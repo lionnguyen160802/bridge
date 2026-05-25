@@ -2,6 +2,36 @@
   "queue": [],
   "completed": [
     {
+      "id": "demo_project_scene_01_4_1779702016974",
+      "projectId": "demo_project",
+      "sceneId": "scene_01",
+      "character": "Chanh Pink",
+      "prompt": "Concept: Chiếc nồi áp suất.\nBối cảnh: Chanh đang đứng tấn, hai tay gồng lên giữ một nụ cười giả tạo (được dán bằng băng dính).\nVisual (0-5s):\nCơ thể Chanh rung bần bật. Bên trong nó như đang sôi sục (hiệu ứng nước sôi ùng ục trong bụng).\nThoại: \"Nhịn... nhịn... mình ổn... mình rất ổn...\"\nVisual (5-9s):\nMiếng băng dính nụ cười bung ra cái Pặc!.\nChanh xì hơi, ngã gục xuống sàn như một đống bùn nhão nhoét (Melting effect). Mắt xoay vòng vòng.\nThoại: \"Thôi xong. Nhịn quá là... nội thương luôn rồi.\"",
+      "callbackUrl": null,
+      "status": "COMPLETED",
+      "createdAt": 1779702016975,
+      "startedAt": 1779702016988,
+      "currentState": "DONE",
+      "retryCount": 0,
+      "completedAt": 1779702021954,
+      "result": {}
+    },
+    {
+      "id": "demo_project_scene_01_3_1779697327938",
+      "projectId": "demo_project",
+      "sceneId": "scene_01",
+      "character": "Chanh Pink",
+      "prompt": "A cinematic lemon mascot walking through a neon cyberpunk city at night.",
+      "callbackUrl": null,
+      "status": "COMPLETED",
+      "createdAt": 1779697327939,
+      "startedAt": 1779697327962,
+      "currentState": "DONE",
+      "retryCount": 0,
+      "completedAt": 1779697336175,
+      "result": {}
+    },
+    {
       "id": "test_n8n_scene_001_2_1779692430634",
       "projectId": "test_n8n",
       "sceneId": "scene_001",
@@ -32,5 +62,5 @@
       "error": "Content script unreachable"
     }
   ],
-  "counter": 2
+  "counter": 4
 }

@@ -13,7 +13,6 @@ const PORT = process.env.PORT || 3500;
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 const LOG_FILE = path.join(__dirname, 'bridge.log');
 
-// ==========================================
 // STATE
 // ==========================================
 let extensionSocket = null;

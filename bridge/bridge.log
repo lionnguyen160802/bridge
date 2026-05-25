@@ -1244,3 +1244,383 @@
 [2026-05-25T07:50:27.092Z] ⚠️ Unknown message type: ping
 [2026-05-25T07:50:52.100Z] ⚠️ Unknown message type: ping
 [2026-05-25T07:51:17.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:51:42.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:52:07.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:52:32.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:52:57.106Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:53:22.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:53:47.105Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:54:12.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:54:37.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:55:02.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:55:27.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:55:52.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:56:17.108Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:56:42.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:57:07.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:57:32.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:57:57.106Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:58:22.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:58:47.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:59:12.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:59:37.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:00:02.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:00:27.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:00:52.104Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:01:17.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:01:42.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:02:07.104Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:02:22.644Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T08:02:31.815Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T08:02:32.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:02:57.104Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:03:22.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:03:47.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:04:12.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:04:37.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:05:02.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:05:27.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:05:52.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:06:17.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:06:42.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:07:07.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:07:32.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:07:57.107Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:08:22.113Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:08:47.108Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:09:12.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:09:37.108Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:10:02.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:10:27.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:10:52.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:11:17.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:11:42.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:12:07.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:12:32.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:12:57.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:13:22.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:13:47.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:14:12.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:14:37.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:15:02.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:15:17.952Z] 📂 Loaded queue: 0 pending, 1 completed
+[2026-05-25T08:15:17.959Z] 
+[2026-05-25T08:15:17.959Z] ╔══════════════════════════════════════════╗
+[2026-05-25T08:15:17.959Z] ║   Flow Auto Bridge v1.0                  ║
+[2026-05-25T08:15:17.960Z] ║   HTTP API + WebSocket: port 3500        ║
+[2026-05-25T08:15:17.960Z] ╚══════════════════════════════════════════╝
+[2026-05-25T08:15:17.961Z] 
+[2026-05-25T08:15:17.961Z] API Endpoints:
+[2026-05-25T08:15:17.961Z]   POST /generate        — Submit new job
+[2026-05-25T08:15:17.962Z]   GET  /status          — Current status
+[2026-05-25T08:15:17.962Z]   GET  /queue           — Queue details
+[2026-05-25T08:15:17.962Z]   POST /cancel          — Cancel job
+[2026-05-25T08:15:17.963Z]   POST /pause           — Pause queue
+[2026-05-25T08:15:17.963Z]   POST /resume          — Resume queue
+[2026-05-25T08:15:17.964Z]   POST /retry           — Retry failed job
+[2026-05-25T08:15:17.964Z]   POST /clear-history   — Clear history
+[2026-05-25T08:15:17.965Z] 
+[2026-05-25T08:15:17.965Z] Waiting for extension connection...
+[2026-05-25T08:15:18.274Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T08:15:18.277Z] ✅ Extension registered
+[2026-05-25T08:15:18.277Z] 📭 Queue empty
+[2026-05-25T08:15:43.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:16:08.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:16:33.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:16:58.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:17:23.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:17:48.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:18:13.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:18:38.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:19:03.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:19:28.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:19:53.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:20:18.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:20:43.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:21:08.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:21:33.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:21:58.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:22:07.940Z] 📥 New job queued: demo_project_scene_01_3_1779697327938 — "A cinematic lemon mascot walking through a neon cyberpunk ci..."
+[2026-05-25T08:22:07.941Z] 📤 Dispatching job: demo_project_scene_01_3_1779697327938
+[2026-05-25T08:22:07.960Z] 📋 Extension acknowledged job: demo_project_scene_01_3_1779697327938
+[2026-05-25T08:22:07.961Z] 🚀 Extension started job: demo_project_scene_01_3_1779697327938
+[2026-05-25T08:22:09.552Z] 📊 State: IDLE | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:11.564Z] 📊 State: IDLE | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:11.578Z] 📊 State: FIND_CHARACTER | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:11.582Z] 📊 State: FIND_CHARACTER | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:11.583Z] 📊 State: HOVER_CHARACTER | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:12.580Z] 📊 State: HOVER_CHARACTER | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:12.581Z] 📊 State: CLICK_MORE_MENU | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:13.704Z] 📊 State: CLICK_MORE_MENU | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:13.705Z] 📊 State: WAIT_MENU | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:13.708Z] 📊 State: WAIT_MENU | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:13.710Z] 📊 State: CLICK_ADD_BUTTON | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:14.515Z] 📊 State: CLICK_ADD_BUTTON | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:14.527Z] 📊 State: WAIT_TEXTAREA | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:14.535Z] 📊 State: WAIT_TEXTAREA | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:14.538Z] 📊 State: INJECT_PROMPT | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:15.212Z] 📊 State: INJECT_PROMPT | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:15.214Z] 📊 State: VERIFY_INPUT | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:15.216Z] 📊 State: VERIFY_INPUT | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:15.217Z] 📊 State: PRESS_ENTER | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:16.171Z] 📊 State: PRESS_ENTER | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:16.172Z] 📊 State: DONE | Job: demo_project_scene_01_3_1779697327938 | Retry: 0
+[2026-05-25T08:22:16.174Z] ✅ Job completed: demo_project_scene_01_3_1779697327938
+[2026-05-25T08:22:16.176Z] ℹ️ No callback URL for job: demo_project_scene_01_3_1779697327938
+[2026-05-25T08:22:18.187Z] 📭 Queue empty
+[2026-05-25T08:22:23.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:22:48.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:23:13.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:23:38.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:24:03.292Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:24:28.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:24:53.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:25:18.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:25:43.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:26:08.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:26:33.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:26:58.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:27:23.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:27:48.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:28:13.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:28:38.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:29:03.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:29:28.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:29:53.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:30:18.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:30:43.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:31:08.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:31:33.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:31:58.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:32:23.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:32:48.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:33:13.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:33:38.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:34:03.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:34:28.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:34:53.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:35:18.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:35:43.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:36:08.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:36:33.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:36:58.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:37:23.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:37:48.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:38:13.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:38:38.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:39:03.304Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:39:28.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:39:53.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:40:18.292Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:40:43.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:41:08.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:41:33.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:41:58.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:42:23.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:42:48.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:43:13.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:43:38.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:44:03.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:44:28.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:44:53.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:45:18.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:45:43.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:46:08.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:46:33.292Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:46:58.302Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:47:23.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:47:48.294Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:48:13.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:48:38.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:49:03.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:49:28.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:49:53.292Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:50:18.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:50:43.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:51:08.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:51:33.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:51:58.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:52:23.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:52:48.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:53:13.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:53:38.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:54:03.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:54:28.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:54:53.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:55:18.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:55:43.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:56:08.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:56:33.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:56:58.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:57:23.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:57:48.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:58:13.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:58:38.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:59:03.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:59:28.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T08:59:53.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:00:18.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:00:43.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:01:08.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:01:33.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:01:58.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:02:23.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:02:48.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:03:13.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:03:38.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:04:03.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:04:28.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:04:53.297Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:05:18.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:05:43.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:06:08.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:06:33.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:06:58.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:07:23.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:07:48.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:08:13.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:08:38.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:09:03.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:09:28.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:09:53.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:10:18.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:10:43.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:11:08.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:11:33.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:11:58.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:12:23.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:12:48.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:13:13.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:13:38.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:14:03.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:14:28.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:14:53.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:15:18.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:15:43.294Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:16:08.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:16:33.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:16:58.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:17:23.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:17:48.312Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:18:13.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:18:38.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:19:03.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:19:28.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:19:53.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:20:18.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:20:43.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:21:08.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:21:33.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:21:58.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:22:23.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:22:48.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:23:13.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:23:38.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:24:03.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:24:28.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:24:53.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:25:18.276Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:25:43.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:26:08.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:26:33.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:26:58.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:27:23.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:27:48.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:28:13.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:28:38.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:29:03.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:29:28.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:29:53.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:30:18.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:30:43.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:31:08.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:31:33.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:31:58.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:32:23.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:32:48.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:33:13.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:33:38.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:34:03.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:34:28.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:34:53.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:35:18.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:35:43.292Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:36:08.301Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:36:33.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:36:58.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:37:23.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:37:48.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:38:13.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:38:31.005Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T09:38:38.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:39:03.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:39:28.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:39:53.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:40:16.977Z] 📥 New job queued: demo_project_scene_01_4_1779702016974 — "Concept: Chiếc nồi áp suất.
+Bối cảnh: Chanh đang đứng tấn, h..."
+[2026-05-25T09:40:16.977Z] 📤 Dispatching job: demo_project_scene_01_4_1779702016974
+[2026-05-25T09:40:16.986Z] 📋 Extension acknowledged job: demo_project_scene_01_4_1779702016974
+[2026-05-25T09:40:16.988Z] 🚀 Extension started job: demo_project_scene_01_4_1779702016974
+[2026-05-25T09:40:17.001Z] 📊 State: IDLE | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:17.005Z] 📊 State: FIND_CHARACTER | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:17.011Z] 📊 State: FIND_CHARACTER | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:17.014Z] 📊 State: HOVER_CHARACTER | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:18.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:40:18.448Z] 📊 State: HOVER_CHARACTER | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:18.449Z] 📊 State: CLICK_MORE_MENU | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:19.573Z] 📊 State: CLICK_MORE_MENU | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:19.574Z] 📊 State: WAIT_MENU | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:19.576Z] 📊 State: WAIT_MENU | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:19.578Z] 📊 State: CLICK_ADD_BUTTON | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.387Z] 📊 State: CLICK_ADD_BUTTON | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.393Z] 📊 State: WAIT_TEXTAREA | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.402Z] 📊 State: WAIT_TEXTAREA | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.405Z] 📊 State: INJECT_PROMPT | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.978Z] 📊 State: INJECT_PROMPT | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.979Z] 📊 State: VERIFY_INPUT | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.984Z] 📊 State: VERIFY_INPUT | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:20.994Z] 📊 State: PRESS_ENTER | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:21.941Z] 📊 State: PRESS_ENTER | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:21.946Z] 📊 State: DONE | Job: demo_project_scene_01_4_1779702016974 | Retry: 0
+[2026-05-25T09:40:21.951Z] ✅ Job completed: demo_project_scene_01_4_1779702016974
+[2026-05-25T09:40:21.958Z] ℹ️ No callback URL for job: demo_project_scene_01_4_1779702016974
+[2026-05-25T09:40:23.972Z] 📭 Queue empty
+[2026-05-25T09:40:43.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:41:08.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:41:33.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:41:58.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:42:23.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:42:48.284Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:43:13.278Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:43:38.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:44:03.292Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:44:28.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:44:53.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:45:18.280Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:45:43.287Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:46:08.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:46:33.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:46:58.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:47:23.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:47:48.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:48:13.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:48:38.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:49:03.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:49:28.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:49:53.282Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:50:18.288Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:50:43.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:51:08.277Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:51:33.290Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:51:58.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:52:23.283Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:52:48.291Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:53:13.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:53:38.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:54:03.285Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:54:28.281Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:54:53.289Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:55:18.279Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:55:43.293Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:56:08.286Z] ⚠️ Unknown message type: ping
+[2026-05-25T09:56:33.277Z] ⚠️ Unknown message type: ping
