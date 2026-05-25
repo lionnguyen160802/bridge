@@ -1,0 +1,36 @@
+{
+  "queue": [],
+  "completed": [
+    {
+      "id": "test_n8n_scene_001_2_1779692430634",
+      "projectId": "test_n8n",
+      "sceneId": "scene_001",
+      "character": "Chanh Pink",
+      "prompt": "M?t qu? chanh m�u h?ng dang d?i n�n l� Vi?t Nam v� cu?i r?t tuoi, phong c�ch ho?t h�nh 3D Pixar, �nh s�ng cinematic",
+      "callbackUrl": null,
+      "status": "COMPLETED",
+      "createdAt": 1779692430635,
+      "startedAt": 1779692430651,
+      "currentState": "DONE",
+      "retryCount": 0,
+      "completedAt": 1779692435272,
+      "result": {}
+    }
+  ],
+  "failed": [
+    {
+      "id": "baba460b_scene_01_1_1779679868943",
+      "projectId": "baba460b",
+      "sceneId": "scene_01",
+      "character": "Chanh Pink",
+      "prompt": "A cinematic lemon mascot walking in slow motion",
+      "callbackUrl": null,
+      "status": "FAILED",
+      "createdAt": 1779679868943,
+      "startedAt": 1779680115740,
+      "failedAt": 1779680119795,
+      "error": "Content script unreachable"
+    }
+  ],
+  "counter": 2
+}

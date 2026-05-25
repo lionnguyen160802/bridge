@@ -1,0 +1,1211 @@
+[2026-05-25T03:28:32.937Z] 
+[2026-05-25T03:28:32.940Z] ╔══════════════════════════════════════════╗
+[2026-05-25T03:28:32.940Z] ║   Flow Auto Bridge v1.0                  ║
+[2026-05-25T03:28:32.940Z] ║   HTTP API + WebSocket: port 3500        ║
+[2026-05-25T03:28:32.941Z] ╚══════════════════════════════════════════╝
+[2026-05-25T03:28:32.941Z] 
+[2026-05-25T03:28:32.941Z] API Endpoints:
+[2026-05-25T03:28:32.941Z]   POST /generate        — Submit new job
+[2026-05-25T03:28:32.942Z]   GET  /status          — Current status
+[2026-05-25T03:28:32.942Z]   GET  /queue           — Queue details
+[2026-05-25T03:28:32.942Z]   POST /cancel          — Cancel job
+[2026-05-25T03:28:32.942Z]   POST /pause           — Pause queue
+[2026-05-25T03:28:32.943Z]   POST /resume          — Resume queue
+[2026-05-25T03:28:32.943Z]   POST /retry           — Retry failed job
+[2026-05-25T03:28:32.943Z]   POST /clear-history   — Clear history
+[2026-05-25T03:28:32.943Z] 
+[2026-05-25T03:28:32.944Z] Waiting for extension connection...
+[2026-05-25T03:31:08.943Z] 📥 New job queued: baba460b_scene_01_1_1779679868943 — "A cinematic lemon mascot walking in slow motion..."
+[2026-05-25T03:31:08.944Z] ⚠️ Extension not connected, waiting...
+[2026-05-25T03:34:46.743Z] 📂 Loaded queue: 1 pending, 0 completed
+[2026-05-25T03:34:46.749Z] 
+[2026-05-25T03:34:46.749Z] ╔══════════════════════════════════════════╗
+[2026-05-25T03:34:46.749Z] ║   Flow Auto Bridge v1.0                  ║
+[2026-05-25T03:34:46.750Z] ║   HTTP API + WebSocket: port 3500        ║
+[2026-05-25T03:34:46.750Z] ╚══════════════════════════════════════════╝
+[2026-05-25T03:34:46.750Z] 
+[2026-05-25T03:34:46.750Z] API Endpoints:
+[2026-05-25T03:34:46.751Z]   POST /generate        — Submit new job
+[2026-05-25T03:34:46.751Z]   GET  /status          — Current status
+[2026-05-25T03:34:46.751Z]   GET  /queue           — Queue details
+[2026-05-25T03:34:46.752Z]   POST /cancel          — Cancel job
+[2026-05-25T03:34:46.752Z]   POST /pause           — Pause queue
+[2026-05-25T03:34:46.753Z]   POST /resume          — Resume queue
+[2026-05-25T03:34:46.754Z]   POST /retry           — Retry failed job
+[2026-05-25T03:34:46.754Z]   POST /clear-history   — Clear history
+[2026-05-25T03:34:46.754Z] 
+[2026-05-25T03:34:46.755Z] Waiting for extension connection...
+[2026-05-25T03:35:15.730Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T03:35:15.733Z] ✅ Extension registered
+[2026-05-25T03:35:15.735Z] 📤 Dispatching job: baba460b_scene_01_1_1779679868943
+[2026-05-25T03:35:15.738Z] 📋 Extension acknowledged job: baba460b_scene_01_1_1779679868943
+[2026-05-25T03:35:15.739Z] 🚀 Extension started job: baba460b_scene_01_1_1779679868943
+[2026-05-25T03:35:19.794Z] ❌ Job failed: baba460b_scene_01_1_1779679868943 — Content script unreachable
+[2026-05-25T03:35:19.796Z] ℹ️ No callback URL for job: baba460b_scene_01_1_1779679868943
+[2026-05-25T03:35:22.799Z] 📭 Queue empty
+[2026-05-25T03:35:40.737Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:36:05.735Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:36:30.732Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:36:33.561Z] 📋 Extension acknowledged job: manual_manual_1779680193560_1779680193561
+[2026-05-25T03:36:33.563Z] 🚀 Extension started job: manual_manual_1779680193560_1779680193561
+[2026-05-25T03:36:37.583Z] ❌ Job failed: manual_manual_1779680193560_1779680193561 — Content script unreachable
+[2026-05-25T03:36:40.598Z] 📭 Queue empty
+[2026-05-25T03:36:55.744Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:37:00.008Z] ⚠️ Unknown message type: pause
+[2026-05-25T03:37:20.744Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:37:45.739Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:38:09.592Z] ⚠️ Unknown message type: resume
+[2026-05-25T03:38:10.746Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:38:35.747Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:38:40.275Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779680320275
+[2026-05-25T03:38:40.276Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779680320275
+[2026-05-25T03:38:44.302Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779680320275 — Content script unreachable
+[2026-05-25T03:38:47.306Z] 📭 Queue empty
+[2026-05-25T03:39:00.741Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:39:25.734Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:39:50.738Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:40:15.744Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:40:40.733Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:40:44.897Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T03:41:05.742Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:41:15.490Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779680475490
+[2026-05-25T03:41:15.491Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779680475490
+[2026-05-25T03:41:16.505Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:16.507Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:16.511Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:16.513Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:17.327Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:17.330Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:22.341Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 0
+[2026-05-25T03:41:22.344Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 1
+[2026-05-25T03:41:28.361Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 1
+[2026-05-25T03:41:28.362Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 2
+[2026-05-25T03:41:30.732Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:41:32.337Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 2
+[2026-05-25T03:41:32.338Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 3
+[2026-05-25T03:41:35.388Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 3
+[2026-05-25T03:41:35.389Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 4
+[2026-05-25T03:41:45.397Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 4
+[2026-05-25T03:41:45.399Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779680475490 | Retry: 5
+[2026-05-25T03:41:45.402Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779680475490 — Max retries exceeded at state: WAIT_MENU
+[2026-05-25T03:41:48.416Z] 📭 Queue empty
+[2026-05-25T03:41:55.747Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:42:20.739Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:42:45.737Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:43:10.737Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:43:35.745Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:44:00.743Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:44:25.739Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:44:50.737Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:45:15.739Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:45:40.746Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:46:05.741Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:46:30.738Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:46:55.742Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:47:20.737Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:47:45.740Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:48:10.748Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:48:35.743Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:49:00.739Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:49:25.743Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:49:40.591Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T03:49:49.590Z] 🔌 WebSocket client disconnected
+[2026-05-25T03:50:24.998Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T03:50:24.999Z] ✅ Extension registered
+[2026-05-25T03:50:25.000Z] 📭 Queue empty
+[2026-05-25T03:50:37.275Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T03:50:50.016Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:51:15.011Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:51:40.010Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:51:44.432Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779681104433
+[2026-05-25T03:51:44.433Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779681104433
+[2026-05-25T03:51:45.457Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:45.458Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:45.462Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:45.463Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:46.470Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:46.472Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:46.982Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 0
+[2026-05-25T03:51:46.982Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 1
+[2026-05-25T03:51:48.505Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 1
+[2026-05-25T03:51:48.506Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 2
+[2026-05-25T03:51:51.021Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 2
+[2026-05-25T03:51:51.022Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 3
+[2026-05-25T03:51:54.541Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 3
+[2026-05-25T03:51:54.543Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 4
+[2026-05-25T03:51:56.484Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 4
+[2026-05-25T03:51:56.485Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681104433 | Retry: 5
+[2026-05-25T03:51:56.486Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779681104433 — Max retries exceeded at state: CLICK_MORE_MENU
+[2026-05-25T03:51:59.496Z] 📭 Queue empty
+[2026-05-25T03:52:05.000Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:52:30.014Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:52:55.012Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:53:20.002Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:53:45.012Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:54:10.002Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:54:35.006Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:55:00.012Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:55:25.012Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:55:50.000Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:56:15.014Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:56:24.387Z] 🔌 WebSocket client disconnected
+[2026-05-25T03:56:35.661Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T03:56:35.662Z] ✅ Extension registered
+[2026-05-25T03:56:35.662Z] 📭 Queue empty
+[2026-05-25T03:57:00.668Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:57:23.835Z] 📋 Extension acknowledged job: manual_scene_chanh_pink_irritated_1779681443834
+[2026-05-25T03:57:23.836Z] 🚀 Extension started job: manual_scene_chanh_pink_irritated_1779681443834
+[2026-05-25T03:57:25.669Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:57:27.866Z] ❌ Job failed: manual_scene_chanh_pink_irritated_1779681443834 — Content script unreachable
+[2026-05-25T03:57:30.866Z] 📭 Queue empty
+[2026-05-25T03:57:38.814Z] ⚠️ Unknown message type: pause
+[2026-05-25T03:57:40.403Z] ⚠️ Unknown message type: resume
+[2026-05-25T03:57:50.675Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:57:54.067Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779681474067
+[2026-05-25T03:57:54.068Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779681474067
+[2026-05-25T03:57:58.090Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779681474067 — Content script unreachable
+[2026-05-25T03:58:01.095Z] 📭 Queue empty
+[2026-05-25T03:58:14.011Z] ⚠️ Unknown message type: pause
+[2026-05-25T03:58:15.670Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:58:40.677Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:59:05.668Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:59:30.676Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:59:55.665Z] ⚠️ Unknown message type: ping
+[2026-05-25T03:59:56.400Z] 🔌 WebSocket client disconnected
+[2026-05-25T03:59:56.494Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T03:59:56.495Z] ✅ Extension registered
+[2026-05-25T03:59:56.496Z] 📭 Queue empty
+[2026-05-25T04:00:21.502Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:00:27.805Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779681627805
+[2026-05-25T04:00:35.989Z] ⚠️ Unknown message type: resume
+[2026-05-25T04:00:35.990Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779681627805
+[2026-05-25T04:00:40.021Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779681627805 — Content script unreachable
+[2026-05-25T04:00:43.029Z] 📭 Queue empty
+[2026-05-25T04:00:46.503Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:01:11.505Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:01:16.556Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:01:36.508Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:01:44.478Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779681704478
+[2026-05-25T04:01:44.479Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779681704478
+[2026-05-25T04:01:45.503Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:45.505Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:45.509Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:45.510Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:46.524Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:46.527Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:47.653Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:47.658Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:47.662Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:47.663Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.262Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.264Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.267Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.269Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.608Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.609Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.611Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:48.612Z] 📊 State: CLICK_GENERATE | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:50.120Z] 📊 State: CLICK_GENERATE | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:50.123Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:01:50.129Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779681704478 | Retry: 0
+[2026-05-25T04:02:01.509Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:02:11.707Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779681704478 — Cancelled
+[2026-05-25T04:02:11.708Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:02:14.713Z] 📭 Queue empty
+[2026-05-25T04:02:26.510Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:02:51.508Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:03:16.509Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:03:41.502Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:04:06.505Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:04:31.499Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:04:56.500Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:05:21.496Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:05:46.502Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:06:11.504Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:06:36.498Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:07:01.508Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:07:26.512Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:07:51.499Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:08:16.507Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:08:41.502Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:09:06.511Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:09:31.504Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:09:56.501Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:10:21.507Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:10:46.502Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:11:11.505Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:11:36.502Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:12:01.507Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:12:16.316Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:12:29.075Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:12:29.076Z] ✅ Extension registered
+[2026-05-25T04:12:29.077Z] 📭 Queue empty
+[2026-05-25T04:12:30.885Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:12:30.995Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:12:30.996Z] ✅ Extension registered
+[2026-05-25T04:12:30.996Z] 📭 Queue empty
+[2026-05-25T04:12:37.885Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:12:56.002Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:13:11.696Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779682391686
+[2026-05-25T04:13:11.698Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779682391686
+[2026-05-25T04:13:11.700Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:11.700Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:11.702Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:11.703Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:12.708Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:12.711Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:13.825Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:13.827Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:13.832Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:13.834Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:14.652Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:14.654Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:14.659Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:14.663Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:15.195Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:15.197Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:15.210Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:15.211Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:16.718Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:16.722Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:16.724Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779682391686 | Retry: 0
+[2026-05-25T04:13:20.999Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:13:46.011Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:14:11.007Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:14:36.008Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:15:01.006Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:15:26.006Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:15:51.009Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:16:15.999Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:16:41.002Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:17:05.999Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:17:30.998Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:17:55.999Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:18:20.999Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:18:34.879Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:18:40.504Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:18:40.505Z] ✅ Extension registered
+[2026-05-25T04:18:40.506Z] 📭 Queue empty
+[2026-05-25T04:18:45.293Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:18:59.452Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:19:05.510Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:19:30.513Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:19:55.516Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:20:20.511Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:20:39.379Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779682839378
+[2026-05-25T04:20:39.380Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779682839378
+[2026-05-25T04:20:39.398Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:39.404Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:39.408Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:39.410Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:40.409Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:40.410Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:41.544Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:41.546Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:41.562Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:41.563Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.370Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.374Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.380Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.382Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.916Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.917Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.919Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:42.920Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:44.433Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:44.435Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:44.436Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:20:45.520Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:21:10.512Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:21:35.518Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:22:00.520Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:22:25.511Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:22:50.509Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:23:15.520Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:23:38.591Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779682839378 | Retry: 0
+[2026-05-25T04:23:40.518Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:23:44.654Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:23:52.708Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:23:52.710Z] ✅ Extension registered
+[2026-05-25T04:23:52.710Z] 📭 Queue empty
+[2026-05-25T04:23:57.109Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:24:17.713Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:24:42.721Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:25:07.718Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:25:09.247Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779683109247
+[2026-05-25T04:25:09.247Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779683109247
+[2026-05-25T04:25:09.261Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:09.265Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:09.267Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:09.268Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:10.270Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:10.272Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:11.391Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:11.394Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:11.397Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:11.398Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.217Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.221Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.229Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.232Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.764Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.765Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.766Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:12.767Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:14.271Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:14.272Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:14.273Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:18.397Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:32.715Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:25:37.954Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683109247 | Retry: 0
+[2026-05-25T04:25:57.726Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:26:19.306Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779683179306
+[2026-05-25T04:26:22.712Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:26:34.997Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779683109247 — Cancelled
+[2026-05-25T04:26:34.998Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:26:38.006Z] 📭 Queue empty
+[2026-05-25T04:26:38.007Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779683179306
+[2026-05-25T04:26:38.019Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:38.024Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:38.026Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:38.027Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:39.038Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:39.040Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:40.173Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:40.176Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:40.181Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:40.183Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:40.999Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.001Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.006Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.009Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.539Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.541Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.543Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:41.544Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:43.047Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:43.048Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:43.049Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:26:47.721Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:27:12.728Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:27:37.715Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:28:02.727Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:28:27.713Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:28:52.721Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:29:17.717Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:29:42.726Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:30:07.722Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:30:32.711Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:30:57.722Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:31:22.724Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:31:47.712Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:31:57.232Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683179306 | Retry: 0
+[2026-05-25T04:32:02.988Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:32:10.883Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:32:10.884Z] ✅ Extension registered
+[2026-05-25T04:32:10.884Z] 📭 Queue empty
+[2026-05-25T04:32:17.884Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:32:35.897Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:33:00.885Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:33:11.333Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779683591333
+[2026-05-25T04:33:11.334Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779683591333
+[2026-05-25T04:33:11.347Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:11.349Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:11.355Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:11.357Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:12.368Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:12.369Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:13.492Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:13.494Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:13.498Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:13.500Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.317Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.318Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.321Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.322Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.847Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.849Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.853Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:14.855Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:16.369Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:16.370Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:16.370Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:33:25.889Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:33:50.895Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:34:15.899Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:34:40.900Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:35:05.894Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:35:30.893Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:35:55.893Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:36:20.894Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:36:45.886Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:37:10.889Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:37:35.889Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:38:00.886Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:38:21.720Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683591333 | Retry: 0
+[2026-05-25T04:38:25.890Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:38:50.891Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:38:54.890Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779683934889
+[2026-05-25T04:39:01.380Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779683591333 — Cancelled
+[2026-05-25T04:39:01.382Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:39:04.389Z] 📭 Queue empty
+[2026-05-25T04:39:04.392Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779683934889
+[2026-05-25T04:39:04.417Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:04.419Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:04.426Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:04.430Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:05.429Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:05.430Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:06.568Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:06.570Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:06.572Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:06.573Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.399Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.402Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.410Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.412Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.938Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.942Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.948Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:07.951Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:09.458Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:09.459Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:09.461Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:15.890Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:39:40.901Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:39:40.956Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779683934889 | Retry: 0
+[2026-05-25T04:39:51.991Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:39:57.603Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:39:57.604Z] ✅ Extension registered
+[2026-05-25T04:39:57.605Z] 📭 Queue empty
+[2026-05-25T04:40:01.251Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:40:22.619Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:40:26.466Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779684026466
+[2026-05-25T04:40:26.467Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779684026466
+[2026-05-25T04:40:26.481Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:26.487Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:26.491Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:26.492Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:27.489Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:27.490Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:28.610Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:28.612Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:28.615Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:28.617Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.424Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.426Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.432Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.435Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.967Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.969Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.970Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:29.971Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:31.490Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:31.491Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:31.492Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779684026466 | Retry: 0
+[2026-05-25T04:40:47.614Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:41:12.619Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:41:37.617Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:42:02.612Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:42:27.614Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:42:52.613Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:43:17.619Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:43:42.619Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:43:58.916Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:44:51.213Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:44:51.215Z] ✅ Extension registered
+[2026-05-25T04:44:51.216Z] 📭 Queue empty
+[2026-05-25T04:44:53.730Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:45:16.230Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:45:36.650Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779684336650
+[2026-05-25T04:45:36.651Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779684336650
+[2026-05-25T04:45:36.666Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:36.669Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:36.675Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:36.679Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:37.683Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:37.684Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:38.811Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:38.813Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:38.816Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:38.819Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:39.626Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:39.628Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:39.636Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:39.637Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:40.168Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:40.169Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:40.171Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:40.172Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:41.226Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:45:41.674Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:41.675Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:45:41.675Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:46:06.227Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:46:31.226Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:46:51.907Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:46:56.231Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:47:21.222Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:47:46.229Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:48:11.219Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:48:36.230Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:49:01.222Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:49:26.224Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:49:51.219Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:50:12.005Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684336650 | Retry: 0
+[2026-05-25T04:50:16.220Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:50:41.218Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:50:46.787Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779684646787
+[2026-05-25T04:50:50.566Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779684336650 — Cancelled
+[2026-05-25T04:50:50.568Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:50:53.580Z] 📭 Queue empty
+[2026-05-25T04:50:53.581Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779684646787
+[2026-05-25T04:50:53.589Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:53.591Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:53.598Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:53.599Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:54.602Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:54.606Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:55.747Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:55.750Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:55.754Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:55.762Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:56.561Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:56.563Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:56.568Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:50:56.569Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:51:06.228Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:51:06.570Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:51:06.572Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 1
+[2026-05-25T04:51:31.223Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:51:56.222Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:52:08.040Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684646787 | Retry: 0
+[2026-05-25T04:52:11.789Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:52:21.786Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:52:21.786Z] ✅ Extension registered
+[2026-05-25T04:52:21.787Z] 📭 Queue empty
+[2026-05-25T04:52:29.872Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:52:29.969Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:52:29.971Z] ✅ Extension registered
+[2026-05-25T04:52:29.971Z] 📭 Queue empty
+[2026-05-25T04:52:54.971Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:53:09.277Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779684789276
+[2026-05-25T04:53:09.278Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779684789276
+[2026-05-25T04:53:09.296Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:11.304Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:11.305Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:11.306Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:11.307Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:12.314Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:12.316Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:13.435Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:13.437Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:18.440Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:18.442Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 1
+[2026-05-25T04:53:19.976Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:53:22.838Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684789276 | Retry: 0
+[2026-05-25T04:53:38.293Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779684818293
+[2026-05-25T04:53:43.364Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779684789276 — Cancelled
+[2026-05-25T04:53:43.367Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:53:44.972Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:53:46.377Z] 📭 Queue empty
+[2026-05-25T04:53:46.380Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779684818293
+[2026-05-25T04:53:46.403Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:46.404Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:46.407Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:46.409Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:47.418Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:47.419Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:48.532Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:48.533Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:48.534Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:48.535Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.342Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.345Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.351Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.356Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.965Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.966Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.969Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:49.971Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:51.490Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:51.492Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:53:51.495Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779684818293 | Retry: 0
+[2026-05-25T04:54:09.979Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:54:34.979Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:54:53.842Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779684818293 — Cancelled
+[2026-05-25T04:54:53.844Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:54:56.844Z] 📭 Queue empty
+[2026-05-25T04:54:59.976Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:55:24.985Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:55:49.982Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:56:14.978Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:56:39.983Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:57:04.974Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:57:08.646Z] 🔌 WebSocket client disconnected
+[2026-05-25T04:57:19.055Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T04:57:19.056Z] ✅ Extension registered
+[2026-05-25T04:57:19.057Z] 📭 Queue empty
+[2026-05-25T04:57:22.948Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:57:44.061Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:58:06.116Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779685086116
+[2026-05-25T04:58:06.129Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779685086116
+[2026-05-25T04:58:06.139Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 0
+[2026-05-25T04:58:06.140Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 0
+[2026-05-25T04:58:06.141Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 0
+[2026-05-25T04:58:06.141Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 1
+[2026-05-25T04:58:08.150Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 1
+[2026-05-25T04:58:08.151Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 2
+[2026-05-25T04:58:09.062Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:58:13.161Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 2
+[2026-05-25T04:58:13.163Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 3
+[2026-05-25T04:58:23.165Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 3
+[2026-05-25T04:58:23.165Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685086116 | Retry: 4
+[2026-05-25T04:58:24.890Z] ⚠️ Unknown message type: pause
+[2026-05-25T04:58:27.512Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779685086116 — Cancelled
+[2026-05-25T04:58:27.515Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T04:58:30.522Z] 📭 Queue empty
+[2026-05-25T04:58:34.070Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:58:41.373Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779685121373
+[2026-05-25T04:58:45.349Z] ⚠️ Unknown message type: resume
+[2026-05-25T04:58:45.350Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779685121373
+[2026-05-25T04:58:45.362Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:45.363Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:45.368Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:45.369Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:46.372Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:46.384Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:47.492Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:47.494Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:47.499Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:47.501Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.308Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.310Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.317Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.319Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.869Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.870Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.872Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:48.872Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:49.814Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:49.816Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:49.818Z] 📊 State: WAIT_RENDER | Job: manual_scene_chanh_lime_irritated_1779685121373 | Retry: 0
+[2026-05-25T04:58:59.070Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:59:24.058Z] ⚠️ Unknown message type: ping
+[2026-05-25T04:59:49.059Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:00:14.072Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:00:39.067Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:01:04.058Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:01:29.062Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:01:54.057Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:02:19.060Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:02:44.068Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:03:09.073Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:03:34.072Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:03:40.495Z] ❌ Job failed: manual_scene_chanh_lime_irritated_1779685121373 — Cancelled
+[2026-05-25T05:03:40.498Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T05:03:43.496Z] 📭 Queue empty
+[2026-05-25T05:03:59.068Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:04:00.611Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T05:04:24.067Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:04:43.189Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T05:04:45.565Z] 🔌 WebSocket client disconnected
+[2026-05-25T05:04:52.080Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T05:04:52.082Z] ✅ Extension registered
+[2026-05-25T05:04:52.082Z] 📭 Queue empty
+[2026-05-25T05:05:03.561Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T05:05:17.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:05:42.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:05:58.401Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779685558400
+[2026-05-25T05:05:58.401Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779685558400
+[2026-05-25T05:05:58.413Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:05:58.415Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:05:58.417Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:05:58.418Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:05:59.428Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:05:59.430Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:00.549Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:00.551Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:00.555Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:00.558Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.377Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.379Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.385Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.387Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.938Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.940Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.943Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:01.945Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:02.903Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:02.905Z] 📊 State: DONE | Job: manual_scene_chanh_lime_irritated_1779685558400 | Retry: 0
+[2026-05-25T05:06:02.906Z] ✅ Job completed: manual_scene_chanh_lime_irritated_1779685558400
+[2026-05-25T05:06:04.915Z] 📭 Queue empty
+[2026-05-25T05:06:07.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:06:32.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:06:57.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:07:22.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:07:47.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:08:12.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:08:32.200Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T05:08:37.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:09:02.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:09:27.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:09:52.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:10:16.320Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779685816320
+[2026-05-25T05:10:16.321Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779685816320
+[2026-05-25T05:10:16.334Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:16.336Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:16.341Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:16.345Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:17.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:10:17.353Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:17.353Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:18.492Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:18.494Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:18.495Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:18.496Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.302Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.305Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.312Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.314Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.880Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.882Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.886Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:19.886Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:20.829Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:20.830Z] 📊 State: DONE | Job: manual_scene_chanh_lime_irritated_1779685816320 | Retry: 0
+[2026-05-25T05:10:20.831Z] ✅ Job completed: manual_scene_chanh_lime_irritated_1779685816320
+[2026-05-25T05:10:22.846Z] 📭 Queue empty
+[2026-05-25T05:10:42.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:11:07.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:11:32.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:11:57.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:12:22.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:12:35.229Z] 📋 Extension acknowledged job: manual_scene_chanh_lime_irritated_1779685955229
+[2026-05-25T05:12:35.230Z] 🚀 Extension started job: manual_scene_chanh_lime_irritated_1779685955229
+[2026-05-25T05:12:35.244Z] 📊 State: IDLE | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:35.250Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:35.252Z] 📊 State: FIND_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:35.253Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:36.252Z] 📊 State: HOVER_CHARACTER | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:36.253Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:37.377Z] 📊 State: CLICK_MORE_MENU | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:37.379Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:37.381Z] 📊 State: WAIT_MENU | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:37.383Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.189Z] 📊 State: CLICK_ADD_BUTTON | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.190Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.192Z] 📊 State: WAIT_TEXTAREA | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.193Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.749Z] 📊 State: INJECT_PROMPT | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.753Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.760Z] 📊 State: VERIFY_INPUT | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:38.767Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:39.704Z] 📊 State: PRESS_ENTER | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:39.709Z] 📊 State: DONE | Job: manual_scene_chanh_lime_irritated_1779685955229 | Retry: 0
+[2026-05-25T05:12:39.711Z] ✅ Job completed: manual_scene_chanh_lime_irritated_1779685955229
+[2026-05-25T05:12:41.713Z] 📭 Queue empty
+[2026-05-25T05:12:47.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:13:12.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:13:37.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:14:02.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:14:27.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:14:52.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:15:17.082Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:15:42.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:16:07.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:16:32.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:16:57.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:17:22.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:17:47.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:18:12.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:18:37.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:19:01.045Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T05:19:02.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:19:27.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:19:52.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:20:17.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:20:42.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:21:07.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:21:32.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:21:57.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:22:22.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:22:47.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:23:12.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:23:37.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:24:02.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:24:27.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:24:52.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:25:17.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:25:42.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:26:07.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:26:32.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:26:57.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:27:22.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:27:47.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:28:12.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:28:37.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:29:02.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:29:27.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:29:52.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:30:17.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:30:42.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:31:07.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:31:32.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:31:57.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:32:22.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:32:47.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:33:12.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:33:37.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:34:02.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:34:27.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:34:52.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:35:17.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:35:42.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:36:07.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:36:32.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:36:57.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:37:22.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:37:47.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:38:12.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:38:37.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:39:02.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:39:27.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:39:52.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:40:17.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:40:42.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:41:07.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:41:32.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:41:57.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:42:22.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:42:47.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:43:12.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:43:37.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:44:02.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:44:27.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:44:52.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:45:17.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:45:42.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:46:07.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:46:32.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:46:57.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:47:22.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:47:47.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:48:12.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:48:37.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:49:02.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:49:27.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:49:52.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:50:17.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:50:42.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:51:07.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:51:32.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:51:57.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:52:22.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:52:47.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:53:12.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:53:37.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:54:02.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:54:27.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:54:52.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:55:17.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:55:42.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:56:07.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:56:32.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:56:57.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:57:22.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:57:47.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:58:12.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:58:37.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:59:02.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:59:27.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T05:59:52.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:00:17.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:00:42.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:01:07.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:01:32.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:01:57.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:02:22.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:02:47.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:03:12.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:03:37.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:04:02.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:04:27.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:04:52.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:05:17.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:05:42.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:06:07.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:06:32.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:06:57.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:07:22.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:07:47.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:08:12.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:08:37.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:09:02.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:09:27.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:09:52.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:10:17.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:10:42.082Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:11:07.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:11:32.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:11:57.104Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:12:22.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:12:47.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:13:12.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:13:37.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:14:02.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:14:27.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:14:52.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:15:17.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:15:42.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:16:07.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:16:32.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:16:57.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:17:22.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:17:47.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:18:12.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:18:37.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:19:02.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:19:27.082Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:19:52.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:20:17.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:20:42.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:21:07.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:21:32.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:21:57.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:22:22.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:22:47.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:23:12.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:23:37.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:24:02.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:24:27.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:24:52.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:25:17.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:25:42.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:26:07.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:26:32.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:26:57.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:27:22.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:27:47.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:28:12.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:28:37.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:29:02.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:29:27.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:29:52.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:30:17.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:30:42.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:31:07.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:31:32.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:31:57.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:32:22.088Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:32:47.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:33:12.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:33:37.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:34:02.085Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:34:27.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:34:52.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:35:17.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:35:42.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:36:07.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:36:32.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:36:57.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:37:22.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:37:47.087Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:38:12.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:38:37.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:39:02.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:39:03.212Z] 📊 State: IDLE | Job: ? | Retry: 0
+[2026-05-25T06:39:27.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:39:52.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:40:17.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:40:42.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:41:07.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:41:32.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:41:57.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:42:22.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:42:47.091Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:43:12.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:43:37.089Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:44:02.086Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:44:27.090Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:44:52.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:45:17.083Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:45:42.084Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:48:05.465Z] 📂 Loaded queue: 0 pending, 0 completed
+[2026-05-25T06:48:05.473Z] 
+[2026-05-25T06:48:05.473Z] ╔══════════════════════════════════════════╗
+[2026-05-25T06:48:05.474Z] ║   Flow Auto Bridge v1.0                  ║
+[2026-05-25T06:48:05.474Z] ║   HTTP API + WebSocket: port 3500        ║
+[2026-05-25T06:48:05.475Z] ╚══════════════════════════════════════════╝
+[2026-05-25T06:48:05.475Z] 
+[2026-05-25T06:48:05.475Z] API Endpoints:
+[2026-05-25T06:48:05.476Z]   POST /generate        — Submit new job
+[2026-05-25T06:48:05.476Z]   GET  /status          — Current status
+[2026-05-25T06:48:05.477Z]   GET  /queue           — Queue details
+[2026-05-25T06:48:05.477Z]   POST /cancel          — Cancel job
+[2026-05-25T06:48:05.478Z]   POST /pause           — Pause queue
+[2026-05-25T06:48:05.478Z]   POST /resume          — Resume queue
+[2026-05-25T06:48:05.479Z]   POST /retry           — Retry failed job
+[2026-05-25T06:48:05.479Z]   POST /clear-history   — Clear history
+[2026-05-25T06:48:05.479Z] 
+[2026-05-25T06:48:05.480Z] Waiting for extension connection...
+[2026-05-25T06:48:24.472Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T06:48:24.478Z] ✅ Extension registered
+[2026-05-25T06:48:24.479Z] 📭 Queue empty
+[2026-05-25T06:48:49.489Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:49:14.486Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:49:39.489Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:50:04.486Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:50:29.484Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:50:54.483Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:51:19.488Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:51:44.492Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:52:09.491Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:52:34.487Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:52:59.490Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:53:24.480Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:53:49.478Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:54:14.483Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:54:39.486Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:55:04.491Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:55:29.489Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:55:54.486Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:56:19.484Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:56:44.484Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:57:09.494Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:57:34.496Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:57:59.477Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:58:24.504Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:58:49.481Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:59:14.483Z] ⚠️ Unknown message type: ping
+[2026-05-25T06:59:39.492Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:00:04.482Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:00:29.485Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:00:30.636Z] 📥 New job queued: test_n8n_scene_001_2_1779692430634 — "M?t qu? chanh m�u h?ng dang d?i n�n l� Vi?t Nam v� cu?i r?t ..."
+[2026-05-25T07:00:30.636Z] 📤 Dispatching job: test_n8n_scene_001_2_1779692430634
+[2026-05-25T07:00:30.649Z] 📋 Extension acknowledged job: test_n8n_scene_001_2_1779692430634
+[2026-05-25T07:00:30.650Z] 🚀 Extension started job: test_n8n_scene_001_2_1779692430634
+[2026-05-25T07:00:30.671Z] 📊 State: IDLE | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:30.673Z] 📊 State: FIND_CHARACTER | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:30.682Z] 📊 State: FIND_CHARACTER | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:30.684Z] 📊 State: HOVER_CHARACTER | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:31.699Z] 📊 State: HOVER_CHARACTER | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:31.702Z] 📊 State: CLICK_MORE_MENU | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:32.837Z] 📊 State: CLICK_MORE_MENU | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:32.841Z] 📊 State: WAIT_MENU | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:32.847Z] 📊 State: WAIT_MENU | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:32.851Z] 📊 State: CLICK_ADD_BUTTON | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:33.664Z] 📊 State: CLICK_ADD_BUTTON | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:33.676Z] 📊 State: WAIT_TEXTAREA | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:33.681Z] 📊 State: WAIT_TEXTAREA | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:33.683Z] 📊 State: INJECT_PROMPT | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:34.255Z] 📊 State: INJECT_PROMPT | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:34.259Z] 📊 State: VERIFY_INPUT | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:34.273Z] 📊 State: VERIFY_INPUT | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:34.279Z] 📊 State: PRESS_ENTER | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:35.255Z] 📊 State: PRESS_ENTER | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:35.259Z] 📊 State: DONE | Job: test_n8n_scene_001_2_1779692430634 | Retry: 0
+[2026-05-25T07:00:35.267Z] ✅ Job completed: test_n8n_scene_001_2_1779692430634
+[2026-05-25T07:00:35.275Z] ℹ️ No callback URL for job: test_n8n_scene_001_2_1779692430634
+[2026-05-25T07:00:37.279Z] 📭 Queue empty
+[2026-05-25T07:00:54.479Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:01:19.485Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:01:44.491Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:02:09.492Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:02:34.491Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:02:59.490Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:05:44.002Z] 📂 Loaded queue: 0 pending, 1 completed
+[2026-05-25T07:05:44.008Z] 
+[2026-05-25T07:05:44.009Z] ╔══════════════════════════════════════════╗
+[2026-05-25T07:05:44.009Z] ║   Flow Auto Bridge v1.0                  ║
+[2026-05-25T07:05:44.009Z] ║   HTTP API + WebSocket: port 3500        ║
+[2026-05-25T07:05:44.010Z] ╚══════════════════════════════════════════╝
+[2026-05-25T07:05:44.010Z] 
+[2026-05-25T07:05:44.011Z] API Endpoints:
+[2026-05-25T07:05:44.011Z]   POST /generate        — Submit new job
+[2026-05-25T07:05:44.011Z]   GET  /status          — Current status
+[2026-05-25T07:05:44.012Z]   GET  /queue           — Queue details
+[2026-05-25T07:05:44.012Z]   POST /cancel          — Cancel job
+[2026-05-25T07:05:44.012Z]   POST /pause           — Pause queue
+[2026-05-25T07:05:44.013Z]   POST /resume          — Resume queue
+[2026-05-25T07:05:44.013Z]   POST /retry           — Retry failed job
+[2026-05-25T07:05:44.013Z]   POST /clear-history   — Clear history
+[2026-05-25T07:05:44.014Z] 
+[2026-05-25T07:05:44.014Z] Waiting for extension connection...
+[2026-05-25T07:05:52.086Z] 🔗 WebSocket client connected from ::1
+[2026-05-25T07:05:52.092Z] ✅ Extension registered
+[2026-05-25T07:05:52.093Z] 📭 Queue empty
+[2026-05-25T07:06:17.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:06:42.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:07:07.106Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:07:32.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:07:57.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:08:22.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:08:47.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:09:12.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:09:37.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:10:02.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:10:27.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:10:52.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:11:17.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:11:42.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:12:07.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:12:32.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:12:57.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:13:22.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:13:47.106Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:14:12.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:14:37.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:15:02.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:15:27.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:15:52.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:16:17.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:16:42.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:17:07.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:17:32.104Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:17:57.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:18:22.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:18:47.104Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:19:12.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:19:37.095Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:20:02.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:20:27.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:20:52.106Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:21:17.094Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:21:42.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:22:07.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:22:32.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:22:57.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:23:22.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:23:47.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:24:12.113Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:24:37.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:25:02.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:25:27.092Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:25:52.105Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:26:17.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:26:42.106Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:27:07.093Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:27:32.105Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:27:57.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:28:22.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:28:47.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:29:12.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:29:37.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:30:02.103Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:30:27.100Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:30:52.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:31:17.105Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:31:42.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:32:07.101Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:32:32.096Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:32:57.099Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:33:22.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:33:47.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:34:12.108Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:34:37.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:35:02.102Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:35:27.105Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:35:52.098Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:36:17.097Z] ⚠️ Unknown message type: ping
+[2026-05-25T07:36:42.100Z] ⚠️ Unknown message type: ping

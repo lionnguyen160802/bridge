@@ -1,0 +1,15 @@
+{
+  "name": "flow-auto-bridge",
+  "version": "1.0.0",
+  "description": "Local bridge server between n8n workflow and Flow Auto Generator extension",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "cors": "^2.8.5"
+  }
+}

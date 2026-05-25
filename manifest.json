@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Flow Auto Generator",
+  "version": "4.0",
+  "description": "Tự động tạo video trên Google Flow — State machine automation with queue engine",
+  "permissions": [
+    "storage",
+    "downloads",
+    "tabs",
+    "activeTab",
+    "alarms",
+    "scripting",
+    "debugger"
+  ],
+  "host_permissions": [
+    "https://labs.google/*",
+    "http://localhost:3500/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://labs.google/fx/*"],
+      "js": ["constants.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://labs.google/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Flow Auto Generator"
+  }
+}

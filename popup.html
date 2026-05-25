@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Flow Auto Generator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 420px;
+      max-height: 580px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #09090f;
+      color: #e4e4ec;
+      font-size: 12px;
+      overflow-y: auto;
+    }
+
+    body::-webkit-scrollbar { width: 4px; }
+    body::-webkit-scrollbar-track { background: transparent; }
+    body::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 4px; }
+
+    /* ─── Header ─── */
+    .header {
+      padding: 16px 18px 14px;
+      background: linear-gradient(135deg, #0d0d18 0%, #12121f 100%);
+      border-bottom: 1px solid #1a1a2e;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.25);
+    }
+    .header-text { flex: 1; }
+    .header-title {
+      font-size: 16px; font-weight: 800;
+      background: linear-gradient(135deg, #c084fc, #818cf8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header-version {
+      font-size: 10px; color: #555; font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── Connection Bar ─── */
+    .conn-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 18px;
+      background: #0c0c16;
+      border-bottom: 1px solid #16162a;
+    }
+    .conn-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.4s ease;
+    }
+    .conn-dot.on {
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e80, 0 0 2px #22c55e;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    .conn-dot.off {
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef444460;
+    }
+    @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .conn-label { font-size: 11px; color: #888; flex: 1; }
+    .conn-label strong { color: #c4c4d4; }
+    .state-chip {
+      font-size: 10px; font-weight: 600;
+      padding: 3px 8px; border-radius: 6px;
+      background: #1a1a2e; color: #a78bfa;
+      border: 1px solid #2a2a4e;
+      max-width: 160px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .state-chip.active {
+      background: linear-gradient(135deg, #7c3aed20, #6366f120);
+      border-color: #7c3aed50;
+      color: #c4b5fd;
+      animation: state-glow 1.5s ease-in-out infinite;
+    }
+    @keyframes state-glow {
+      0%,100% { box-shadow: none; }
+      50% { box-shadow: 0 0 8px #7c3aed30; }
+    }
+
+    /* ─── Content ─── */
+    .content { padding: 12px 14px; }
+
+    /* ─── Stats Grid ─── */
+    .stats {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 6px; margin-bottom: 12px;
+    }
+    .stat {
+      background: #0f0f1c;
+      border: 1px solid #1a1a2e;
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .stat:hover { border-color: #2a2a4e; transform: translateY(-1px); }
+    .stat-num {
+      font-size: 20px; font-weight: 800;
+      line-height: 1;
+    }
+    .stat-num.purple { color: #a855f7; }
+    .stat-num.green { color: #22c55e; }
+    .stat-num.red { color: #ef4444; }
+    .stat-num.blue { color: #3b82f6; }
+    .stat-label {
+      font-size: 9px; color: #555;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-top: 4px; font-weight: 600;
+    }
+
+    /* ─── Current Job Card ─── */
+    .job-card {
+      background: linear-gradient(135deg, #0f0f1c 0%, #12121f 100%);
+      border: 1px solid #1e1e36;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      transition: all 0.3s;
+    }
+    .job-card.active {
+      border-color: #7c3aed40;
+      box-shadow: 0 2px 20px rgba(124, 58, 237, 0.08);
+    }
+    .job-card-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px;
+    }
+    .job-card-title {
+      font-size: 11px; font-weight: 700; color: #a78bfa;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      flex: 1;
+    }
+    .job-card-badge {
+      font-size: 9px; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .badge-processing { background: #7c3aed20; color: #a78bfa; border: 1px solid #7c3aed40; }
+    .badge-idle { background: #1a1a2e; color: #555; border: 1px solid #2a2a4e; }
+
+    .job-detail {
+      display: flex; align-items: center; gap: 6px;
+      padding: 3px 0;
+      font-size: 11px;
+    }
+    .job-detail-key { color: #555; min-width: 68px; font-weight: 500; }
+    .job-detail-val { color: #c4c4d4; flex: 1; word-break: break-all; }
+
+    /* Progress bar */
+    .progress-wrap {
+      margin-top: 8px;
+      background: #08080f; border-radius: 6px;
+      height: 6px; overflow: hidden;
+      border: 1px solid #1a1a2e;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #7c3aed, #a855f7, #c084fc);
+      border-radius: 6px;
+      transition: width 0.5s ease;
+      box-shadow: 0 0 10px #a855f740;
+    }
+
+    /* ─── Queue Section ─── */
+    .section {
+      background: #0f0f1c;
+      border: 1px solid #1a1a2e;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      background: #0c0c18;
+      border-bottom: 1px solid #1a1a2e;
+    }
+    .section-title {
+      font-size: 10px; font-weight: 700; color: #666;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      flex: 1;
+    }
+    .section-count {
+      font-size: 10px; font-weight: 700; color: #a78bfa;
+      background: #1a1a2e; padding: 1px 7px; border-radius: 4px;
+    }
+    .queue-list { max-height: 100px; overflow-y: auto; }
+    .queue-list::-webkit-scrollbar { width: 3px; }
+    .queue-list::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+    .queue-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      border-bottom: 1px solid #12121f;
+      font-size: 11px;
+    }
+    .queue-item:last-child { border-bottom: none; }
+    .queue-item-idx {
+      width: 18px; height: 18px;
+      background: #1a1a2e; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: #666;
+    }
+    .queue-item-name { flex: 1; color: #aaa; }
+    .queue-item-char { color: #555; font-size: 10px; }
+    .queue-empty {
+      text-align: center; padding: 14px;
+      color: #333; font-style: italic; font-size: 11px;
+    }
+
+    /* ─── Controls ─── */
+    .controls {
+      display: flex; gap: 6px;
+      margin-bottom: 10px;
+    }
+    .btn {
+      flex: 1; padding: 9px 6px;
+      border: none; border-radius: 8px;
+      font-size: 11px; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.3px;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-pause {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      box-shadow: 0 3px 12px #f59e0b30;
+    }
+    .btn-resume {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff;
+      box-shadow: 0 3px 12px #22c55e30;
+    }
+    .btn-skip {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      box-shadow: 0 3px 12px #3b82f630;
+    }
+    .btn-cancel {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      box-shadow: 0 3px 12px #ef444430;
+    }
+    .btn:disabled {
+      opacity: 0.35; cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none;
+    }
+
+    /* ─── Manual Job ─── */
+    .manual-section {
+      background: #0f0f1c; border: 1px solid #1a1a2e;
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 10px;
+    }
+    .manual-title {
+      font-size: 10px; font-weight: 700; color: #666;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .manual-row { display: flex; gap: 6px; margin-bottom: 6px; }
+    .manual-input {
+      flex: 1; padding: 7px 10px;
+      background: #08080f; border: 1px solid #1e1e36;
+      border-radius: 6px; color: #d4d4e8;
+      font-size: 11px; font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .manual-input:focus { border-color: #7c3aed; outline: none; }
+    .manual-input::placeholder { color: #333; }
+    textarea.manual-input {
+      resize: vertical; min-height: 46px;
+      font-family: inherit;
+    }
+    .btn-submit {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      color: #fff; width: 100%; padding: 8px;
+      box-shadow: 0 3px 12px #a855f730;
+    }
+
+    /* ─── Logs ─── */
+    .logs-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      background: #0c0c18;
+      border-bottom: 1px solid #1a1a2e;
+    }
+    .logs-wrap {
+      max-height: 140px; overflow-y: auto;
+      padding: 6px 10px;
+      font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+    .logs-wrap::-webkit-scrollbar { width: 3px; }
+    .logs-wrap::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+    .log-line {
+      padding: 2px 0;
+      border-bottom: 1px solid #0d0d18;
+      color: #666;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .log-line:last-child { border-bottom: none; }
+    .logs-empty {
+      text-align: center; padding: 14px;
+      color: #2a2a3e; font-style: italic;
+    }
+
+    .btn-clear {
+      background: #1a1a2e; border: 1px solid #2a2a4e;
+      color: #666; padding: 3px 8px; border-radius: 4px;
+      font-size: 9px; cursor: pointer; font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-clear:hover { background: #2a2a4e; color: #aaa; }
+
+    /* ─── Animations ─── */
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .content > * { animation: slide-in 0.25s ease-out; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🎬</div>
+    <div class="header-text">
+      <div class="header-title">Flow Auto Generator</div>
+      <div class="header-version">Automation Dashboard v4.0</div>
+    </div>
+  </div>
+
+  <!-- Connection Bar -->
+  <div class="conn-bar">
+    <span class="conn-dot off" id="connDot"></span>
+    <span class="conn-label" id="connLabel">Đang kiểm tra...</span>
+    <span class="state-chip" id="stateChip">IDLE</span>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num purple" id="statQueue">0</div>
+        <div class="stat-label">Queue</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num green" id="statDone">0</div>
+        <div class="stat-label">Done</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num red" id="statFailed">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num blue" id="statRetry">0</div>
+        <div class="stat-label">Retries</div>
+      </div>
+    </div>
+
+    <!-- Current Job -->
+    <div class="job-card" id="jobCard">
+      <div class="job-card-header">
+        <span class="job-card-title">Current Job</span>
+        <span class="job-card-badge badge-idle" id="jobBadge">IDLE</span>
+      </div>
+      <div id="jobDetails">
+        <div class="queue-empty">Không có job đang chạy</div>
+      </div>
+      <div class="progress-wrap" id="progressWrap" style="display:none">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-pause" id="btnPause" title="Pause queue">⏸ Pause</button>
+      <button class="btn btn-resume" id="btnResume" title="Resume queue" style="display:none">▶ Resume</button>
+      <button class="btn btn-skip" id="btnSkip" title="Skip current job" disabled>⏭ Skip</button>
+      <button class="btn btn-cancel" id="btnCancel" title="Cancel current job" disabled>✖ Cancel</button>
+    </div>
+
+    <!-- Queue -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">📋 Queue</span>
+        <span class="section-count" id="queueCount">0</span>
+      </div>
+      <div class="queue-list" id="queueList">
+        <div class="queue-empty">Queue trống</div>
+      </div>
+    </div>
+
+    <!-- Manual Job -->
+    <div class="manual-section" id="manualSection">
+      <div class="manual-title">🧪 Gửi Job Thủ Công</div>
+      <div class="manual-row">
+        <input class="manual-input" id="manualChar" type="text" placeholder="Character (optional)">
+        <input class="manual-input" id="manualScene" type="text" placeholder="Scene ID">
+      </div>
+      <textarea class="manual-input" id="manualPrompt" placeholder="Nhập prompt..."></textarea>
+      <button class="btn btn-submit" id="btnManual" style="margin-top:6px">🚀 Gửi Job</button>
+    </div>
+
+    <!-- Logs -->
+    <div class="section">
+      <div class="logs-header">
+        <span class="section-title" style="flex:1">📋 Logs</span>
+        <button class="btn-clear" id="btnClearLog">Xóa</button>
+      </div>
+      <div class="logs-wrap" id="logsWrap">
+        <div class="logs-empty">Chưa có hoạt động</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
