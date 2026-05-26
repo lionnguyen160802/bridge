@@ -9,7 +9,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 'https://bridge-u03a.onrender.com/'
+const PORT = process.env.PORT || 3500;
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 const LOG_FILE = path.join(__dirname, 'bridge.log');
 
