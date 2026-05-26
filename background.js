@@ -330,6 +330,7 @@ function completeCurrentJob(result) {
   sendToBridge({
     type: 'job_completed',
     jobId: job.id,
+    rowId: job.rowId,
     projectId: job.projectId,
     sceneId: job.sceneId,
     status: 'completed',
@@ -364,6 +365,7 @@ function failCurrentJob(error) {
   sendToBridge({
     type: 'job_failed',
     jobId: job.id,
+    rowId: job.rowId,
     projectId: job.projectId,
     sceneId: job.sceneId,
     status: 'failed',

@@ -84,7 +84,9 @@ app.get('/', (req, res) => {
 
 // Submit new job — called by n8n
 app.post('/generate', (req, res) => {
-  const { rowId, projectId, sceneId, character, prompt, callbackUrl } = req.body;
+  const { row_id, projectId, sceneId, character, prompt, callbackUrl } = req.body;
+  
+  const finalRowId = row_id || null;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing required field: prompt' });
@@ -93,6 +95,7 @@ app.post('/generate', (req, res) => {
   jobCounter++;
   const job = {
     id: (projectId || 'proj') + '_' + (sceneId || 'scene') + '_' + jobCounter + '_' + Date.now(),
+    rowId: finalRowId,
     projectId: projectId || 'default',
     sceneId: sceneId || 'scene_' + String(jobCounter).padStart(3, '0'),
     character: character || '',
@@ -112,7 +115,7 @@ app.post('/generate', (req, res) => {
   res.json({
     success: true,
     jobId: job.id,
-    rowId: rowId,
+    rowId: finalRowId,
     position: jobQueue.length,
     message: 'Job queued successfully'
   });
@@ -370,6 +373,7 @@ function dispatchNext() {
     type: 'new_job',
     job: {
       id: currentJob.id,
+      rowId: currentJob.rowId,
       projectId: currentJob.projectId,
       sceneId: currentJob.sceneId,
       character: currentJob.character,
@@ -401,6 +405,7 @@ async function sendCallback(result) {
 
   const payload = {
     jobId: result.jobId,
+    rowId: result.rowId || job?.rowId || null,
     projectId: result.projectId,
     sceneId: result.sceneId,
     status: result.status || (result.type === 'job_completed' ? 'completed' : 'failed'),
