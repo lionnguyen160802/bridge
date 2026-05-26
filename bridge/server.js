@@ -9,7 +9,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 3500;
+const PORT = 'https://bridge-u03a.onrender.com/'
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 const LOG_FILE = path.join(__dirname, 'bridge.log');
 
@@ -84,7 +84,7 @@ app.get('/', (req, res) => {
 
 // Submit new job — called by n8n
 app.post('/generate', (req, res) => {
-  const { projectId, sceneId, character, prompt, callbackUrl } = req.body;
+  const { rowId, projectId, sceneId, character, prompt, callbackUrl } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing required field: prompt' });
@@ -112,6 +112,7 @@ app.post('/generate', (req, res) => {
   res.json({
     success: true,
     jobId: job.id,
+    rowId: rowId,
     position: jobQueue.length,
     message: 'Job queued successfully'
   });

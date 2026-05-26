@@ -36,6 +36,9 @@ async function loadState() {
       state = { ...state, ...data.flowAutoState };
       // Don't restore WebSocket state — always start fresh
       state.wsConnected = false;
+      // Force settings to reflect latest constants (prevent stale localhost overrides)
+      state.settings.bridgeUrl = BRIDGE_URL;
+      state.settings.wsUrl = WS_URL;
     }
   } catch (e) {
     console.error('[FlowAuto] loadState error:', e);
@@ -224,7 +227,7 @@ function processQueue() {
 
 async function dispatchJobToContentScript(job) {
   try {
-    const tab = await findOrOpenFlowTab();
+    const tab = await findOrOpenFlowTab(job.projectId);
     if (!tab) {
       addLog('❌ Cannot find/open Google Flow tab');
       failCurrentJob('Cannot find Google Flow tab');
@@ -290,6 +293,27 @@ function completeCurrentJob(result) {
   if (!state.currentJob) return;
 
   const job = { ...state.currentJob };
+  
+  // Natively download videos using chrome.downloads API
+  if (result && result.videos) {
+    result.videos.forEach(v => {
+      if (v.base64) {
+        chrome.downloads.download({
+          url: v.base64,
+          filename: 'Veo/' + v.filename,
+          conflictAction: 'uniquify'
+        }, (downloadId) => {
+           if (chrome.runtime.lastError) {
+             addLog('❌ Download local lỗi: ' + chrome.runtime.lastError.message);
+           }
+        });
+      }
+    });
+    
+    // Strip Base64 from payload to prevent Bridge/Webhook crashes
+    result.videos = result.videos.map(v => ({ filename: v.filename, url: v.url }));
+  }
+
   job.status = 'COMPLETED';
   job.completedAt = Date.now();
   job.duration = job.completedAt - (job.startedAt || job.queuedAt);
@@ -301,13 +325,16 @@ function completeCurrentJob(result) {
   const durationStr = Math.round((job.duration || 0) / 1000) + 's';
   addLog('✅ Completed: ' + job.sceneId + ' (' + durationStr + ')');
 
+  const finalCallbackUrl = job.callbackUrl || state.settings?.defaultWebhookUrl || null;
+
   sendToBridge({
     type: 'job_completed',
     jobId: job.id,
     projectId: job.projectId,
     sceneId: job.sceneId,
     status: 'completed',
-    result: result
+    result: result,
+    callbackUrl: finalCallbackUrl
   });
 
   state.currentJob = null;
@@ -332,13 +359,16 @@ function failCurrentJob(error) {
 
   addLog('❌ Failed: ' + job.sceneId + ' — ' + error);
 
+  const finalCallbackUrl = job.callbackUrl || state.settings?.defaultWebhookUrl || null;
+
   sendToBridge({
     type: 'job_failed',
     jobId: job.id,
     projectId: job.projectId,
     sceneId: job.sceneId,
     status: 'failed',
-    error: error
+    error: error,
+    callbackUrl: finalCallbackUrl
   });
 
   state.currentJob = null;
@@ -396,20 +426,42 @@ async function findFlowTab() {
   return null;
 }
 
-async function findOrOpenFlowTab() {
+async function findOrOpenFlowTab(projectId) {
+  let targetUrl = 'https://labs.google/fx/vi/tools/flow';
+  if (projectId && projectId !== 'default' && projectId !== 'test_n8n') {
+     targetUrl = `https://labs.google/fx/vi/tools/flow/project/${projectId}`;
+  }
+
   let tab = await findFlowTab();
+  
   if (tab) {
+    // Check if the existing tab needs navigation
+    const currentUrl = tab.url || '';
+    if (projectId && projectId !== 'default' && projectId !== 'test_n8n' && !currentUrl.includes(`/project/${projectId}`)) {
+       addLog('🌐 Navigating existing tab to project: ' + projectId);
+       await chrome.tabs.update(tab.id, { url: targetUrl, active: true });
+       // Wait for navigation and load
+       return new Promise((resolve) => {
+         const onUpdated = (tabId, changeInfo) => {
+           if (tabId === tab.id && changeInfo.status === 'complete') {
+             chrome.tabs.onUpdated.removeListener(onUpdated);
+             setTimeout(() => resolve(tab), 3000); // Wait for SPA hydration
+           }
+         };
+         chrome.tabs.onUpdated.addListener(onUpdated);
+         setTimeout(() => { chrome.tabs.onUpdated.removeListener(onUpdated); resolve(tab); }, 15000);
+       });
+    }
+
     // Focus existing tab
     await chrome.tabs.update(tab.id, { active: true });
-    try {
-      await chrome.windows.update(tab.windowId, { focused: true });
-    } catch (e) {}
+    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (e) {}
     return tab;
   }
 
   // Open new tab
-  addLog('🌐 Opening Google Flow tab...');
-  tab = await chrome.tabs.create({ url: 'https://labs.google/fx/vi/tools/flow' });
+  addLog('🌐 Opening Google Flow tab: ' + targetUrl);
+  tab = await chrome.tabs.create({ url: targetUrl });
 
   // Wait for page load
   return new Promise((resolve) => {
@@ -576,10 +628,12 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     case MSG.MANUAL_JOB:
       // Submit job directly from popup
       enqueueJob({
+        id: 'manual_' + Date.now(),
         projectId: msg.projectId || 'manual',
         sceneId: msg.sceneId || 'scene_' + Date.now(),
         character: msg.character || '',
-        prompt: msg.prompt
+        prompt: msg.prompt,
+        callbackUrl: msg.callbackUrl || null
       });
       respond({ ok: true });
       return true;

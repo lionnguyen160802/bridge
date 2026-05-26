@@ -613,21 +613,40 @@
     return null;
   }
 
-  /** Detect completed video */
+  /** Detect completed videos (up to 3 newest at top) */
   function detectVideoComplete() {
-    for (const v of document.querySelectorAll('video')) {
+    const results = [];
+    const videos = Array.from(document.querySelectorAll('video'));
+    
+    for (const v of videos) {
       const src = v.src || v.currentSrc;
       if (src && (src.startsWith('http') || src.startsWith('blob:'))) {
-        return { element: v, src, type: 'video' };
+        results.push({ element: v, src, type: 'video' });
+        if (results.length >= 3) break;
+      } else {
+        const source = v.querySelector('source[src]');
+        if (source?.src) {
+           results.push({ element: v, src: source.src, type: 'source' });
+           if (results.length >= 3) break;
+        }
       }
-      const source = v.querySelector('source[src]');
-      if (source?.src) return { element: v, src: source.src, type: 'source' };
     }
-    for (const sel of ['a[download]', 'a[href*="download"]', 'button[aria-label*="Download"]', 'button[aria-label*="Tải"]']) {
-      const el = document.querySelector(sel);
-      if (el && isVisible(el)) return { element: el, src: el.href || '', type: 'download_button' };
+    
+    // Fallback to download buttons if no video tags found
+    if (results.length === 0) {
+      for (const sel of ['a[download]', 'a[href*="download"]', 'button[aria-label*="Download"]', 'button[aria-label*="Tải"]']) {
+        const buttons = Array.from(document.querySelectorAll(sel));
+        for (const el of buttons) {
+           if (isVisible(el)) {
+             results.push({ element: el, src: el.href || '', type: 'download_button' });
+             if (results.length >= 3) break;
+           }
+        }
+        if (results.length >= 3) break;
+      }
     }
-    return null;
+    
+    return results.length > 0 ? results : null;
   }
 
   // ==========================================
@@ -659,27 +678,53 @@
   }
 
   // ==========================================
-  // VIDEO DOWNLOAD
+  // VIDEO DOWNLOAD (Base64 to n8n)
   // ==========================================
-  function downloadVideo(info, projectId, sceneId) {
+  async function downloadVideos(videos, projectId, sceneId) {
     try {
-      const filename = (projectId || 'project') + '_' + (sceneId || 'scene') + '.mp4';
-      if (info.type === 'download_button') {
-        simulateClick(info.element);
-        setTimeout(() => window.postMessage({ type: 'FLOW_DOWNLOAD_COMPLETE', filename, url: info.src }, '*'), 2000);
-        return true;
+      const results = [];
+      for (let i = 0; i < videos.length; i++) {
+        const info = videos[i];
+        const filename = (projectId || 'project') + '_' + (sceneId || 'scene') + '_v' + (i + 1) + '.mp4';
+        
+        let videoUrl = info.src;
+        if (!videoUrl && info.type === 'download_button') {
+          simulateClick(info.element);
+          results.push({ filename, url: '', base64: '' });
+          continue;
+        }
+        
+        log(`📥 Fetching video blob ${i+1}/${videos.length}: ` + videoUrl);
+        const response = await fetch(videoUrl);
+        const blob = await response.blob();
+        
+        log(`📦 Converting video ${i+1} to Base64 (` + Math.round(blob.size / 1024 / 1024 * 10) / 10 + ' MB)...');
+        
+        const base64data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        
+        log(`✅ Base64 conversion ${i+1} complete.`);
+        results.push({
+          filename,
+          url: videoUrl,
+          base64: base64data
+        });
       }
-      if (info.src) {
-        const a = document.createElement('a');
-        a.href = info.src; a.download = filename;
-        a.style.cssText = 'position:fixed;top:-9999px;opacity:0';
-        document.body.appendChild(a); a.click();
-        setTimeout(() => document.body.removeChild(a), 500);
-        window.postMessage({ type: 'FLOW_DOWNLOAD_COMPLETE', filename, url: info.src }, '*');
-        return true;
-      }
-    } catch (e) { log('❌ Download error: ' + e.message); }
-    return false;
+      
+      window.postMessage({ 
+        type: 'FLOW_DOWNLOAD_COMPLETE', 
+        videos: results
+      }, '*');
+      
+      return true;
+    } catch (e) { 
+      log('❌ Download error: ' + e.message); 
+      return false; 
+    }
   }
 
   // ==========================================
@@ -920,19 +965,22 @@
           sendResult(action, true, { log: '✓ Video already present', status: 'complete' });
           return;
         }
-        if (startRenderMonitor()) {
-          sendResult(action, true, { log: '⏳ Monitoring render...', status: 'monitoring' });
-        } else {
-          sendResult(action, false, null, 'Could not start render monitor');
-        }
+        
+        log('⏳ Waiting exactly 3 minutes (180s) for video to render...');
+        sendResult(action, true, { log: '⏳ Waiting 3 minutes for render...', status: 'monitoring' });
+        
+        setTimeout(() => {
+           log('⏰ 3 minutes elapsed. Assuming video is ready.');
+           window.postMessage({ type: 'FLOW_VIDEO_DETECTED' }, '*');
+        }, 180000); // 3 minutes
         break;
       }
 
       // ── Step 11: Detect completion ──
       case 'detectComplete': {
-        const video = detectVideoComplete();
-        if (video) {
-          sendResult(action, true, { log: '✓ Video ready: ' + video.type, video: { src: video.src, type: video.type } });
+        const videos = detectVideoComplete();
+        if (videos && videos.length > 0) {
+          sendResult(action, true, { log: '✓ Videos ready: ' + videos.length, videos: videos.map(v => ({ src: v.src, type: v.type })) });
         } else {
           sendResult(action, false, null, 'Video not yet complete');
         }
@@ -941,12 +989,16 @@
 
       // ── Step 12: Download ──
       case 'downloadVideo': {
-        const video = detectVideoComplete();
-        if (video && downloadVideo(video, params.projectId, params.sceneId)) {
-          sendResult(action, true, { log: '✓ Download initiated' });
-        } else {
-          sendResult(action, false, null, 'Download failed');
-        }
+        sendResult(action, true, { log: '⏳ Chờ 10s để đảm bảo video load xong...', status: 'monitoring' });
+        
+        setTimeout(() => {
+          const videos = detectVideoComplete();
+          if (videos && videos.length > 0) {
+            downloadVideos(videos, params.projectId, params.sceneId);
+          } else {
+            window.postMessage({ type: 'FLOW_DOWNLOAD_COMPLETE', videos: [] }, '*');
+          }
+        }, 10000);
         break;
       }
 

@@ -53,8 +53,8 @@ const STATE_TIMEOUTS = {
 };
 
 // WebSocket / Bridge configuration
-const WS_URL = 'ws://localhost:3500';
-const BRIDGE_URL = 'http://localhost:3500';
+const WS_URL = 'wss://bridge-u03a.onrender.com';
+const BRIDGE_URL = 'https://bridge-u03a.onrender.com';
 const WS_RECONNECT_DELAYS = [1000, 2000, 5000, 10000, 30000];
 const WS_HEARTBEAT_INTERVAL = 25000;
 

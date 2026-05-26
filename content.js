@@ -30,6 +30,9 @@ const STATE_SEQUENCE = [
   FLOW_STATES.INJECT_PROMPT,
   FLOW_STATES.VERIFY_INPUT,
   FLOW_STATES.PRESS_ENTER,
+  FLOW_STATES.WAIT_RENDER,
+  FLOW_STATES.DETECT_COMPLETE,
+  FLOW_STATES.DOWNLOAD_VIDEO,
   FLOW_STATES.DONE
 ];
 
@@ -69,7 +72,7 @@ function transitionTo(newState, logMsg) {
   reportState(newState, msg);
 
   if (newState === FLOW_STATES.DONE) {
-    completeJob();
+    completeJob(currentJob?.result || { success: true, message: 'Flow completed successfully' });
     return;
   }
 
@@ -204,7 +207,10 @@ window.addEventListener('message', (event) => {
       const log = data?.log || ('✓ ' + action);
       reportState(currentState, log);
 
-      if (currentState === FLOW_STATES.WAIT_RENDER && data?.status === 'monitoring') {
+      if (
+        (currentState === FLOW_STATES.WAIT_RENDER && data?.status === 'monitoring') ||
+        (currentState === FLOW_STATES.DOWNLOAD_VIDEO && data?.status === 'monitoring')
+      ) {
         return;
       }
 
@@ -228,8 +234,12 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === MSG.DOWNLOAD_DONE) {
     if (currentState === FLOW_STATES.DOWNLOAD_VIDEO) {
-      reportState(FLOW_STATES.DOWNLOAD_VIDEO, '💾 Downloaded: ' + (event.data.filename || ''));
-      transitionTo(FLOW_STATES.CALLBACK_RESULT, '📤 Sending result...');
+      const videosCount = event.data.videos ? event.data.videos.length : 0;
+      reportState(FLOW_STATES.DOWNLOAD_VIDEO, '💾 Downloaded/Encoded ' + videosCount + ' videos');
+      currentJob.result = {
+        videos: event.data.videos || []
+      };
+      transitionTo(FLOW_STATES.DONE, '📤 Processing video payload...');
     }
   }
 

@@ -227,6 +227,7 @@ document.getElementById('btnClearLog').addEventListener('click', async () => {
 document.getElementById('btnManual').addEventListener('click', async () => {
   const character = document.getElementById('manualChar').value.trim();
   const sceneId = document.getElementById('manualScene').value.trim();
+  const webhookUrl = document.getElementById('manualWebhook').value.trim();
   const prompt = document.getElementById('manualPrompt').value.trim();
 
   if (!prompt) {
@@ -239,16 +240,40 @@ document.getElementById('btnManual').addEventListener('click', async () => {
     character: character,
     sceneId: sceneId || 'manual_' + Date.now(),
     projectId: 'manual',
-    prompt: prompt
+    prompt: prompt,
+    callbackUrl: webhookUrl || null
   });
 
   // Clear inputs
   document.getElementById('manualChar').value = '';
   document.getElementById('manualScene').value = '';
   document.getElementById('manualPrompt').value = '';
-
+  
   setTimeout(loadDashboard, 500);
 });
+
+document.getElementById('btnSaveSettings').addEventListener('click', async () => {
+  const webhookUrl = document.getElementById('settingDefaultWebhook').value.trim();
+  
+  await chrome.runtime.sendMessage({
+    type: 'UPDATE_SETTINGS',
+    settings: { defaultWebhookUrl: webhookUrl || null }
+  });
+  
+  alert('Đã lưu cài đặt chung!');
+  loadDashboard();
+});
+
+// Update settings when dashboard loads
+const oldRenderConnection = renderConnection;
+renderConnection = function(data) {
+  oldRenderConnection(data);
+  // Populate settings if not focused
+  const webhookInput = document.getElementById('settingDefaultWebhook');
+  if (document.activeElement !== webhookInput && data.settings) {
+    webhookInput.value = data.settings.defaultWebhookUrl || '';
+  }
+};
 
 // ==========================================
 // INIT

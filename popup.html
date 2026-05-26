@@ -416,8 +416,20 @@
         <input class="manual-input" id="manualChar" type="text" placeholder="Character (optional)">
         <input class="manual-input" id="manualScene" type="text" placeholder="Scene ID">
       </div>
+      <div class="manual-row">
+        <input class="manual-input" id="manualWebhook" type="text" placeholder="Webhook URL (optional)">
+      </div>
       <textarea class="manual-input" id="manualPrompt" placeholder="Nhập prompt..."></textarea>
       <button class="btn btn-submit" id="btnManual" style="margin-top:6px">🚀 Gửi Job</button>
+    </div>
+
+    <!-- Settings -->
+    <div class="manual-section" id="settingsSection">
+      <div class="manual-title">⚙️ Cài đặt chung (Tự động hóa)</div>
+      <div class="manual-row">
+        <input class="manual-input" id="settingDefaultWebhook" type="text" placeholder="Default Webhook URL (nhận video tự động)">
+      </div>
+      <button class="btn btn-submit" id="btnSaveSettings" style="margin-top:6px; background: linear-gradient(135deg, #3b82f6, #2563eb);">💾 Lưu Cài Đặt</button>
     </div>
 
     <!-- Logs -->
