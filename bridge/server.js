@@ -193,12 +193,17 @@ app.post('/resume', (req, res) => {
   res.json({ success: true, message: 'Queue resumed' });
 });
 
-// Clear completed/failed history
+// Clear completed/failed history and unstick queue
 app.post('/clear-history', (req, res) => {
   completedJobs = [];
   failedJobs = [];
+  if (currentJob) {
+    log('⚠️ Forcefully clearing stuck currentJob');
+    currentJob = null;
+  }
   saveQueue();
-  log('🧹 History cleared');
+  log('🧹 History and current job cleared');
+  dispatchNext();
   res.json({ success: true });
 });
 

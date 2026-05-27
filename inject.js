@@ -585,9 +585,9 @@
       if (role === 'search' || role === 'searchbox') return false;
       const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
       if (ariaLabel.includes('search') || ariaLabel.includes('tìm kiếm')) return false;
-      // Must be in the bottom half of the viewport (prompt bar is at the bottom)
+      // Must be in the lower part of the viewport (ignore top navigation search bars)
       const rect = el.getBoundingClientRect();
-      if (rect.top < viewH * 0.4) return false;
+      if (rect.top < 100) return false;
       return true;
     }
 
@@ -628,15 +628,16 @@
       for (const el of allInputs) {
         if (!isVisible(el)) continue;
         const r = el.getBoundingClientRect();
-        // Same vertical area (within 60px)
-        if (Math.abs(r.top - btnRect.top) < 60 || Math.abs(r.bottom - btnRect.bottom) < 60) {
+        // The bottom of the input should be close to the bottom of the button
+        // Even if the input expands upwards immensely, their bottoms will align.
+        if (Math.abs(r.bottom - btnRect.bottom) < 120) {
           log('✓ findPromptInput: near "Tác nhân" button at y=' + Math.round(r.top));
           return el;
         }
       }
     }
 
-    // Strategy 4: Any visible input/textarea in the bottom 50% of viewport
+    // Strategy 4: Any visible input/textarea in the bottom viewport
     for (const el of allInputs) {
       if (isPromptBarInput(el)) {
         log('✓ findPromptInput: bottom-half input at y=' + Math.round(el.getBoundingClientRect().top));

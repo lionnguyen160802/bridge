@@ -37,6 +37,16 @@ const STATE_SEQUENCE = [
 ];
 
 function nextState(state) {
+  // If we just clicked add button, check if there are more characters to process
+  if (state === FLOW_STATES.CLICK_ADD_BUTTON) {
+    if (typeof currentCharacterIndex !== 'undefined' && typeof currentCharacterList !== 'undefined') {
+      if (currentCharacterIndex < currentCharacterList.length - 1) {
+        currentCharacterIndex++;
+        return FLOW_STATES.FIND_CHARACTER; // Loop back
+      }
+    }
+  }
+
   const idx = STATE_SEQUENCE.indexOf(state);
   if (idx >= 0 && idx < STATE_SEQUENCE.length - 1) {
     return STATE_SEQUENCE[idx + 1];
@@ -123,22 +133,24 @@ function onStateTimeout() {
 function executeState(state) {
   if (stopped || !currentJob) return;
 
+  const charName = currentCharacterList[currentCharacterIndex];
+
   switch (state) {
     case FLOW_STATES.FIND_CHARACTER:
-      if (!currentJob.character) {
+      if (!charName) {
         // No character — skip to WAIT_TEXTAREA (find the prompt input directly)
         transitionTo(FLOW_STATES.WAIT_TEXTAREA, '⏭️ No character — skipping to prompt input');
         return;
       }
-      sendAction('findCharacter', { name: currentJob.character });
+      sendAction('findCharacter', { name: charName });
       break;
 
     case FLOW_STATES.HOVER_CHARACTER:
-      sendAction('hoverCharacter', { name: currentJob.character });
+      sendAction('hoverCharacter', { name: charName });
       break;
 
     case FLOW_STATES.CLICK_MORE_MENU:
-      sendAction('clickMoreMenu', { name: currentJob.character });
+      sendAction('clickMoreMenu', { name: charName });
       break;
 
     case FLOW_STATES.WAIT_MENU:
@@ -284,8 +296,15 @@ function startJob(job) {
   pendingAction = null;
   clearTimeout(stateTimeoutId);
 
+  // Parse comma-separated characters
+  currentCharacterList = [];
+  if (job.character) {
+    currentCharacterList = job.character.split(',').map(c => c.trim()).filter(c => c.length > 0);
+  }
+  currentCharacterIndex = 0;
+
   reportState(FLOW_STATES.IDLE, '🚀 Job started: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : ''));
-  transitionTo(FLOW_STATES.FIND_CHARACTER, '🔍 Finding character: ' + (job.character || '(none)'));
+  transitionTo(FLOW_STATES.FIND_CHARACTER, '🔍 Finding character: ' + (currentCharacterList[0] || '(none)'));
 }
 
 function completeJob(result) {

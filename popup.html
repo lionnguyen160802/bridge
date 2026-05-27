@@ -430,13 +430,23 @@
     <div class="manual-section" id="settingsSection">
       <div class="manual-title">⚙️ Cài đặt chung (Tự động hóa)</div>
       <div class="manual-row">
+        <input class="manual-input" id="settingBridgeUrl" type="text" placeholder="Server URL (VD: http://localhost:3000)">
+      </div>
+      <div class="manual-row" style="margin-top:6px">
         <input class="manual-input" id="settingDefaultWebhook" type="text" placeholder="Default Webhook URL (nhận video tự động)">
       </div>
       <div class="manual-row" style="margin-top:6px">
-        <input class="manual-input" id="settingDriveToken" type="text" placeholder="Google Drive API Token (tùy chọn)">
-      </div>
-      <div class="manual-row" style="margin-top:6px">
         <input class="manual-input" id="settingDriveFolderId" type="text" placeholder="Google Drive Folder ID (tùy chọn)">
+      </div>
+      <div class="manual-title" style="margin-top:10px; font-size:10px; color:#888;">Tự động Refresh Token Drive</div>
+      <div class="manual-row" style="margin-top:4px">
+        <input class="manual-input" id="settingDriveClientId" type="text" placeholder="Client ID">
+      </div>
+      <div class="manual-row" style="margin-top:4px">
+        <input class="manual-input" id="settingDriveClientSecret" type="password" placeholder="Client Secret">
+      </div>
+      <div class="manual-row" style="margin-top:4px">
+        <input class="manual-input" id="settingDriveRefreshToken" type="password" placeholder="Refresh Token">
       </div>
       <button class="btn btn-submit" id="btnSaveSettings" style="margin-top:8px; background: linear-gradient(135deg, #3b82f6, #2563eb);">💾 Lưu Cài Đặt</button>
     </div>

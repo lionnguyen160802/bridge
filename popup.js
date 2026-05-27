@@ -255,16 +255,23 @@ document.getElementById('btnManual').addEventListener('click', async () => {
 });
 
 document.getElementById('btnSaveSettings').addEventListener('click', async () => {
+  const bridgeUrl = document.getElementById('settingBridgeUrl').value.trim();
   const webhookUrl = document.getElementById('settingDefaultWebhook').value.trim();
-  const driveToken = document.getElementById('settingDriveToken').value.trim();
   const driveFolderId = document.getElementById('settingDriveFolderId').value.trim();
+  const clientId = document.getElementById('settingDriveClientId').value.trim();
+  const clientSecret = document.getElementById('settingDriveClientSecret').value.trim();
+  const refreshToken = document.getElementById('settingDriveRefreshToken').value.trim();
   
   await chrome.runtime.sendMessage({
     type: 'UPDATE_SETTINGS',
     settings: { 
+      bridgeUrl: bridgeUrl || 'http://localhost:3000',
+      wsUrl: (bridgeUrl || 'http://localhost:3000').replace('http://', 'ws://').replace('https://', 'wss://') + '/stream',
       defaultWebhookUrl: webhookUrl || null,
-      driveToken: driveToken || null,
-      driveFolderId: driveFolderId || null
+      driveFolderId: driveFolderId || null,
+      driveClientId: clientId || null,
+      driveClientSecret: clientSecret || null,
+      driveRefreshToken: refreshToken || null
     }
   });
   
@@ -277,14 +284,20 @@ const oldRenderConnection = renderConnection;
 renderConnection = function(data) {
   oldRenderConnection(data);
   // Populate settings if not focused
+  const bridgeInput = document.getElementById('settingBridgeUrl');
   const webhookInput = document.getElementById('settingDefaultWebhook');
-  const tokenInput = document.getElementById('settingDriveToken');
   const folderInput = document.getElementById('settingDriveFolderId');
+  const clientIdInput = document.getElementById('settingDriveClientId');
+  const clientSecretInput = document.getElementById('settingDriveClientSecret');
+  const refreshTokenInput = document.getElementById('settingDriveRefreshToken');
   
   if (data.settings) {
+    if (document.activeElement !== bridgeInput) bridgeInput.value = data.settings.bridgeUrl || 'http://localhost:3000';
     if (document.activeElement !== webhookInput) webhookInput.value = data.settings.defaultWebhookUrl || '';
-    if (document.activeElement !== tokenInput) tokenInput.value = data.settings.driveToken || '';
     if (document.activeElement !== folderInput) folderInput.value = data.settings.driveFolderId || '';
+    if (document.activeElement !== clientIdInput) clientIdInput.value = data.settings.driveClientId || '';
+    if (document.activeElement !== clientSecretInput) clientSecretInput.value = data.settings.driveClientSecret || '';
+    if (document.activeElement !== refreshTokenInput) refreshTokenInput.value = data.settings.driveRefreshToken || '';
   }
 };
 

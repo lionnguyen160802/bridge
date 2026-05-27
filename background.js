@@ -36,9 +36,14 @@ async function loadState() {
       state = { ...state, ...data.flowAutoState };
       // Don't restore WebSocket state — always start fresh
       state.wsConnected = false;
-      // Force settings to reflect latest constants (prevent stale localhost overrides)
-      state.settings.bridgeUrl = BRIDGE_URL;
-      state.settings.wsUrl = WS_URL;
+      
+      // Ensure settings object exists
+      if (!state.settings) {
+        state.settings = {
+          bridgeUrl: BRIDGE_URL,
+          wsUrl: WS_URL
+        };
+      }
     }
   } catch (e) {
     console.error('[FlowAuto] loadState error:', e);
@@ -295,18 +300,23 @@ function completeCurrentJob(result) {
   const job = { ...state.currentJob };
   
   // Natively download videos using chrome.downloads API and optionally Drive
-  const driveToken = state.settings?.driveToken || null;
   const driveFolderId = job.driveFolderId || state.settings?.driveFolderId || null;
 
   if (result && result.videos) {
-    result.videos.forEach(v => {
-      if (v.base64) {
+    // Preserve references to the original objects that contain base64
+    const videosWithBase64 = [...result.videos];
+
+    // 1. Pre-validate and refresh token if needed
+    ensureValidToken().then(async (driveToken) => {
+      // 2. Process all videos sequentially or in parallel
+      for (const v of videosWithBase64) {
+        if (!v.base64) continue;
+
         // Upload to Google Drive if configured
         if (driveToken && driveFolderId) {
           addLog('📁 Đang upload lên Drive: ' + v.filename);
-          uploadToDrive(v.base64, v.filename, driveFolderId, driveToken).then(url => {
-            if (url) addLog('✅ Đã lưu Drive: ' + url);
-          });
+          const url = await uploadToDrive(v.base64, v.filename, driveFolderId, driveToken);
+          if (url) addLog('✅ Đã lưu Drive: ' + url);
         }
       }
     });
@@ -696,8 +706,60 @@ loadState().then(() => {
 });
 
 // ==========================================
-// GOOGLE DRIVE UPLOAD
+// GOOGLE DRIVE UPLOAD & OAUTH
 // ==========================================
+async function ensureValidToken() {
+  const { driveClientId, driveClientSecret, driveRefreshToken } = state.settings || {};
+  let currentToken = state.settings?.driveToken || null;
+  let tokenExpiry = state.settings?.tokenExpiry || 0;
+
+  if (!driveClientId || !driveClientSecret || !driveRefreshToken) {
+    return null; // Missing config
+  }
+
+  // If token is valid for at least 5 more minutes
+  if (currentToken && tokenExpiry > Date.now() + 5 * 60 * 1000) {
+    return currentToken;
+  }
+
+  addLog('🔄 Đang làm mới Google OAuth Token...');
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: driveClientId,
+        client_secret: driveClientSecret,
+        refresh_token: driveRefreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      addLog('❌ Lỗi Refresh Token: ' + res.status + ' ' + errText.substring(0, 100));
+      return null;
+    }
+
+    const data = await res.json();
+    currentToken = data.access_token;
+    // Google tokens usually expire in 3600 seconds
+    tokenExpiry = Date.now() + (data.expires_in * 1000); 
+
+    // Save to state
+    if (!state.settings) state.settings = {};
+    state.settings.driveToken = currentToken;
+    state.settings.tokenExpiry = tokenExpiry;
+    saveState();
+
+    addLog('✅ Làm mới Token thành công');
+    return currentToken;
+  } catch (err) {
+    addLog('❌ Refresh Token bị lỗi mạng: ' + err.message);
+    return null;
+  }
+}
+
 async function uploadToDrive(base64data, fileName, driveFolderId, token) {
   try {
     const metadata = { name: fileName, mimeType: 'video/mp4', parents: [driveFolderId] };
