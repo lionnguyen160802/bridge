@@ -84,7 +84,7 @@ app.get('/', (req, res) => {
 
 // Submit new job — called by n8n
 app.post('/generate', (req, res) => {
-  // Support both Object {...} and Array [{...}] payloads from n8n
+  // Support both Object {...} and Array [{...}] payloads from N8N
   const body = Array.isArray(req.body) ? req.body[0] : req.body;
   const { row_id, rowId, projectId, sceneId, character, prompt, callbackUrl, driveFolderId } = body || {};
   
