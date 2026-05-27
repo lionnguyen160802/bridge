@@ -419,7 +419,10 @@
       <div class="manual-row">
         <input class="manual-input" id="manualWebhook" type="text" placeholder="Webhook URL (optional)">
       </div>
-      <textarea class="manual-input" id="manualPrompt" placeholder="Nhập prompt..."></textarea>
+      <div class="manual-row" style="margin-top:4px">
+        <input class="manual-input" id="manualDriveFolderId" type="text" placeholder="Drive Folder ID (optional)">
+      </div>
+      <textarea class="manual-input" id="manualPrompt" placeholder="Nhập prompt..." style="margin-top:4px"></textarea>
       <button class="btn btn-submit" id="btnManual" style="margin-top:6px">🚀 Gửi Job</button>
     </div>
 
@@ -429,7 +432,13 @@
       <div class="manual-row">
         <input class="manual-input" id="settingDefaultWebhook" type="text" placeholder="Default Webhook URL (nhận video tự động)">
       </div>
-      <button class="btn btn-submit" id="btnSaveSettings" style="margin-top:6px; background: linear-gradient(135deg, #3b82f6, #2563eb);">💾 Lưu Cài Đặt</button>
+      <div class="manual-row" style="margin-top:6px">
+        <input class="manual-input" id="settingDriveToken" type="text" placeholder="Google Drive API Token (tùy chọn)">
+      </div>
+      <div class="manual-row" style="margin-top:6px">
+        <input class="manual-input" id="settingDriveFolderId" type="text" placeholder="Google Drive Folder ID (tùy chọn)">
+      </div>
+      <button class="btn btn-submit" id="btnSaveSettings" style="margin-top:8px; background: linear-gradient(135deg, #3b82f6, #2563eb);">💾 Lưu Cài Đặt</button>
     </div>
 
     <!-- Logs -->

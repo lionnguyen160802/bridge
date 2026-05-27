@@ -84,9 +84,11 @@ app.get('/', (req, res) => {
 
 // Submit new job — called by n8n
 app.post('/generate', (req, res) => {
-  const { row_id, projectId, sceneId, character, prompt, callbackUrl } = req.body;
+  // Support both Object {...} and Array [{...}] payloads from n8n
+  const body = Array.isArray(req.body) ? req.body[0] : req.body;
+  const { row_id, rowId, projectId, sceneId, character, prompt, callbackUrl, driveFolderId } = body || {};
   
-  const finalRowId = row_id || null;
+  const finalRowId = row_id || rowId || null;
 
   if (!prompt) {
     return res.status(400).json({ error: 'Missing required field: prompt' });
@@ -101,6 +103,7 @@ app.post('/generate', (req, res) => {
     character: character || '',
     prompt: prompt,
     callbackUrl: callbackUrl || null,
+    driveFolderId: driveFolderId || null,
     status: 'QUEUED',
     createdAt: Date.now()
   };
@@ -116,6 +119,7 @@ app.post('/generate', (req, res) => {
     success: true,
     jobId: job.id,
     rowId: finalRowId,
+    folderId: driveFolderId,
     position: jobQueue.length,
     message: 'Job queued successfully'
   });
@@ -377,7 +381,9 @@ function dispatchNext() {
       projectId: currentJob.projectId,
       sceneId: currentJob.sceneId,
       character: currentJob.character,
-      prompt: currentJob.prompt
+      prompt: currentJob.prompt,
+      callbackUrl: currentJob.callbackUrl,
+      driveFolderId: currentJob.driveFolderId
     }
   });
 }

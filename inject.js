@@ -7,8 +7,55 @@
 (function () {
   'use strict';
 
+  let authToken = '';
+
+  // --- Intercept Fetch for Token ---
+  const _fetch = window.fetch;
+  window.fetch = async function(...args) {
+    try {
+      const [url, opts] = args;
+      const urlStr = (url || '').toString();
+      if (urlStr.includes('googleapis.com')) {
+        if (opts && opts.headers) {
+          let auth = '';
+          if (opts.headers instanceof Headers) auth = opts.headers.get('Authorization') || '';
+          else if (typeof opts.headers === 'object') auth = opts.headers['Authorization'] || opts.headers['authorization'] || '';
+          if (auth && auth.length > 20) authToken = auth.replace('Bearer ', '');
+        }
+      }
+    } catch(e) {}
+    return _fetch.apply(this, args);
+  };
+
+  // --- Intercept XHR for Token ---
+  try {
+    const _open = XMLHttpRequest.prototype.open;
+    const _setHeader = XMLHttpRequest.prototype.setRequestHeader;
+    XMLHttpRequest.prototype.open = function(method, url) {
+      this._vUrl = (url || '').toString();
+      return _open.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+      if (this._vUrl && this._vUrl.includes('googleapis.com') && name.toLowerCase() === 'authorization') {
+        authToken = (value || '').replace('Bearer ', '');
+      }
+      return _setHeader.apply(this, arguments);
+    };
+  } catch(e) {}
+
   const TAG = '[FlowAuto:inject]';
   let renderObserver = null;
+  let preexistingVideos = new Set();
+
+  function capturePreexistingVideos() {
+    preexistingVideos.clear();
+    document.querySelectorAll('video').forEach(v => {
+      if (v.src) preexistingVideos.add(v.src);
+      if (v.currentSrc) preexistingVideos.add(v.currentSrc);
+      v.querySelectorAll('source').forEach(s => { if (s.src) preexistingVideos.add(s.src); });
+    });
+    log('📸 Captured ' + preexistingVideos.size + ' pre-existing video URLs to ignore.');
+  }
 
   function log(msg) {
     console.log(TAG, msg);
@@ -613,19 +660,19 @@
     return null;
   }
 
-  /** Detect completed videos (up to 3 newest at top) */
+  /** Detect completed videos (up to 3 newest at top/bottom) */
   function detectVideoComplete() {
     const results = [];
-    const videos = Array.from(document.querySelectorAll('video'));
+    const videos = Array.from(document.querySelectorAll('video')).reverse();
     
     for (const v of videos) {
       const src = v.src || v.currentSrc;
-      if (src && (src.startsWith('http') || src.startsWith('blob:'))) {
+      if (src && (src.startsWith('http') || src.startsWith('blob:')) && !preexistingVideos.has(src)) {
         results.push({ element: v, src, type: 'video' });
         if (results.length >= 3) break;
       } else {
         const source = v.querySelector('source[src]');
-        if (source?.src) {
+        if (source?.src && !preexistingVideos.has(source.src)) {
            results.push({ element: v, src: source.src, type: 'source' });
            if (results.length >= 3) break;
         }
@@ -635,7 +682,7 @@
     // Fallback to download buttons if no video tags found
     if (results.length === 0) {
       for (const sel of ['a[download]', 'a[href*="download"]', 'button[aria-label*="Download"]', 'button[aria-label*="Tải"]']) {
-        const buttons = Array.from(document.querySelectorAll(sel));
+        const buttons = Array.from(document.querySelectorAll(sel)).reverse();
         for (const el of buttons) {
            if (isVisible(el)) {
              results.push({ element: el, src: el.href || '', type: 'download_button' });
@@ -717,7 +764,8 @@
       
       window.postMessage({ 
         type: 'FLOW_DOWNLOAD_COMPLETE', 
-        videos: results
+        videos: results,
+        token: authToken
       }, '*');
       
       return true;
@@ -904,6 +952,9 @@
         if (input) {
           input.focus();
           
+          // 🛑 Capture existing videos BEFORE we submit the new prompt!
+          capturePreexistingVideos();
+          
           log('🐞 Requesting OS-level Debugger Enter Key...');
           
           const handleEnterResponse = (e) => {
@@ -966,13 +1017,13 @@
           return;
         }
         
-        log('⏳ Waiting exactly 3 minutes (180s) for video to render...');
-        sendResult(action, true, { log: '⏳ Waiting 3 minutes for render...', status: 'monitoring' });
+        log('⏳ Waiting exactly 2 minutes (120s) for video to render...');
+        sendResult(action, true, { log: '⏳ Waiting 2 minutes for render...', status: 'monitoring' });
         
         setTimeout(() => {
-           log('⏰ 3 minutes elapsed. Assuming video is ready.');
+           log('⏰ 2 minutes elapsed. Assuming video is ready.');
            window.postMessage({ type: 'FLOW_VIDEO_DETECTED' }, '*');
-        }, 180000); // 3 minutes
+        }, 120000); // 2 minutes
         break;
       }
 

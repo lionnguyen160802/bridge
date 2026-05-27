@@ -228,6 +228,7 @@ document.getElementById('btnManual').addEventListener('click', async () => {
   const character = document.getElementById('manualChar').value.trim();
   const sceneId = document.getElementById('manualScene').value.trim();
   const webhookUrl = document.getElementById('manualWebhook').value.trim();
+  const driveFolderId = document.getElementById('manualDriveFolderId').value.trim();
   const prompt = document.getElementById('manualPrompt').value.trim();
 
   if (!prompt) {
@@ -241,7 +242,8 @@ document.getElementById('btnManual').addEventListener('click', async () => {
     sceneId: sceneId || 'manual_' + Date.now(),
     projectId: 'manual',
     prompt: prompt,
-    callbackUrl: webhookUrl || null
+    callbackUrl: webhookUrl || null,
+    driveFolderId: driveFolderId || null
   });
 
   // Clear inputs
@@ -254,10 +256,16 @@ document.getElementById('btnManual').addEventListener('click', async () => {
 
 document.getElementById('btnSaveSettings').addEventListener('click', async () => {
   const webhookUrl = document.getElementById('settingDefaultWebhook').value.trim();
+  const driveToken = document.getElementById('settingDriveToken').value.trim();
+  const driveFolderId = document.getElementById('settingDriveFolderId').value.trim();
   
   await chrome.runtime.sendMessage({
     type: 'UPDATE_SETTINGS',
-    settings: { defaultWebhookUrl: webhookUrl || null }
+    settings: { 
+      defaultWebhookUrl: webhookUrl || null,
+      driveToken: driveToken || null,
+      driveFolderId: driveFolderId || null
+    }
   });
   
   alert('Đã lưu cài đặt chung!');
@@ -270,8 +278,13 @@ renderConnection = function(data) {
   oldRenderConnection(data);
   // Populate settings if not focused
   const webhookInput = document.getElementById('settingDefaultWebhook');
-  if (document.activeElement !== webhookInput && data.settings) {
-    webhookInput.value = data.settings.defaultWebhookUrl || '';
+  const tokenInput = document.getElementById('settingDriveToken');
+  const folderInput = document.getElementById('settingDriveFolderId');
+  
+  if (data.settings) {
+    if (document.activeElement !== webhookInput) webhookInput.value = data.settings.defaultWebhookUrl || '';
+    if (document.activeElement !== tokenInput) tokenInput.value = data.settings.driveToken || '';
+    if (document.activeElement !== folderInput) folderInput.value = data.settings.driveFolderId || '';
   }
 };
 

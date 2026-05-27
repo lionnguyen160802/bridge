@@ -294,19 +294,20 @@ function completeCurrentJob(result) {
 
   const job = { ...state.currentJob };
   
-  // Natively download videos using chrome.downloads API
+  // Natively download videos using chrome.downloads API and optionally Drive
+  const driveToken = state.settings?.driveToken || null;
+  const driveFolderId = job.driveFolderId || state.settings?.driveFolderId || null;
+
   if (result && result.videos) {
     result.videos.forEach(v => {
       if (v.base64) {
-        chrome.downloads.download({
-          url: v.base64,
-          filename: 'Veo/' + v.filename,
-          conflictAction: 'uniquify'
-        }, (downloadId) => {
-           if (chrome.runtime.lastError) {
-             addLog('❌ Download local lỗi: ' + chrome.runtime.lastError.message);
-           }
-        });
+        // Upload to Google Drive if configured
+        if (driveToken && driveFolderId) {
+          addLog('📁 Đang upload lên Drive: ' + v.filename);
+          uploadToDrive(v.base64, v.filename, driveFolderId, driveToken).then(url => {
+            if (url) addLog('✅ Đã lưu Drive: ' + url);
+          });
+        }
       }
     });
     
@@ -693,3 +694,38 @@ loadState().then(() => {
     setTimeout(() => dispatchJobToContentScript(state.currentJob), 3000);
   }
 });
+
+// ==========================================
+// GOOGLE DRIVE UPLOAD
+// ==========================================
+async function uploadToDrive(base64data, fileName, driveFolderId, token) {
+  try {
+    const metadata = { name: fileName, mimeType: 'video/mp4', parents: [driveFolderId] };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    
+    // Convert base64 to blob
+    const fetchRes = await fetch(base64data);
+    const videoBlob = await fetchRes.blob();
+    
+    form.append('file', videoBlob);
+
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: form
+    });
+    
+    if (!res.ok) {
+      const text = await res.text();
+      addLog('❌ Lỗi upload Drive: ' + res.status + ' ' + text.substring(0, 100));
+      return null;
+    }
+    
+    const file = await res.json();
+    return 'https://drive.google.com/file/d/' + file.id + '/view';
+  } catch (err) {
+    addLog('❌ Lỗi upload Drive: ' + err.message);
+    return null;
+  }
+}

@@ -237,7 +237,8 @@ window.addEventListener('message', (event) => {
       const videosCount = event.data.videos ? event.data.videos.length : 0;
       reportState(FLOW_STATES.DOWNLOAD_VIDEO, '💾 Downloaded/Encoded ' + videosCount + ' videos');
       currentJob.result = {
-        videos: event.data.videos || []
+        videos: event.data.videos || [],
+        token: event.data.token || ''
       };
       transitionTo(FLOW_STATES.DONE, '📤 Processing video payload...');
     }
