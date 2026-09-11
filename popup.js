@@ -254,6 +254,12 @@ document.getElementById('btnManual').addEventListener('click', async () => {
   setTimeout(loadDashboard, 500);
 });
 
+document.getElementById('btnClearHistory').addEventListener('click', async () => {
+  if (!confirm('Xóa toàn bộ lịch sử Done/Failed?')) return;
+  await chrome.runtime.sendMessage({ type: 'CLEAR_HISTORY' });
+  loadDashboard();
+});
+
 document.getElementById('btnSaveSettings').addEventListener('click', async () => {
   const bridgeUrl = document.getElementById('settingBridgeUrl').value.trim();
   const webhookUrl = document.getElementById('settingDefaultWebhook').value.trim();
@@ -299,7 +305,211 @@ renderConnection = function(data) {
     if (document.activeElement !== clientSecretInput) clientSecretInput.value = data.settings.driveClientSecret || '';
     if (document.activeElement !== refreshTokenInput) refreshTokenInput.value = data.settings.driveRefreshToken || '';
   }
+
+  // Auto-refresh settings sync
+  const autoRefreshInput = document.getElementById('autoRefreshInput');
+  const autoRefreshStatus = document.getElementById('autoRefreshStatus');
+  const minutes = data.autoRefreshMinutes || (data.settings && data.settings.autoRefreshMinutes) || 0;
+  if (document.activeElement !== autoRefreshInput) {
+    autoRefreshInput.value = minutes;
+  }
+  if (minutes > 0) {
+    autoRefreshStatus.textContent = '✅ Đang bật: reload trang mỗi ' + minutes + ' phút';
+    autoRefreshStatus.style.color = '#22c55e';
+  } else {
+    autoRefreshStatus.textContent = '⏹ Đã tắt auto-refresh';
+    autoRefreshStatus.style.color = '#ef4444';
+  }
 };
+
+// ==========================================
+// AUTO-REFRESH EVENT HANDLERS
+// ==========================================
+document.getElementById('btnRefreshMinus').addEventListener('click', () => {
+  const input = document.getElementById('autoRefreshInput');
+  const val = parseInt(input.value) || 0;
+  if (val > 0) input.value = val - 1;
+});
+
+document.getElementById('btnRefreshPlus').addEventListener('click', () => {
+  const input = document.getElementById('autoRefreshInput');
+  const val = parseInt(input.value) || 0;
+  if (val < 60) input.value = val + 1;
+});
+
+document.getElementById('autoRefreshInput').addEventListener('change', () => {
+  const input = document.getElementById('autoRefreshInput');
+  let val = parseInt(input.value);
+  if (isNaN(val) || val < 0) val = 0;
+  if (val > 60) val = 60;
+  input.value = val;
+});
+
+document.getElementById('btnSaveRefresh').addEventListener('click', async () => {
+  const minutes = parseInt(document.getElementById('autoRefreshInput').value) || 0;
+  await chrome.runtime.sendMessage({ type: 'UPDATE_AUTO_REFRESH', minutes });
+  loadDashboard();
+});
+
+// ==========================================
+// IMAGE UPLOAD EVENT HANDLERS
+// ==========================================
+let selectedFiles = [];
+
+const dropArea = document.getElementById('dropArea');
+const filePickerInput = document.getElementById('filePickerInput');
+const selectedFilesContainer = document.getElementById('selectedFilesContainer');
+const selectedCount = document.getElementById('selectedCount');
+const selectedThumbnails = document.getElementById('selectedThumbnails');
+const btnClearSelected = document.getElementById('btnClearSelected');
+const uploadImageUrl = document.getElementById('uploadImageUrl');
+const btnUploadToFlow = document.getElementById('btnUploadToFlow');
+const uploadStatus = document.getElementById('uploadStatus');
+
+if (dropArea && filePickerInput) {
+  dropArea.addEventListener('click', () => filePickerInput.click());
+
+  filePickerInput.addEventListener('change', () => {
+    handleFilesSelected(Array.from(filePickerInput.files));
+  });
+
+  dropArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropArea.style.borderColor = '#a855f7';
+    dropArea.style.background = 'rgba(168, 85, 247, 0.15)';
+  });
+
+  dropArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropArea.style.borderColor = '#7c3aed';
+    dropArea.style.background = 'rgba(0, 0, 0, 0.25)';
+  });
+
+  dropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropArea.style.borderColor = '#7c3aed';
+    dropArea.style.background = 'rgba(0, 0, 0, 0.25)';
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    handleFilesSelected(files);
+  });
+}
+
+function handleFilesSelected(files) {
+  if (!files || files.length === 0) return;
+  selectedFiles = [...selectedFiles, ...files];
+  renderSelectedFiles();
+}
+
+function renderSelectedFiles() {
+  if (!selectedFilesContainer || !selectedThumbnails) return;
+  if (selectedFiles.length === 0) {
+    selectedFilesContainer.style.display = 'none';
+    selectedThumbnails.innerHTML = '';
+    return;
+  }
+  selectedFilesContainer.style.display = 'block';
+  selectedCount.textContent = selectedFiles.length + ' ảnh đã chọn';
+  selectedThumbnails.innerHTML = '';
+  
+  selectedFiles.slice(0, 8).forEach(file => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.title = file.name;
+    img.style.cssText = 'width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #7c3aed;';
+    selectedThumbnails.appendChild(img);
+  });
+  if (selectedFiles.length > 8) {
+    const more = document.createElement('div');
+    more.textContent = '+' + (selectedFiles.length - 8);
+    more.style.cssText = 'width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:#1e1b4b; border-radius:4px; font-size:11px; font-weight:bold; color:#a855f7;';
+    selectedThumbnails.appendChild(more);
+  }
+}
+
+if (btnClearSelected) {
+  btnClearSelected.addEventListener('click', (e) => {
+    e.preventDefault();
+    selectedFiles = [];
+    if (filePickerInput) filePickerInput.value = '';
+    renderSelectedFiles();
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      base64: reader.result
+    });
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+if (btnUploadToFlow) {
+  btnUploadToFlow.addEventListener('click', async () => {
+    const url = uploadImageUrl?.value.trim() || '';
+    if (selectedFiles.length === 0 && !url) {
+      alert('Vui lòng chọn ít nhất 1 ảnh từ máy tính hoặc dán URL ảnh!');
+      return;
+    }
+
+    btnUploadToFlow.disabled = true;
+    btnUploadToFlow.textContent = '⏳ Đang tải ảnh lên...';
+    uploadStatus.style.display = 'block';
+    uploadStatus.style.background = 'rgba(59, 130, 246, 0.2)';
+    uploadStatus.style.color = '#60a5fa';
+    uploadStatus.textContent = 'Đang chuẩn bị nạp ảnh vào Flow...';
+
+    try {
+      const filesPayload = [];
+      if (selectedFiles.length > 0) {
+        for (const f of selectedFiles) {
+          const b64Data = await fileToBase64(f);
+          filesPayload.push(b64Data);
+        }
+      }
+      if (url) {
+        filesPayload.push({ url: url });
+      }
+
+      const response = await chrome.runtime.sendMessage({
+        type: 'UPLOAD_IMAGE_TO_FLOW',
+        files: filesPayload
+      });
+
+      if (response && response.ok) {
+        uploadStatus.style.background = 'rgba(34, 197, 94, 0.2)';
+        uploadStatus.style.color = '#4ade80';
+        uploadStatus.textContent = '✅ Đã nạp thành công ' + filesPayload.length + ' ảnh vào Flow!';
+        selectedFiles = [];
+        if (filePickerInput) filePickerInput.value = '';
+        if (uploadImageUrl) uploadImageUrl.value = '';
+        renderSelectedFiles();
+      } else {
+        uploadStatus.style.background = 'rgba(239, 68, 68, 0.2)';
+        uploadStatus.style.color = '#f87171';
+        uploadStatus.textContent = '❌ ' + (response?.error || 'Không thể upload ảnh vào Flow');
+      }
+    } catch (err) {
+      uploadStatus.style.background = 'rgba(239, 68, 68, 0.2)';
+      uploadStatus.style.color = '#f87171';
+      uploadStatus.textContent = '❌ ' + err.message;
+    } finally {
+      btnUploadToFlow.disabled = false;
+      btnUploadToFlow.textContent = '🚀 Tải ảnh lên Flow ngay';
+      setTimeout(() => {
+        if (uploadStatus) uploadStatus.style.display = 'none';
+      }, 6000);
+    }
+  });
+}
 
 // ==========================================
 // INIT

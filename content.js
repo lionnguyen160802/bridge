@@ -1,9 +1,18 @@
-// content.js — State Machine Automation Controller v4.3
+// content.js — State Machine Automation Controller v4.4
 // Injected into Google Flow pages by manifest content_scripts
 // Depends on: constants.js (loaded before this in manifest)
 
 // ==========================================
-// INJECT PAGE-CONTEXT SCRIPT
+// RE-INJECTION GUARD — prevent listener accumulation on 24/7 VPS
+// ==========================================
+if (window._flowAutoContentLoaded) {
+  console.log('[FlowAuto v4.4] Content script already loaded, skipping re-injection');
+  // Don't re-inject inject.js, don't add duplicate listeners
+} else {
+  window._flowAutoContentLoaded = true;
+
+// ==========================================
+// INJECT PAGE-CONTEXT SCRIPT (only once)
 // ==========================================
 const _injectScript = document.createElement('script');
 _injectScript.src = chrome.runtime.getURL('inject.js');
@@ -17,10 +26,14 @@ let currentJob = null;
 let currentState = FLOW_STATES.IDLE;
 let retryCount = 0;
 let stateTimeoutId = null;
+let retryTimeoutId = null;
 let pendingAction = null;
 let stopped = false;
+let currentCharacterList = [];
+let currentCharacterIndex = 0;
 
 const STATE_SEQUENCE = [
+  FLOW_STATES.UPLOAD_IMAGE,
   FLOW_STATES.FIND_CHARACTER,
   FLOW_STATES.HOVER_CHARACTER,
   FLOW_STATES.CLICK_MORE_MENU,
@@ -37,13 +50,16 @@ const STATE_SEQUENCE = [
 ];
 
 function nextState(state) {
+  // If action is upload_only, stop right after upload completes
+  if (currentJob?.action === 'upload_only' && state === FLOW_STATES.UPLOAD_IMAGE) {
+    return FLOW_STATES.DONE;
+  }
+
   // If we just clicked add button, check if there are more characters to process
+  // NOTE: currentCharacterIndex is incremented BEFORE this call (in the success handler)
   if (state === FLOW_STATES.CLICK_ADD_BUTTON) {
-    if (typeof currentCharacterIndex !== 'undefined' && typeof currentCharacterList !== 'undefined') {
-      if (currentCharacterIndex < currentCharacterList.length - 1) {
-        currentCharacterIndex++;
-        return FLOW_STATES.FIND_CHARACTER; // Loop back
-      }
+    if (currentCharacterIndex < currentCharacterList.length - 1) {
+      return FLOW_STATES.FIND_CHARACTER; // Loop back for next character
     }
   }
 
@@ -117,7 +133,7 @@ function retryState() {
   const delay = getRetryDelay();
   reportState(currentState, '🔄 Retry ' + retryCount + '/' + maxR + ' in ' + (delay / 1000) + 's — ' + (STATE_LABELS[currentState] || currentState));
 
-  setTimeout(() => {
+  retryTimeoutId = setTimeout(() => {
     if (!stopped) executeState(currentState);
   }, delay);
 }
@@ -136,6 +152,14 @@ function executeState(state) {
   const charName = currentCharacterList[currentCharacterIndex];
 
   switch (state) {
+    case FLOW_STATES.UPLOAD_IMAGE:
+      if (!currentJob?.images || currentJob.images.length === 0) {
+        transitionTo(FLOW_STATES.FIND_CHARACTER, '⏭️ Không có ảnh — chuyển sang tìm nhân vật');
+        return;
+      }
+      sendAction('uploadImage', { files: currentJob.images });
+      break;
+
     case FLOW_STATES.FIND_CHARACTER:
       if (!charName) {
         // No character — skip to WAIT_TEXTAREA (find the prompt input directly)
@@ -226,6 +250,11 @@ window.addEventListener('message', (event) => {
         return;
       }
 
+      // Advance character index BEFORE computing next state
+      if (currentState === FLOW_STATES.CLICK_ADD_BUTTON) {
+        currentCharacterIndex++;
+      }
+
       transitionTo(nextState(currentState));
     } else {
       reportState(currentState, '⚠️ ' + action + ': ' + (error || 'failed'));
@@ -304,7 +333,11 @@ function startJob(job) {
   currentCharacterIndex = 0;
 
   reportState(FLOW_STATES.IDLE, '🚀 Job started: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : ''));
-  transitionTo(FLOW_STATES.FIND_CHARACTER, '🔍 Finding character: ' + (currentCharacterList[0] || '(none)'));
+  if (job.images && job.images.length > 0) {
+    transitionTo(FLOW_STATES.UPLOAD_IMAGE, '🖼️ Uploading ' + job.images.length + ' image(s) to Flow...');
+  } else {
+    transitionTo(FLOW_STATES.FIND_CHARACTER, '🔍 Finding character: ' + (currentCharacterList[0] || '(none)'));
+  }
 }
 
 function completeJob(result) {
@@ -341,11 +374,14 @@ function errorJob(error) {
 
 function stopJob() {
   clearTimeout(stateTimeoutId);
+  clearTimeout(retryTimeoutId);
   stopped = true;
   currentJob = null;
   currentState = FLOW_STATES.IDLE;
   retryCount = 0;
   pendingAction = null;
+  currentCharacterList = [];
+  currentCharacterIndex = 0;
   reportState(FLOW_STATES.IDLE, '🛑 Job stopped');
 }
 
@@ -378,6 +414,31 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     return true;
   }
 
+  if (msg.type === 'HEALTH_CHECK') {
+    respond({ ok: true, state: currentState, hasJob: !!currentJob });
+    return true;
+  }
+
+  if (msg.type === MSG.UPLOAD_IMAGE_TO_FLOW) {
+    const files = msg.files || msg.images || [];
+    sendAction('uploadImage', { files: files });
+    
+    // Listen for inject result or timeout
+    const onResult = (event) => {
+      if (event.source !== window || event.data?.type !== MSG.INJECT_RESULT) return;
+      if (event.data.action === 'uploadImage') {
+        window.removeEventListener('message', onResult);
+        respond({ ok: event.data.success, data: event.data.data, error: event.data.error });
+      }
+    };
+    window.addEventListener('message', onResult);
+    setTimeout(() => {
+      window.removeEventListener('message', onResult);
+      respond({ ok: true, message: 'Upload command sent' });
+    }, 15000);
+    return true;
+  }
+
   if (msg.type === MSG.GET_DASHBOARD) {
     return false;
   }
@@ -386,5 +447,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 // ==========================================
 // INIT
 // ==========================================
-console.log('[FlowAuto v4.3] Content script loaded on:', window.location.href);
+console.log('[FlowAuto v4.4] Content script loaded on:', window.location.href);
 reportState(FLOW_STATES.IDLE, '📌 Content script ready');
+
+} // end of re-injection guard else block

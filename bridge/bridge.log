@@ -1670,3 +1670,23 @@ Bối cảnh: Chanh đang đứng tấn, h..."
 [2026-05-25T10:14:03.285Z] ⚠️ Unknown message type: ping
 [2026-05-25T10:14:28.291Z] ⚠️ Unknown message type: ping
 [2026-05-25T10:14:32.988Z] 🔌 WebSocket client disconnected
+[2026-09-11T10:10:06.149Z] 📂 Loaded queue: 0 pending, 3 completed
+[2026-09-11T10:10:06.158Z] 
+[2026-09-11T10:10:06.158Z] ╔══════════════════════════════════════════╗
+[2026-09-11T10:10:06.158Z] ║   Flow Auto Bridge v1.0                  ║
+[2026-09-11T10:10:06.159Z] ║   HTTP API + WebSocket: port 3500        ║
+[2026-09-11T10:10:06.159Z] ╚══════════════════════════════════════════╝
+[2026-09-11T10:10:06.160Z] 
+[2026-09-11T10:10:06.160Z] API Endpoints:
+[2026-09-11T10:10:06.161Z]   POST /generate        — Submit new job
+[2026-09-11T10:10:06.161Z]   GET  /status          — Current status
+[2026-09-11T10:10:06.162Z]   GET  /queue           — Queue details
+[2026-09-11T10:10:06.162Z]   POST /cancel          — Cancel job
+[2026-09-11T10:10:06.163Z]   POST /pause           — Pause queue
+[2026-09-11T10:10:06.163Z]   POST /resume          — Resume queue
+[2026-09-11T10:10:06.164Z]   POST /retry           — Retry failed job
+[2026-09-11T10:10:06.164Z]   POST /clear-history   — Clear history
+[2026-09-11T10:10:06.164Z] 
+[2026-09-11T10:10:06.165Z] Waiting for extension connection...
+[2026-09-11T10:11:59.779Z] 📥 New job queued: e7f6496b-27f5-4934-90ab-aea75b349a15_scene_5_1789121519777 [2 images] — "upload_only..."
+[2026-09-11T10:11:59.780Z] ⚠️ Extension not connected, waiting...

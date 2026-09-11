@@ -13,6 +13,7 @@
     "debugger"
   ],
   "host_permissions": [
+    "https://flow.google.com/*",
     "https://labs.google/*",
     "http://localhost:3500/*"
   ],
@@ -21,7 +22,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://labs.google/fx/*"],
+      "matches": [
+        "https://flow.google.com/*",
+        "https://labs.google/fx/*"
+      ],
       "js": ["constants.js", "content.js"],
       "run_at": "document_idle"
     }
@@ -29,7 +33,10 @@
   "web_accessible_resources": [
     {
       "resources": ["inject.js"],
-      "matches": ["https://labs.google/*"]
+      "matches": [
+        "https://flow.google.com/*",
+        "https://labs.google/*"
+      ]
     }
   ],
   "action": {

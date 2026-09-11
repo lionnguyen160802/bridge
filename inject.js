@@ -1,4 +1,4 @@
-// inject.js — DOM Manipulator for Google Flow v4.3
+// inject.js — DOM Manipulator for Google Flow v4.4
 // Runs in PAGE CONTEXT for full DOM + React access
 // Communicates with content.js via window.postMessage
 //
@@ -6,6 +6,13 @@
 
 (function () {
   'use strict';
+
+  // RE-INJECTION GUARD — prevent duplicate listeners & fetch wrapper chains on 24/7 VPS
+  if (window._flowAutoInjectLoaded) {
+    console.log('[FlowAuto:inject] Already loaded, skipping re-injection');
+    return;
+  }
+  window._flowAutoInjectLoaded = true;
 
   let authToken = '';
 
@@ -63,46 +70,12 @@
   }
 
   // ==========================================
-  // CSS INJECTION — Force hover-only buttons visible
+  // CSS INJECTION — Removed force visibility CSS
+  // Previously injected rules with pointer-events: auto !important on overlay containers
+  // caused UI click interception and severe lag on Google Flow.
   // ==========================================
-  function injectForceVisibilityCSS() {
-    if (document.getElementById('flowauto-force-css')) return;
-    const style = document.createElement('style');
-    style.id = 'flowauto-force-css';
-    style.textContent = `
-      /* FlowAuto: Force hover-only overlay buttons visible */
-      img ~ button,
-      img ~ div button,
-      img ~ div [role="button"],
-      img + div button,
-      img + div [role="button"] {
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-      }
-      [class*="overlay"] button,
-      [class*="overlay"] [role="button"],
-      [class*="action"] button,
-      [class*="action"] [role="button"],
-      [class*="hover"] button,
-      [class*="hover"] [role="button"] {
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-      }
-      [class*="overlay"],
-      [class*="action-bar"],
-      [class*="actions"],
-      [class*="toolbar"] {
-        opacity: 1 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-      }
-    `;
-    document.head.appendChild(style);
-    log('💉 Force-visibility CSS injected');
-  }
-  injectForceVisibilityCSS();
+  const existingForceCss = document.getElementById('flowauto-force-css');
+  if (existingForceCss) existingForceCss.remove();
 
   // ==========================================
   // RESULT SENDER
@@ -427,6 +400,56 @@
   // ELEMENT FINDERS
   // ==========================================
 
+  function findSearchBar() {
+    const inputs = document.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+    for (const el of inputs) {
+      if (!isVisible(el)) continue;
+      const ph = (el.getAttribute('placeholder') || '').toLowerCase();
+      const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      if (ph.includes('tìm kiếm') || ph.includes('search') || aria.includes('tìm kiếm') || aria.includes('search')) {
+        // Must be in the top half (exclude prompt input)
+        if (el.getBoundingClientRect().top < window.innerHeight / 2) {
+          return el;
+        }
+      }
+    }
+    return null;
+  }
+
+  function clearSearchInput(el) {
+    if (!el) return;
+    el.focus();
+    
+    // Strategy 1: Native setter (React-compatible)
+    try {
+      const proto = window.HTMLInputElement.prototype;
+      const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (nativeSetter) nativeSetter.call(el, '');
+      else el.value = '';
+    } catch(e) { el.value = ''; }
+    
+    // Strategy 2: Keyboard simulation — Ctrl+A then Delete (most reliable for React/Angular)
+    try {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', code: 'KeyA', ctrlKey: true, bubbles: true }));
+      el.select && el.select();
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', code: 'Delete', bubbles: true }));
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'deleteContentBackward' }));
+    } catch(e) {}
+
+    // Strategy 3: Fire standard events
+    const opts = { bubbles: true, composed: true };
+    el.dispatchEvent(new Event('input', opts));
+    el.dispatchEvent(new Event('change', opts));
+    
+    // Clear React internal tracker
+    try {
+      const tracker = el._valueTracker;
+      if (tracker) tracker.setValue('x'); // Force React to see the change
+    } catch(e) {}
+    
+    el.dispatchEvent(new Event('input', opts));
+  }
+
   /** Find character card by name */
   function findCharacterCard(name) {
     if (!name) return null;
@@ -570,9 +593,16 @@
     return null;
   }
 
-  /** Find prompt input "Bạn muốn tạo gì?" at the bottom prompt bar */
+  /** Find prompt input "Bạn muốn tạo những gì?" at the bottom prompt bar */
   function findPromptInput() {
-    const placeholders = ['Bạn muốn tạo gì', 'What do you want to create', 'Nhập câu lệnh'];
+    const placeholders = [
+      'Bạn muốn tạo những gì',
+      'Bạn muốn tạo gì',
+      'What do you want to create',
+      'Start creating or drop media',
+      'Bắt đầu tạo hoặc thả nội dung nghe nhìn',
+      'Nhập câu lệnh'
+    ];
     const viewH = window.innerHeight;
 
     // Helper: Check if element is the bottom prompt bar input (not search/title)
@@ -620,18 +650,15 @@
       }
     }
 
-    // Strategy 3: Find input near "+ Tác nhân" button (they're in the same prompt bar)
-    const tacNhanBtn = findButtonByText('Tác nhân');
+    // Strategy 3: Find input near "+ Tác nhân" / "+ Characters" button (they're in the same prompt bar)
+    const tacNhanBtn = findButtonByText('Tác nhân') || findButtonByText('Characters');
     if (tacNhanBtn) {
       const btnRect = tacNhanBtn.getBoundingClientRect();
-      // The input should be nearby (same bar)
       for (const el of allInputs) {
         if (!isVisible(el)) continue;
         const r = el.getBoundingClientRect();
-        // The bottom of the input should be close to the bottom of the button
-        // Even if the input expands upwards immensely, their bottoms will align.
         if (Math.abs(r.bottom - btnRect.bottom) < 120) {
-          log('✓ findPromptInput: near "Tác nhân" button at y=' + Math.round(r.top));
+          log('✓ findPromptInput: near "' + tacNhanBtn.textContent.trim().substring(0, 15) + '" button at y=' + Math.round(r.top));
           return el;
         }
       }
@@ -659,6 +686,319 @@
     }
 
     return null;
+  }
+
+  /** Find '+' button in prompt bar */
+  function findPlusButton() {
+    const promptInput = findPromptInput();
+    const promptContainer = promptInput ? (promptInput.closest('div[class*="prompt"], form, footer') || promptInput.parentElement?.parentElement?.parentElement) : null;
+    const searchRoot = promptContainer || document;
+    for (const btn of searchRoot.querySelectorAll('button, [role="button"]')) {
+      const text = (btn.textContent || '').trim();
+      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+      const title = (btn.getAttribute('title') || '').toLowerCase();
+      if (text === '+' || aria.includes('thêm') || aria.includes('add') || aria.includes('upload') || title.includes('thêm') || title.includes('add')) {
+        if (isVisible(btn)) return btn;
+      }
+      if (btn.querySelector('svg path[d*="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"]') || btn.querySelector('svg [d*="M12 5v14"]') || btn.querySelector('svg [d*="M5 12h14"]')) {
+        if (isVisible(btn)) return btn;
+      }
+    }
+    return null;
+  }
+
+  function base64ToFile(base64Str, filename, mimeType) {
+    try {
+      const arr = base64Str.split(',');
+      const mime = mimeType || (arr[0].match(/:(.*?);/) || [])[1] || 'image/png';
+      const bstr = atob(arr[arr.length - 1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename || 'flow_upload_' + Date.now() + '.png', { type: mime });
+    } catch (e) {
+      log('base64ToFile error: ' + e.message);
+      return null;
+    }
+  }
+
+  function showFlowToast(message, duration = 4000) {
+    let toast = document.getElementById('flowauto-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'flowauto-toast';
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #1e1b4b, #312e81);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.4);
+        z-index: 1000000;
+        pointer-events: none;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      `;
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+      if (toast) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+      }
+    }, duration);
+  }
+
+  function getFlowDropTarget() {
+    const cx = Math.floor(window.innerWidth * 0.5);
+    const cy = Math.floor(window.innerHeight * 0.45);
+
+    // 1. Innermost leaf element with text "thả nội dung" or "drop media"
+    const textCandidates = Array.from(document.querySelectorAll('*')).filter(node => {
+      if (!isVisible(node) || node.closest('#flowauto-floating-widget') || node.closest('#flowauto-toast')) return false;
+      const t = (node.textContent || '').toLowerCase();
+      return t.includes('thả nội dung') || t.includes('drop media') || t.includes('bắt đầu tạo');
+    });
+
+    if (textCandidates.length > 0) {
+      // Sort by fewest children = innermost leaf element!
+      textCandidates.sort((a, b) => a.querySelectorAll('*').length - b.querySelectorAll('*').length);
+      const leaf = textCandidates[0];
+      const r = leaf.getBoundingClientRect();
+      log('✓ Found innermost dropzone leaf: <' + leaf.tagName + '> ("' + leaf.textContent.trim().substring(0, 30) + '")');
+      return { element: leaf, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    }
+
+    // 2. Element right at center of screen (when media already exists on canvas)
+    let centerEl = document.elementFromPoint(cx, cy);
+    if (centerEl && !centerEl.closest('#flowauto-floating-widget') && !centerEl.closest('#flowauto-toast') && centerEl !== document.body && centerEl !== document.documentElement) {
+      log('✓ Found center workspace element: <' + centerEl.tagName + ' class="' + (centerEl.className || '') + '">');
+      return { element: centerEl, x: cx, y: cy };
+    }
+
+    // 3. Existing image card on canvas
+    const img = document.querySelector('img:not([id*="flowauto"]):not([src^="data:"])');
+    if (img && isVisible(img)) {
+      const r = img.getBoundingClientRect();
+      log('✓ Found existing canvas image card');
+      return { element: img, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    }
+
+    // 4. Fallback: Main container or body
+    const mainArea = document.querySelector('main') || document.querySelector('[role="main"]') || document.body;
+    return { element: mainArea, x: cx, y: cy };
+  }
+
+  function dispatchDragDropToFlow(targetObj, dt) {
+    const { element, x, y } = targetObj;
+    log('🎯 Dispatching DragDrop to <' + element.tagName + ' class="' + (element.className || '') + '"> at (' + x + ',' + y + ')');
+
+    const opts = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      dataTransfer: dt,
+      clientX: x,
+      clientY: y,
+      screenX: x + (window.screenX || 0),
+      screenY: y + (window.screenY || 0),
+      view: window
+    };
+
+    try {
+      element.dispatchEvent(new DragEvent('dragenter', opts));
+      element.dispatchEvent(new DragEvent('dragover', opts));
+      element.dispatchEvent(new DragEvent('drop', opts));
+      return true;
+    } catch (e) {
+      log('dispatchDragDropToFlow error: ' + e.message);
+      return false;
+    }
+  }
+
+  let isUploading = false;
+
+  /** Upload an array of files/images into Google Flow */
+  async function uploadFilesToFlow(filesData) {
+    if (!filesData || filesData.length === 0) {
+      return { success: false, error: 'Không có dữ liệu ảnh' };
+    }
+
+    if (isUploading) {
+      log('⚠️ Upload đang diễn ra, bỏ qua lệnh gọi trùng lặp');
+      return { success: false, error: 'Đang tải ảnh, vui lòng chờ...' };
+    }
+    isUploading = true;
+
+    try {
+      const fileObjects = [];
+      for (const item of filesData) {
+        if (item instanceof File) {
+          fileObjects.push(item);
+        } else if (item?.file instanceof File) {
+          fileObjects.push(item.file);
+        } else if (item?.base64) {
+          const f = base64ToFile(item.base64, item.name, item.type);
+          if (f) fileObjects.push(f);
+        } else if (typeof item === 'string' && item.startsWith('data:image')) {
+          const f = base64ToFile(item, 'image_' + Date.now() + '.png');
+          if (f) fileObjects.push(f);
+        } else if (item?.url || (typeof item === 'string' && item.startsWith('http'))) {
+          const url = item.url || item;
+          try {
+            log('🌐 Fetching image from URL: ' + url);
+            const resp = await fetch(url);
+            const blob = await resp.blob();
+            const fname = url.split('/').pop().split('?')[0] || ('image_' + Date.now() + '.png');
+            fileObjects.push(new File([blob], fname, { type: blob.type || 'image/png' }));
+          } catch (err) {
+            log('❌ Fetch URL failed: ' + err.message);
+          }
+        }
+      }
+
+      if (fileObjects.length === 0) {
+        return { success: false, error: 'Không thể tạo file từ dữ liệu ảnh cung cấp' };
+      }
+
+      log('🖼️ Chuẩn bị upload ' + fileObjects.length + ' ảnh vào Flow...');
+      showFlowToast('⏳ Đang upload ' + fileObjects.length + ' ảnh vào Flow...', 3000);
+
+      const dt = new DataTransfer();
+      for (const f of fileObjects) {
+        dt.items.add(f);
+      }
+      try {
+        dt.effectAllowed = 'all';
+        dt.dropEffect = 'copy';
+      } catch(e) {}
+
+      // Get THE ONE BEST leaf target element
+      const targetObj = getFlowDropTarget();
+
+      // Dispatch Drag & Drop ONCE to target (bubbles naturally to React components)
+      const ok = dispatchDragDropToFlow(targetObj, dt);
+
+      showFlowToast('✅ Đã nạp ' + fileObjects.length + ' ảnh vào Flow!', 4000);
+      return { success: ok, count: fileObjects.length };
+    } finally {
+      setTimeout(() => { isUploading = false; }, 1500);
+    }
+  }
+
+  /** Injects floating upload button into Flow interface */
+  function injectFloatingUploadWidget() {
+    if (document.getElementById('flowauto-floating-widget')) return;
+
+    const widget = document.createElement('div');
+    widget.id = 'flowauto-floating-widget';
+    widget.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999998;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    `;
+
+    // Inner upload button
+    const btn = document.createElement('button');
+    btn.id = 'flowauto-float-upload-btn';
+    btn.innerHTML = '📤 <span style="font-weight:700;">Upload Ảnh vào Flow</span>';
+    btn.title = 'Bấm để chọn ảnh từ máy tính hoặc kéo thả ảnh vào đây để nạp vào Flow';
+    btn.style.cssText = `
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    `;
+
+    btn.onmouseover = () => {
+      btn.style.transform = 'translateY(-2px) scale(1.02)';
+      btn.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.6)';
+    };
+    btn.onmouseout = () => {
+      btn.style.transform = 'none';
+      btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
+    };
+
+    // Hidden file input — marked with data-flowauto-input so uploadFilesToFlow will never mistakenly match it!
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/*';
+    fileInput.setAttribute('data-flowauto-input', 'true');
+    fileInput.style.display = 'none';
+
+    btn.onclick = () => fileInput.click();
+
+    fileInput.onchange = async () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ <span>Đang nạp ảnh...</span>';
+        await uploadFilesToFlow(Array.from(fileInput.files));
+        btn.disabled = false;
+        btn.innerHTML = '📤 <span style="font-weight:700;">Upload Ảnh vào Flow</span>';
+        fileInput.value = '';
+      }
+    };
+
+    // Drag-and-drop directly onto floating button
+    btn.ondragover = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      btn.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.8)';
+    };
+    btn.ondragleave = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.style.background = 'linear-gradient(135deg, #7c3aed, #4f46e5)';
+      btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
+    };
+    btn.ondrop = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.style.background = 'linear-gradient(135deg, #7c3aed, #4f46e5)';
+      btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length > 0) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ <span>Đang nạp ảnh...</span>';
+        await uploadFilesToFlow(files);
+        btn.disabled = false;
+        btn.innerHTML = '📤 <span style="font-weight:700;">Upload Ảnh vào Flow</span>';
+      }
+    };
+
+    widget.appendChild(fileInput);
+    widget.appendChild(btn);
+    document.body.appendChild(widget);
+    log('🎨 Injected Floating Upload Widget on Flow');
   }
 
   /** Detect completed videos (up to 3 newest at top/bottom) */
@@ -784,9 +1124,82 @@
 
     switch (action) {
 
+      // ── Step 0: Upload Image(s) to Flow ──
+      case 'uploadImage': {
+        try {
+          const filesData = params.files || [];
+          if (filesData.length === 0 && params.imageUrl) filesData.push({ url: params.imageUrl });
+          if (filesData.length === 0 && params.base64) filesData.push({ base64: params.base64, name: params.name });
+
+          log('🖼️ uploadImage action: ' + filesData.length + ' image(s)');
+          const res = await uploadFilesToFlow(filesData);
+          if (res.success) {
+            sendResult(action, true, { log: '✓ Đã nạp ' + res.count + ' ảnh vào Flow' });
+          } else {
+            sendResult(action, false, null, res.error || 'Upload ảnh thất bại');
+          }
+        } catch (err) {
+          sendResult(action, false, null, 'uploadImage exception: ' + err.message);
+        }
+        break;
+      }
+
       // ── Step 1: Find character card ──
       case 'findCharacter': {
-        const r = findCharacterCard(params.name);
+        // Always clear leftover search filter from previous character
+        const preSearchBar = findSearchBar();
+        if (preSearchBar && preSearchBar.value && preSearchBar.value.trim().length > 0) {
+          log('🧹 Clearing leftover search filter...');
+          clearSearchInput(preSearchBar);
+          await new Promise(res => setTimeout(res, 1500));
+        }
+
+        // Attempt 1: Try finding directly in the visible grid
+        let r = findCharacterCard(params.name);
+        
+        // Attempt 2: Use Search Bar to filter (essential for large projects)
+        if (!r) {
+          const searchInput = findSearchBar();
+          if (searchInput) {
+            log('🔍 Character not visible (' + params.name + '), using Search Bar...');
+            clearSearchInput(searchInput);
+            await new Promise(res => setTimeout(res, 500));
+            
+            // Type full character name
+            injectTextToReactInput(searchInput, params.name);
+            const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+            searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+            searchInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+            searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+            
+            // Wait for search results
+            await new Promise(res => setTimeout(res, 2500));
+            r = findCharacterCard(params.name);
+            
+            // Attempt 3: Try with first word only (e.g. "Chanh Pink" → "Chanh")
+            if (!r) {
+              const words = params.name.trim().split(/\s+/);
+              if (words.length > 1) {
+                log('🔍 Full name not found, trying first word: "' + words[0] + '"...');
+                clearSearchInput(searchInput);
+                await new Promise(res => setTimeout(res, 500));
+                injectTextToReactInput(searchInput, words[0]);
+                searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+                searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+                await new Promise(res => setTimeout(res, 2500));
+                r = findCharacterCard(params.name); // Still match full name in results
+              }
+            }
+            
+            // Clear search bar after finding to reset grid for hover/click steps
+            if (r) {
+              log('🧹 Clearing search filter after finding character...');
+              clearSearchInput(searchInput);
+              await new Promise(res => setTimeout(res, 1500)); // Wait for grid to fully reset
+            }
+          }
+        }
+
         if (r) {
           log('✓ Found via ' + r.method);
           sendResult(action, true, { log: '✓ Found: ' + params.name + ' (' + r.method + ')' });
@@ -827,25 +1240,26 @@
 
       // ── Step 4: Wait for dropdown menu ──
       case 'waitMenu': {
-        const btn = await waitForCondition(() => findButtonByText('Thêm vào câu lệnh'), 5000);
+        const btn = await waitForCondition(() => findButtonByText('Thêm vào câu lệnh') || findButtonByText('Add to prompt'), 5000);
         if (btn) {
-          sendResult(action, true, { log: '✓ Menu with "Thêm vào câu lệnh" detected' });
+          sendResult(action, true, { log: '✓ Menu detected: "' + btn.textContent.trim().substring(0, 30) + '"' });
         } else {
           sendResult(action, false, null, 'Menu did not appear');
         }
         break;
       }
 
-      // ── Step 5: Click "Thêm vào câu lệnh" ──
+      // ── Step 5: Click "Thêm vào câu lệnh" / "Add to prompt" ──
       case 'clickAddButton': {
-        const btn = findButtonByText('Thêm vào câu lệnh');
+        const btn = findButtonByText('Thêm vào câu lệnh') || findButtonByText('Add to prompt');
         if (btn) {
           simulateClick(btn);
-          log('✓ Clicked "Thêm vào câu lệnh"');
+          const label = btn.textContent.trim().substring(0, 30);
+          log('✓ Clicked "' + label + '"');
           await new Promise(r => setTimeout(r, 800));
-          sendResult(action, true, { log: '✓ Clicked "Thêm vào câu lệnh"' });
+          sendResult(action, true, { log: '✓ Clicked "' + label + '"' });
         } else {
-          sendResult(action, false, null, '"Thêm vào câu lệnh" not found');
+          sendResult(action, false, null, '"Thêm vào câu lệnh" / "Add to prompt" not found');
         }
         break;
       }
@@ -895,19 +1309,21 @@
              try { input.selectionStart = input.selectionEnd = input.value.length; } catch(e) {}
           }
 
-          // 2. Setup listener for the background script's response
+          // 2. Setup listener with TIMEOUT FALLBACK for the background script's response
+          let debuggerHandled = false;
           const handleDebuggerResponse = (e) => {
              if (e.source !== window || e.data.type !== 'FLOW_DEBUGGER_RESULT') return;
+             if (debuggerHandled) return;
+             debuggerHandled = true;
              window.removeEventListener('message', handleDebuggerResponse);
              
              if (e.data.success) {
                 log('✓ Debugger typing succeeded! (' + params.prompt.length + ' chars)');
                 setTimeout(() => {
                    sendResult(action, true, { log: '✓ Typed: "' + params.prompt.substring(0, 50) + '..."' });
-                }, 500); // Wait for framework to digest the text
+                }, 500);
              } else {
                 log('❌ Debugger typing failed: ' + e.data.error);
-                // Fallback to DOM injection if debugger fails (e.g., policy blocks it)
                 log('💉 Falling back to DOM injection...');
                 const ok = injectTextToReactInput(input, textToInject);
                 if (ok) {
@@ -918,6 +1334,21 @@
              }
           };
           window.addEventListener('message', handleDebuggerResponse);
+
+          // Timeout fallback: if debugger never responds within 15s, use DOM fallback
+          setTimeout(() => {
+            if (!debuggerHandled) {
+              debuggerHandled = true;
+              window.removeEventListener('message', handleDebuggerResponse);
+              log('⏰ Debugger typing timeout (15s). Falling back to DOM injection...');
+              const ok = injectTextToReactInput(input, textToInject);
+              if (ok) {
+                sendResult(action, true, { log: '✓ Timeout fallback injected: "' + params.prompt.substring(0, 50) + '..."' });
+              } else {
+                sendResult(action, false, null, 'Debugger timeout and DOM fallback both failed');
+              }
+            }
+          }, 15000);
 
           // 3. Send request to content.js to bridge to background.js
           window.postMessage({
@@ -958,15 +1389,17 @@
           
           log('🐞 Requesting OS-level Debugger Enter Key...');
           
+          let enterHandled = false;
           const handleEnterResponse = (e) => {
              if (e.source !== window || e.data.type !== 'FLOW_DEBUGGER_ENTER_RESULT') return;
+             if (enterHandled) return;
+             enterHandled = true;
              window.removeEventListener('message', handleEnterResponse);
              
              if (e.data.success) {
                 log('✓ Debugger Enter pressed natively!');
              } else {
                 log('❌ Debugger Enter failed: ' + e.data.error + '. Falling back to DOM events...');
-                // Fallback to DOM events
                 const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
                 input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
                 input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
@@ -977,13 +1410,10 @@
              setTimeout(() => {
                 const container = input.closest('form, [role="dialog"], body');
                 if (container) {
-                   // Look for common submit button selectors (arrows, active buttons near the prompt)
                    const buttons = Array.from(container.querySelectorAll('button:not([disabled]), [role="button"]:not([aria-disabled="true"])'));
-                   // A generic heuristic for the right arrow button
                    const submitBtn = buttons.find(b => {
                       const aria = (b.getAttribute('aria-label') || '').toLowerCase();
                       if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create')) return true;
-                      // Arrow right SVG
                       if (b.querySelector('svg path[d*="m12 4"]')) return true; 
                       return false;
                    });
@@ -999,6 +1429,23 @@
           };
           
           window.addEventListener('message', handleEnterResponse);
+
+          // Timeout fallback: if debugger never responds within 15s
+          setTimeout(() => {
+            if (!enterHandled) {
+              enterHandled = true;
+              window.removeEventListener('message', handleEnterResponse);
+              log('⏰ Debugger Enter timeout (15s). Falling back to DOM events...');
+              const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+              input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+              input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+              input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+              
+              setTimeout(() => {
+                sendResult(action, true, { log: '✓ Timeout fallback: Enter pressed via DOM' });
+              }, 800);
+            }
+          }, 15000);
           
           window.postMessage({
              type: 'FLOW_DEBUGGER_ENTER'
@@ -1069,5 +1516,8 @@
     }
   });
 
-  log('🚀 inject.js v4.3 loaded');
+  // Injects floating upload widget on Flow interface
+  setTimeout(injectFloatingUploadWidget, 1500);
+
+  log('🚀 inject.js v4.5 loaded (with Flow Image Upload & Widget)');
 })();

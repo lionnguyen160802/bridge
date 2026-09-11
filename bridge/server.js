@@ -86,11 +86,11 @@ app.get('/', (req, res) => {
 app.post('/generate', (req, res) => {
   // Support both Object {...} and Array [{...}] payloads from N8N
   const body = Array.isArray(req.body) ? req.body[0] : req.body;
-  const { row_id, rowId, projectId, sceneId, character, prompt, callbackUrl, driveFolderId } = body || {};
+  const { row_id, rowId, projectId, sceneId, character, prompt, callbackUrl, driveFolderId, images, action } = body || {};
   
   const finalRowId = row_id || rowId || null;
 
-  if (!prompt) {
+  if (!prompt && action !== 'upload_only') {
     return res.status(400).json({ error: 'Missing required field: prompt' });
   }
 
@@ -101,7 +101,9 @@ app.post('/generate', (req, res) => {
     projectId: projectId || 'default',
     sceneId: sceneId || 'scene_' + String(jobCounter).padStart(3, '0'),
     character: character || '',
-    prompt: prompt,
+    prompt: prompt || '',
+    images: images || [],
+    action: action || 'generate',
     callbackUrl: callbackUrl || null,
     driveFolderId: driveFolderId || null,
     status: 'QUEUED',
@@ -110,7 +112,7 @@ app.post('/generate', (req, res) => {
 
   jobQueue.push(job);
   saveQueue();
-  log('📥 New job queued: ' + job.id + ' — "' + prompt.substring(0, 60) + '..."');
+  log('📥 New job queued: ' + job.id + (images?.length ? ' [' + images.length + ' images]' : '') + ' — "' + (prompt || 'upload_only').substring(0, 60) + '..."');
 
   // Try to dispatch immediately
   dispatchNext();
@@ -387,6 +389,8 @@ function dispatchNext() {
       sceneId: currentJob.sceneId,
       character: currentJob.character,
       prompt: currentJob.prompt,
+      images: currentJob.images || [],
+      action: currentJob.action || 'generate',
       callbackUrl: currentJob.callbackUrl,
       driveFolderId: currentJob.driveFolderId
     }

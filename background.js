@@ -18,7 +18,8 @@ let state = {
   settings: {
     bridgeUrl: BRIDGE_URL,
     wsUrl: WS_URL,
-    downloadPath: 'FlowVideos'
+    downloadPath: 'FlowVideos',
+    autoRefreshMinutes: 3  // Auto-refresh Flow tab every N minutes (0 = disabled)
   }
 };
 
@@ -50,7 +51,35 @@ async function loadState() {
   }
 }
 
+let _saveTimeout = null;
 function saveState() {
+  // Debounce: coalesce rapid writes into one (max 2s delay)
+  if (_saveTimeout) clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(() => {
+    _saveTimeout = null;
+    try {
+      chrome.storage.local.set({
+        flowAutoState: {
+          currentJob: state.currentJob,
+          currentState: state.currentState,
+          queue: state.queue,
+          completedJobs: state.completedJobs.slice(0, 50),
+          failedJobs: state.failedJobs.slice(0, 50),
+          logs: state.logs.slice(0, 300),
+          paused: state.paused,
+          retryCount: state.retryCount,
+          settings: state.settings
+        }
+      });
+    } catch (e) {
+      console.error('[FlowAuto] saveState error:', e);
+    }
+  }, 2000);
+}
+
+// Force immediate save (for critical state changes like job start/complete)
+function saveStateNow() {
+  if (_saveTimeout) { clearTimeout(_saveTimeout); _saveTimeout = null; }
   try {
     chrome.storage.local.set({
       flowAutoState: {
@@ -66,7 +95,7 @@ function saveState() {
       }
     });
   } catch (e) {
-    console.error('[FlowAuto] saveState error:', e);
+    console.error('[FlowAuto] saveStateNow error:', e);
   }
 }
 
@@ -74,7 +103,7 @@ function addLog(msg) {
   const entry = '[' + new Date().toLocaleTimeString('vi-VN') + '] ' + msg;
   state.logs.unshift(entry);
   if (state.logs.length > 500) state.logs.length = 500;
-  saveState();
+  saveState(); // debounced — won't hammer storage
   console.log('[FlowAuto]', msg);
 }
 
@@ -241,12 +270,19 @@ async function dispatchJobToContentScript(job) {
 
     addLog('📤 Dispatching to tab #' + tab.id);
 
-    // Try sending message directly first
-    const sent = await trySendToContentScript(tab.id, job);
-    if (sent) return;
+    // Health check: ping content script first
+    const alive = await healthCheckContentScript(tab.id);
+    if (alive) {
+      const sent = await trySendToContentScript(tab.id, job);
+      if (sent) return;
+    }
 
-    // Content script not present — inject programmatically
-    addLog('💉 Injecting content scripts into tab...');
+    // Content script not responding — try refresh tab if it's been running a while
+    addLog('💉 Content script not responding, refreshing tab...');
+    await refreshFlowTab(tab);
+
+    // After refresh, inject scripts
+    addLog('💉 Injecting content scripts...');
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -278,6 +314,53 @@ async function dispatchJobToContentScript(job) {
   }
 }
 
+// Health check: ping content script to see if it's alive
+async function healthCheckContentScript(tabId) {
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, { type: 'HEALTH_CHECK' });
+    return response && response.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Refresh the Flow tab to clear memory (critical for 24/7 VPS)
+async function refreshFlowTab(tab) {
+  try {
+    addLog('🔄 Refreshing Flow tab to clear memory...');
+    // Clear the re-injection guard flags by reloading the page
+    await chrome.tabs.reload(tab.id);
+    
+    // Wait for page to fully load
+    await new Promise((resolve) => {
+      const onUpdated = (tabId, changeInfo) => {
+        if (tabId === tab.id && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(onUpdated);
+          setTimeout(resolve, 7000); // Wait 7s for SPA hydration
+        }
+      };
+      chrome.tabs.onUpdated.addListener(onUpdated);
+      setTimeout(() => { chrome.tabs.onUpdated.removeListener(onUpdated); resolve(); }, 25000);
+    });
+    
+    addLog('✅ Tab refreshed successfully');
+  } catch (e) {
+    addLog('⚠️ Tab refresh failed: ' + e.message);
+  }
+}
+
+// Start/restart auto-refresh alarm based on settings
+function setupAutoRefreshAlarm() {
+  chrome.alarms.clear('flowAutoRefreshTab');
+  const minutes = state.settings.autoRefreshMinutes || 0;
+  if (minutes > 0) {
+    chrome.alarms.create('flowAutoRefreshTab', { periodInMinutes: minutes });
+    addLog('🔄 Auto-refresh trang: mỗi ' + minutes + ' phút');
+  } else {
+    addLog('🔄 Auto-refresh trang: TẮT');
+  }
+}
+
 /**
  * Try to send EXECUTE_JOB message to content script.
  * Returns true if successful, false if unreachable.
@@ -294,32 +377,31 @@ async function trySendToContentScript(tabId, job) {
   }
 }
 
-function completeCurrentJob(result) {
+async function completeCurrentJob(result) {
   if (!state.currentJob) return;
 
   const job = { ...state.currentJob };
   
-  // Natively download videos using chrome.downloads API and optionally Drive
+  // Upload videos to Google Drive if configured
   const driveFolderId = job.driveFolderId || state.settings?.driveFolderId || null;
 
   if (result && result.videos) {
-    // Preserve references to the original objects that contain base64
     const videosWithBase64 = [...result.videos];
 
-    // 1. Pre-validate and refresh token if needed
-    ensureValidToken().then(async (driveToken) => {
-      // 2. Process all videos sequentially or in parallel
+    // Await Drive upload — don't fire-and-forget
+    try {
+      const driveToken = await ensureValidToken();
       for (const v of videosWithBase64) {
         if (!v.base64) continue;
-
-        // Upload to Google Drive if configured
         if (driveToken && driveFolderId) {
           addLog('📁 Đang upload lên Drive: ' + v.filename);
           const url = await uploadToDrive(v.base64, v.filename, driveFolderId, driveToken);
           if (url) addLog('✅ Đã lưu Drive: ' + url);
         }
       }
-    });
+    } catch (uploadErr) {
+      addLog('❌ Drive upload error: ' + uploadErr.message);
+    }
     
     // Strip Base64 from payload to prevent Bridge/Webhook crashes
     result.videos = result.videos.map(v => ({ filename: v.filename, url: v.url }));
@@ -352,7 +434,7 @@ function completeCurrentJob(result) {
   state.currentJob = null;
   state.currentState = FLOW_STATES.IDLE;
   state.retryCount = 0;
-  saveState();
+  saveStateNow(); // Critical state change — save immediately
 
   // Process next after delay
   setTimeout(processQueue, 2000);
@@ -416,8 +498,9 @@ function cancelJob(jobId) {
 // TAB MANAGEMENT
 // ==========================================
 async function findFlowTab() {
-  // Try specific Flow URL patterns
+  // Try specific Flow URL patterns (supports both new flow.google.com and legacy labs.google/fx)
   const patterns = [
+    'https://flow.google.com/*',
     'https://labs.google/fx/vi/tools/flow/*',
     'https://labs.google/fx/*/tools/flow/*',
     'https://labs.google/fx/*'
@@ -427,7 +510,7 @@ async function findFlowTab() {
     try {
       const tabs = await chrome.tabs.query({ url: pattern });
       for (const tab of tabs) {
-        if (tab.url && tab.url.includes('/tools/flow')) {
+        if (tab.url && (tab.url.includes('flow.google.com') || tab.url.includes('/tools/flow'))) {
           return tab;
         }
       }
@@ -440,9 +523,9 @@ async function findFlowTab() {
 }
 
 async function findOrOpenFlowTab(projectId) {
-  let targetUrl = 'https://labs.google/fx/vi/tools/flow';
+  let targetUrl = 'https://flow.google.com/';
   if (projectId && projectId !== 'default' && projectId !== 'test_n8n') {
-     targetUrl = `https://labs.google/fx/vi/tools/flow/project/${projectId}`;
+     targetUrl = `https://flow.google.com/project/${projectId}`;
   }
 
   let tab = await findFlowTab();
@@ -451,18 +534,18 @@ async function findOrOpenFlowTab(projectId) {
     // Check if the existing tab needs navigation
     const currentUrl = tab.url || '';
     if (projectId && projectId !== 'default' && projectId !== 'test_n8n' && !currentUrl.includes(`/project/${projectId}`)) {
-       addLog('🌐 Navigating existing tab to project: ' + projectId);
+       addLog('🌐 Navigating to new project: ' + projectId + ' (waiting 7s for page load)');
        await chrome.tabs.update(tab.id, { url: targetUrl, active: true });
        // Wait for navigation and load
        return new Promise((resolve) => {
          const onUpdated = (tabId, changeInfo) => {
            if (tabId === tab.id && changeInfo.status === 'complete') {
              chrome.tabs.onUpdated.removeListener(onUpdated);
-             setTimeout(() => resolve(tab), 3000); // Wait for SPA hydration
+             setTimeout(() => resolve(tab), 7000); // Wait 7s for SPA hydration + character grid
            }
          };
          chrome.tabs.onUpdated.addListener(onUpdated);
-         setTimeout(() => { chrome.tabs.onUpdated.removeListener(onUpdated); resolve(tab); }, 15000);
+         setTimeout(() => { chrome.tabs.onUpdated.removeListener(onUpdated); resolve(tab); }, 20000);
        });
     }
 
@@ -473,7 +556,7 @@ async function findOrOpenFlowTab(projectId) {
   }
 
   // Open new tab
-  addLog('🌐 Opening Google Flow tab: ' + targetUrl);
+  addLog('🌐 Opening Google Flow tab (waiting 7s for page load): ' + targetUrl);
   tab = await chrome.tabs.create({ url: targetUrl });
 
   // Wait for page load
@@ -481,8 +564,8 @@ async function findOrOpenFlowTab(projectId) {
     const onUpdated = (tabId, changeInfo) => {
       if (tabId === tab.id && changeInfo.status === 'complete') {
         chrome.tabs.onUpdated.removeListener(onUpdated);
-        // Extra wait for SPA hydration
-        setTimeout(() => resolve(tab), 4000);
+        // Extra wait for SPA hydration + character grid
+        setTimeout(() => resolve(tab), 7000);
       }
     };
     chrome.tabs.onUpdated.addListener(onUpdated);
@@ -586,7 +669,8 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
         retryCount: state.retryCount,
         paused: state.paused,
         logs: state.logs.slice(0, 100),
-        settings: state.settings
+        settings: state.settings,
+        autoRefreshMinutes: state.settings.autoRefreshMinutes || 0
       });
       return true;
 
@@ -623,6 +707,15 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       respond({ ok: true });
       return true;
 
+    case 'CLEAR_HISTORY':
+      state.completedJobs = [];
+      state.failedJobs = [];
+      state.retryCount = 0;
+      addLog('🧹 Lịch sử Done/Failed đã được xóa');
+      saveStateNow();
+      respond({ ok: true });
+      return true;
+
     case MSG.RETRY_JOB:
       if (msg.jobId) {
         const idx = state.failedJobs.findIndex(j => j.id === msg.jobId);
@@ -646,10 +739,39 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
         sceneId: msg.sceneId || 'scene_' + Date.now(),
         character: msg.character || '',
         prompt: msg.prompt,
-        callbackUrl: msg.callbackUrl || null
+        images: msg.images || [],
+        callbackUrl: msg.callbackUrl || null,
+        driveFolderId: msg.driveFolderId || null
       });
       respond({ ok: true });
       return true;
+
+    case MSG.UPLOAD_IMAGE_TO_FLOW: {
+      (async () => {
+        try {
+          const tab = await findFlowTab();
+          if (!tab) {
+            respond({ ok: false, error: 'Không tìm thấy tab Google Flow đang mở. Vui lòng mở trang Flow trước!' });
+            return;
+          }
+          addLog('🖼️ Đang gửi ' + (msg.files?.length || 1) + ' ảnh vào Flow...');
+          chrome.tabs.sendMessage(tab.id, {
+            type: MSG.UPLOAD_IMAGE_TO_FLOW,
+            files: msg.files,
+            images: msg.images
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              respond({ ok: false, error: chrome.runtime.lastError.message });
+            } else {
+              respond(response || { ok: true });
+            }
+          });
+        } catch (err) {
+          respond({ ok: false, error: err.message });
+        }
+      })();
+      return true;
+    }
 
     case 'LOG':
       addLog(msg.message);
@@ -665,7 +787,18 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
           if (ws) ws.close();
           setTimeout(connectWS, 500);
         }
+        // Update auto-refresh alarm if changed
+        if ('autoRefreshMinutes' in msg.settings) {
+          setupAutoRefreshAlarm();
+        }
       }
+      respond({ ok: true });
+      return true;
+
+    case 'UPDATE_AUTO_REFRESH':
+      state.settings.autoRefreshMinutes = msg.minutes || 0;
+      saveState();
+      setupAutoRefreshAlarm();
       respond({ ok: true });
       return true;
   }
@@ -675,7 +808,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 // KEEPALIVE ALARM (MV3 Service Worker persistence)
 // ==========================================
 chrome.alarms.create('flowAutoKeepalive', { periodInMinutes: 1 });
-chrome.alarms.onAlarm.addListener((alarm) => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'flowAutoKeepalive') {
     // Keep service worker alive while processing
     if (state.currentJob || state.queue.length > 0) {
@@ -684,9 +817,33 @@ chrome.alarms.onAlarm.addListener((alarm) => {
         ' | Job: ' + (state.currentJob?.sceneId || 'none'));
     }
 
+    // GLOBAL JOB TIMEOUT: If a job has been running > 15 minutes, force-fail it
+    if (state.currentJob && state.currentJob.startedAt) {
+      const elapsed = Date.now() - state.currentJob.startedAt;
+      const MAX_JOB_DURATION = 15 * 60 * 1000; // 15 minutes
+      if (elapsed > MAX_JOB_DURATION) {
+        addLog('❌ Global timeout: Job ' + state.currentJob.sceneId + ' running for ' + Math.round(elapsed / 60000) + ' min. Force-failing...');
+        failCurrentJob('Global timeout exceeded (' + Math.round(elapsed / 60000) + ' min)');
+      }
+    }
+
     // Reconnect WebSocket if needed
     if (!state.wsConnected) {
       connectWS();
+    }
+  }
+
+  // Auto-refresh Flow tab periodically (time-based, not job-count-based)
+  if (alarm.name === 'flowAutoRefreshTab') {
+    // Skip refresh if a job is currently running
+    if (state.currentJob) {
+      addLog('🔄 Auto-refresh bị bỏ qua (đang chạy job: ' + state.currentJob.sceneId + ')');
+      return;
+    }
+    const tab = await findFlowTab();
+    if (tab) {
+      addLog('🔄 Auto-refresh trang (mỗi ' + (state.settings.autoRefreshMinutes || 3) + ' phút — chống rò rỉ RAM)...');
+      await refreshFlowTab(tab);
     }
   }
 });
@@ -697,6 +854,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 loadState().then(() => {
   addLog('🚀 Flow Auto Generator v4.0 started');
   connectWS();
+  setupAutoRefreshAlarm();
 
   // Resume interrupted job
   if (state.currentJob && state.currentJob.status === 'PROCESSING') {
@@ -772,7 +930,7 @@ async function uploadToDrive(base64data, fileName, driveFolderId, token) {
     
     form.append('file', videoBlob);
 
-    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
       body: form

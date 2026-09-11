@@ -1,5 +1,23 @@
 {
-  "queue": [],
+  "queue": [
+    {
+      "id": "e7f6496b-27f5-4934-90ab-aea75b349a15_scene_5_1789121519777",
+      "rowId": null,
+      "projectId": "e7f6496b-27f5-4934-90ab-aea75b349a15",
+      "sceneId": "scene_005",
+      "character": "",
+      "prompt": "",
+      "images": [
+        "https://example.com/character-front.png",
+        "https://example.com/character-side.png"
+      ],
+      "action": "upload_only",
+      "callbackUrl": "https://your-backend.com/api/flow-callback",
+      "driveFolderId": null,
+      "status": "QUEUED",
+      "createdAt": 1789121519778
+    }
+  ],
   "completed": [
     {
       "id": "demo_project_scene_01_4_1779702016974",
@@ -62,5 +80,5 @@
       "error": "Content script unreachable"
     }
   ],
-  "counter": 4
+  "counter": 5
 }

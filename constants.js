@@ -3,6 +3,7 @@
 
 const FLOW_STATES = {
   IDLE: 'IDLE',
+  UPLOAD_IMAGE: 'UPLOAD_IMAGE',
   FIND_CHARACTER: 'FIND_CHARACTER',
   HOVER_CHARACTER: 'HOVER_CHARACTER',
   CLICK_MORE_MENU: 'CLICK_MORE_MENU',
@@ -22,6 +23,7 @@ const FLOW_STATES = {
 
 // Retry delays (ms) per state — array length = max retries
 const RETRY_DELAYS = {
+  UPLOAD_IMAGE:     [1000, 2000, 5000],
   FIND_CHARACTER:   [1000, 2000, 5000, 10000, 10000],
   HOVER_CHARACTER:  [1000, 2000, 5000],
   CLICK_MORE_MENU:  [500, 1000, 2000, 3000, 5000],
@@ -38,6 +40,7 @@ const RETRY_DELAYS = {
 
 // Max time (ms) allowed in each state before timeout triggers retry
 const STATE_TIMEOUTS = {
+  UPLOAD_IMAGE:     30000,
   FIND_CHARACTER:   30000,
   HOVER_CHARACTER:  10000,
   CLICK_MORE_MENU:  10000,
@@ -60,29 +63,32 @@ const WS_HEARTBEAT_INTERVAL = 25000;
 
 // Message types
 const MSG = {
-  EXECUTE_JOB:    'EXECUTE_JOB',
-  STOP_JOB:       'STOP_JOB',
-  STATE_UPDATE:    'STATE_UPDATE',
-  JOB_COMPLETE:    'JOB_COMPLETE',
-  JOB_ERROR:       'JOB_ERROR',
-  INJECT_ACTION:   'FLOW_INJECT_ACTION',
-  INJECT_RESULT:   'FLOW_INJECT_RESULT',
-  RENDER_PROGRESS: 'FLOW_RENDER_PROGRESS',
-  DOWNLOAD_DONE:   'FLOW_DOWNLOAD_COMPLETE',
-  INJECT_LOG:      'FLOW_LOG',
-  GET_DASHBOARD:   'GET_DASHBOARD',
-  PAUSE_QUEUE:     'PAUSE_QUEUE',
-  RESUME_QUEUE:    'RESUME_QUEUE',
-  CANCEL_JOB:      'CANCEL_JOB',
-  CLEAR_LOGS:      'CLEAR_LOGS',
-  RETRY_JOB:       'RETRY_JOB',
-  SKIP_JOB:        'SKIP_JOB',
-  MANUAL_JOB:      'MANUAL_JOB'
+  EXECUTE_JOB:          'EXECUTE_JOB',
+  STOP_JOB:             'STOP_JOB',
+  STATE_UPDATE:         'STATE_UPDATE',
+  JOB_COMPLETE:         'JOB_COMPLETE',
+  JOB_ERROR:            'JOB_ERROR',
+  INJECT_ACTION:         'FLOW_INJECT_ACTION',
+  INJECT_RESULT:         'FLOW_INJECT_RESULT',
+  RENDER_PROGRESS:       'FLOW_RENDER_PROGRESS',
+  DOWNLOAD_DONE:         'FLOW_DOWNLOAD_COMPLETE',
+  INJECT_LOG:            'FLOW_LOG',
+  GET_DASHBOARD:         'GET_DASHBOARD',
+  PAUSE_QUEUE:           'PAUSE_QUEUE',
+  RESUME_QUEUE:          'RESUME_QUEUE',
+  CANCEL_JOB:            'CANCEL_JOB',
+  CLEAR_LOGS:            'CLEAR_LOGS',
+  RETRY_JOB:             'RETRY_JOB',
+  SKIP_JOB:              'SKIP_JOB',
+  MANUAL_JOB:            'MANUAL_JOB',
+  UPLOAD_IMAGE_TO_FLOW:  'UPLOAD_IMAGE_TO_FLOW',
+  UPLOAD_IMAGE_RESULT:   'UPLOAD_IMAGE_RESULT'
 };
 
 // State display names (Vietnamese)
 const STATE_LABELS = {
   IDLE:             '⏸️ Chờ job',
+  UPLOAD_IMAGE:     '🖼️ Upload ảnh',
   FIND_CHARACTER:   '🔍 Tìm nhân vật',
   HOVER_CHARACTER:  '👆 Hover nhân vật',
   CLICK_MORE_MENU:  '🖱️ Click ⋮ menu',
