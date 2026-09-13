@@ -128,9 +128,9 @@ app.post('/generate', (req, res) => {
 });
 
 // Dedicated endpoint to create project and optionally upload images
-app.post('/create-project', (req, res) => {
+app.post('/create-project', async (req, res) => {
   const body = Array.isArray(req.body) ? req.body[0] : req.body;
-  const { rowId, row_id, images, callbackUrl } = body || {};
+  const { rowId, row_id, images, callbackUrl, wait } = body || {};
 
   jobCounter++;
   const job = {
@@ -153,12 +153,101 @@ app.post('/create-project', (req, res) => {
 
   dispatchNext();
 
+  // If wait=true (default is true if wait !== false), wait synchronously up to 30s for projectId!
+  const shouldWait = wait !== false;
+  if (shouldWait) {
+    const startWait = Date.now();
+    const checkDone = setInterval(() => {
+      const found = completedJobs.find(j => j.id === job.id);
+      if (found) {
+        clearInterval(checkDone);
+        return res.json({
+          success: true,
+          jobId: job.id,
+          projectId: found.projectId || found.result?.projectId,
+          status: 'completed',
+          result: found.result
+        });
+      }
+
+      const failed = failedJobs.find(j => j.id === job.id);
+      if (failed) {
+        clearInterval(checkDone);
+        return res.status(500).json({
+          success: false,
+          jobId: job.id,
+          status: 'failed',
+          error: failed.error
+        });
+      }
+
+      // Timeout after 35s
+      if (Date.now() - startWait > 35000) {
+        clearInterval(checkDone);
+        return res.json({
+          success: true,
+          jobId: job.id,
+          status: 'processing',
+          message: 'Project creation is taking longer than expected. Check /job/' + job.id + ' or your callbackUrl.'
+        });
+      }
+    }, 500);
+    return;
+  }
+
   res.json({
     success: true,
     jobId: job.id,
     position: jobQueue.length,
-    message: 'Create project job queued. Once created, projectId will be sent to your callbackUrl or check /status'
+    message: 'Create project job queued. Query /job/' + job.id + ' or wait for callback.'
   });
+});
+
+// Query single job by ID to get projectId
+app.get('/job/:jobId', (req, res) => {
+  const { jobId } = req.params;
+
+  // Check running job
+  if (currentJob && currentJob.id === jobId) {
+    return res.json({
+      jobId: currentJob.id,
+      status: currentJob.status || 'PROCESSING',
+      state: currentJob.currentState
+    });
+  }
+
+  // Check completed
+  const completed = completedJobs.find(j => j.id === jobId);
+  if (completed) {
+    return res.json({
+      jobId: completed.id,
+      status: 'COMPLETED',
+      projectId: completed.projectId || completed.result?.projectId,
+      result: completed.result
+    });
+  }
+
+  // Check failed
+  const failed = failedJobs.find(j => j.id === jobId);
+  if (failed) {
+    return res.status(500).json({
+      jobId: failed.id,
+      status: 'FAILED',
+      error: failed.error
+    });
+  }
+
+  // Check in queue
+  const queued = jobQueue.find(j => j.id === jobId);
+  if (queued) {
+    return res.json({
+      jobId: queued.id,
+      status: 'QUEUED',
+      position: jobQueue.indexOf(queued) + 1
+    });
+  }
+
+  res.status(404).json({ error: 'Job not found: ' + jobId });
 });
 
 // Get current status
