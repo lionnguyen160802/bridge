@@ -410,6 +410,9 @@ async function completeCurrentJob(result) {
   job.status = 'COMPLETED';
   job.completedAt = Date.now();
   job.duration = job.completedAt - (job.startedAt || job.queuedAt);
+  if (result?.projectId) {
+    job.projectId = result.projectId;
+  }
   job.result = result;
 
   state.completedJobs.unshift(job);

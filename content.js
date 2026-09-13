@@ -33,6 +33,7 @@ let currentCharacterList = [];
 let currentCharacterIndex = 0;
 
 const STATE_SEQUENCE = [
+  FLOW_STATES.CREATE_PROJECT,
   FLOW_STATES.UPLOAD_IMAGE,
   FLOW_STATES.FIND_CHARACTER,
   FLOW_STATES.HOVER_CHARACTER,
@@ -50,8 +51,17 @@ const STATE_SEQUENCE = [
 ];
 
 function nextState(state) {
+  // If action is create_project_only, stop right after project is created
+  if (currentJob?.action === 'create_project' && state === FLOW_STATES.CREATE_PROJECT) {
+    // If images are provided with create_project, proceed to upload image first
+    if (currentJob.images && currentJob.images.length > 0) {
+      return FLOW_STATES.UPLOAD_IMAGE;
+    }
+    return FLOW_STATES.DONE;
+  }
+
   // If action is upload_only, stop right after upload completes
-  if (currentJob?.action === 'upload_only' && state === FLOW_STATES.UPLOAD_IMAGE) {
+  if ((currentJob?.action === 'upload_only' || currentJob?.action === 'create_project') && state === FLOW_STATES.UPLOAD_IMAGE) {
     return FLOW_STATES.DONE;
   }
 
@@ -152,6 +162,10 @@ function executeState(state) {
   const charName = currentCharacterList[currentCharacterIndex];
 
   switch (state) {
+    case FLOW_STATES.CREATE_PROJECT:
+      sendAction('createProject', {});
+      break;
+
     case FLOW_STATES.UPLOAD_IMAGE:
       if (!currentJob?.images || currentJob.images.length === 0) {
         transitionTo(FLOW_STATES.FIND_CHARACTER, '⏭️ Không có ảnh — chuyển sang tìm nhân vật');
@@ -250,6 +264,13 @@ window.addEventListener('message', (event) => {
         return;
       }
 
+      // Save newly created projectId to currentJob
+      if (currentState === FLOW_STATES.CREATE_PROJECT && data?.projectId) {
+        currentJob.projectId = data.projectId;
+        if (!currentJob.result) currentJob.result = {};
+        currentJob.result.projectId = data.projectId;
+      }
+
       // Advance character index BEFORE computing next state
       if (currentState === FLOW_STATES.CLICK_ADD_BUTTON) {
         currentCharacterIndex++;
@@ -333,7 +354,10 @@ function startJob(job) {
   currentCharacterIndex = 0;
 
   reportState(FLOW_STATES.IDLE, '🚀 Job started: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : ''));
-  if (job.images && job.images.length > 0) {
+  
+  if (job.action === 'create_project' || (!job.projectId && !window.location.href.includes('/project/'))) {
+    transitionTo(FLOW_STATES.CREATE_PROJECT, '✨ Creating new project in Flow...');
+  } else if (job.images && job.images.length > 0) {
     transitionTo(FLOW_STATES.UPLOAD_IMAGE, '🖼️ Uploading ' + job.images.length + ' image(s) to Flow...');
   } else {
     transitionTo(FLOW_STATES.FIND_CHARACTER, '🔍 Finding character: ' + (currentCharacterList[0] || '(none)'));

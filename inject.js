@@ -1124,6 +1124,66 @@
 
     switch (action) {
 
+      // ── Step -1: Create New Project ──
+      case 'createProject': {
+        try {
+          // Check if already in a project
+          const currentUrl = window.location.href;
+          const match = currentUrl.match(/\/project\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            log('✓ Already inside project: ' + match[1]);
+            sendResult(action, true, { log: '✓ Đang ở trong project: ' + match[1], projectId: match[1] });
+            return;
+          }
+
+          log('✨ Looking for "Dự án mới" / "New project" button...');
+          const newProjectKeywords = ['dự án mới', 'new project', 'tạo dự án', 'create project'];
+          let targetBtn = null;
+
+          for (const btn of document.querySelectorAll('button, [role="button"], a, div')) {
+            const text = (btn.textContent || '').trim().toLowerCase();
+            const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+            const title = (btn.getAttribute('title') || '').toLowerCase();
+            
+            for (const kw of newProjectKeywords) {
+              if ((text.includes(kw) || aria.includes(kw) || title.includes(kw)) && isVisible(btn)) {
+                // Climb up to clickable button if needed
+                targetBtn = btn.closest('button, [role="button"], a') || btn;
+                break;
+              }
+            }
+            if (targetBtn) break;
+          }
+
+          if (!targetBtn) {
+            sendResult(action, false, null, 'Không tìm thấy nút "+ Dự án mới"');
+            return;
+          }
+
+          log('🖱️ Clicking "+ Dự án mới" button...');
+          simulateClick(targetBtn);
+
+          // Wait for URL to update with project ID (up to 15 seconds)
+          const startWait = Date.now();
+          const checkInterval = setInterval(() => {
+            const cur = window.location.href;
+            const m = cur.match(/\/project\/([a-zA-Z0-9_-]+)/);
+            if (m && m[1]) {
+              clearInterval(checkInterval);
+              log('🎉 Created new project successfully: ' + m[1]);
+              sendResult(action, true, { log: '✓ Đã tạo dự án mới: ' + m[1], projectId: m[1] });
+            } else if (Date.now() - startWait > 15000) {
+              clearInterval(checkInterval);
+              sendResult(action, false, null, 'Hết thời gian chờ tạo dự án (URL không đổi)');
+            }
+          }, 500);
+
+        } catch (err) {
+          sendResult(action, false, null, 'createProject exception: ' + err.message);
+        }
+        break;
+      }
+
       // ── Step 0: Upload Image(s) to Flow ──
       case 'uploadImage': {
         try {

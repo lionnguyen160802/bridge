@@ -271,8 +271,8 @@ document.getElementById('btnSaveSettings').addEventListener('click', async () =>
   await chrome.runtime.sendMessage({
     type: 'UPDATE_SETTINGS',
     settings: { 
-      bridgeUrl: bridgeUrl || 'http://localhost:3000',
-      wsUrl: (bridgeUrl || 'http://localhost:3000').replace('http://', 'ws://').replace('https://', 'wss://') + '/stream',
+      bridgeUrl: bridgeUrl || 'http://localhost:3500',
+      wsUrl: (bridgeUrl || 'http://localhost:3500').replace(/^http/, 'ws'),
       defaultWebhookUrl: webhookUrl || null,
       driveFolderId: driveFolderId || null,
       driveClientId: clientId || null,

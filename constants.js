@@ -3,6 +3,7 @@
 
 const FLOW_STATES = {
   IDLE: 'IDLE',
+  CREATE_PROJECT: 'CREATE_PROJECT',
   UPLOAD_IMAGE: 'UPLOAD_IMAGE',
   FIND_CHARACTER: 'FIND_CHARACTER',
   HOVER_CHARACTER: 'HOVER_CHARACTER',
@@ -23,6 +24,7 @@ const FLOW_STATES = {
 
 // Retry delays (ms) per state — array length = max retries
 const RETRY_DELAYS = {
+  CREATE_PROJECT:   [1000, 2000, 3000, 5000],
   UPLOAD_IMAGE:     [1000, 2000, 5000],
   FIND_CHARACTER:   [1000, 2000, 5000, 10000, 10000],
   HOVER_CHARACTER:  [1000, 2000, 5000],
@@ -40,6 +42,7 @@ const RETRY_DELAYS = {
 
 // Max time (ms) allowed in each state before timeout triggers retry
 const STATE_TIMEOUTS = {
+  CREATE_PROJECT:   25000,
   UPLOAD_IMAGE:     30000,
   FIND_CHARACTER:   30000,
   HOVER_CHARACTER:  10000,
@@ -88,6 +91,7 @@ const MSG = {
 // State display names (Vietnamese)
 const STATE_LABELS = {
   IDLE:             '⏸️ Chờ job',
+  CREATE_PROJECT:   '✨ Tạo dự án mới',
   UPLOAD_IMAGE:     '🖼️ Upload ảnh',
   FIND_CHARACTER:   '🔍 Tìm nhân vật',
   HOVER_CHARACTER:  '👆 Hover nhân vật',
