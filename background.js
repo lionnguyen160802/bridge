@@ -250,7 +250,15 @@ function processQueue() {
   state.currentJob = job;
   state.currentJob.status = 'PROCESSING';
   state.currentJob.startedAt = Date.now();
-  state.currentState = FLOW_STATES.FIND_CHARACTER;
+  if (job.action === 'create_project' || (!job.projectId && !job.images?.length && !job.action)) {
+    state.currentState = FLOW_STATES.CREATE_PROJECT;
+  } else if (job.action === 'create_character') {
+    state.currentState = (job.projectId && job.projectId !== 'manual') ? FLOW_STATES.GENERATE_CHARACTER : FLOW_STATES.CREATE_PROJECT;
+  } else if (job.images && job.images.length > 0) {
+    state.currentState = FLOW_STATES.UPLOAD_IMAGE;
+  } else {
+    state.currentState = FLOW_STATES.FIND_CHARACTER;
+  }
   state.retryCount = 0;
   saveState();
 
@@ -261,7 +269,7 @@ function processQueue() {
 
 async function dispatchJobToContentScript(job) {
   try {
-    const tab = await findOrOpenFlowTab(job.projectId);
+    const tab = await findOrOpenFlowTab(job.projectId, job.action);
     if (!tab) {
       addLog('❌ Cannot find/open Google Flow tab');
       failCurrentJob('Cannot find Google Flow tab');
@@ -413,6 +421,9 @@ async function completeCurrentJob(result) {
   if (result?.projectId) {
     job.projectId = result.projectId;
   }
+  if (result?.character) {
+    job.character = result.character;
+  }
   job.result = result;
 
   state.completedJobs.unshift(job);
@@ -427,7 +438,7 @@ async function completeCurrentJob(result) {
     type: 'job_completed',
     jobId: job.id,
     rowId: job.rowId,
-    projectId: job.projectId,
+    projectId: job.projectId || result?.projectId || null,
     sceneId: job.sceneId,
     status: 'completed',
     result: result,
@@ -525,10 +536,15 @@ async function findFlowTab() {
   return null;
 }
 
-async function findOrOpenFlowTab(projectId) {
+async function findOrOpenFlowTab(projectId, action) {
   let targetUrl = 'https://flow.google.com/';
-  if (projectId && projectId !== 'default' && projectId !== 'test_n8n') {
-     targetUrl = `https://flow.google.com/project/${projectId}`;
+  const isSpecialId = !projectId || projectId === 'default' || projectId === 'test_n8n' || projectId === 'manual' || projectId === 'new' || projectId === 'proj';
+  if (!isSpecialId) {
+    if (action === 'create_character') {
+      targetUrl = `https://flow.google.com/project/${projectId}/character`;
+    } else {
+      targetUrl = `https://flow.google.com/project/${projectId}`;
+    }
   }
 
   let tab = await findFlowTab();
@@ -536,8 +552,13 @@ async function findOrOpenFlowTab(projectId) {
   if (tab) {
     // Check if the existing tab needs navigation
     const currentUrl = tab.url || '';
-    if (projectId && projectId !== 'default' && projectId !== 'test_n8n' && !currentUrl.includes(`/project/${projectId}`)) {
-       addLog('🌐 Navigating to new project: ' + projectId + ' (waiting 7s for page load)');
+    const needsNav = !isSpecialId && (
+      action === 'create_character'
+        ? !currentUrl.includes(`/project/${projectId}/character`)
+        : !currentUrl.includes(`/project/${projectId}`)
+    );
+    if (needsNav) {
+       addLog('🌐 Navigating to ' + targetUrl + ' (waiting 7s for page load)');
        await chrome.tabs.update(tab.id, { url: targetUrl, active: true });
        // Wait for navigation and load
        return new Promise((resolve) => {
@@ -581,6 +602,30 @@ async function findOrOpenFlowTab(projectId) {
   });
 }
 
+// Helper for safe Chrome Debugger API execution
+async function safeDebuggerCommand(tabId, fn) {
+  const target = { tabId };
+  let attachedHere = false;
+  try {
+    await chrome.debugger.attach(target, "1.2");
+    attachedHere = true;
+  } catch (attachErr) {
+    if (attachErr.message && attachErr.message.includes('already attached')) {
+      attachedHere = false; // Already attached, can proceed
+    } else {
+      throw attachErr;
+    }
+  }
+
+  try {
+    return await fn(target);
+  } finally {
+    if (attachedHere) {
+      try { await chrome.debugger.detach(target); } catch(e) {}
+    }
+  }
+}
+
 // ==========================================
 // CHROME MESSAGE HANDLER
 // ==========================================
@@ -610,19 +655,17 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 
     // --- Debugger API for precise text injection ---
     case 'DEBUGGER_TYPE': {
-      if (!sender || !sender.tab) { respond({ success: false }); return; }
+      if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
       const tabId = sender.tab.id;
       const text = msg.text || '';
       
       (async () => {
         try {
-          const target = { tabId };
-          await chrome.debugger.attach(target, "1.2");
-          await chrome.debugger.sendCommand(target, "Input.insertText", { text: text });
-          await chrome.debugger.detach(target);
+          await safeDebuggerCommand(tabId, async (target) => {
+            await chrome.debugger.sendCommand(target, "Input.insertText", { text: text });
+          });
           respond({ success: true });
         } catch (err) {
-          try { await chrome.debugger.detach({ tabId }); } catch(e) {}
           respond({ success: false, error: err.message });
         }
       })();
@@ -630,27 +673,25 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     }
 
     case 'DEBUGGER_ENTER': {
-      if (!sender || !sender.tab) { respond({ success: false }); return; }
+      if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
       const tabId = sender.tab.id;
       
       (async () => {
         try {
-          const target = { tabId };
-          await chrome.debugger.attach(target, "1.2");
-          await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
-            type: "rawKeyDown",
-            windowsVirtualKeyCode: 13,
-            unmodifiedText: "\r",
-            text: "\r"
+          await safeDebuggerCommand(tabId, async (target) => {
+            await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
+              type: "rawKeyDown",
+              windowsVirtualKeyCode: 13,
+              unmodifiedText: "\r",
+              text: "\r"
+            });
+            await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
+              type: "keyUp",
+              windowsVirtualKeyCode: 13
+            });
           });
-          await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
-            type: "keyUp",
-            windowsVirtualKeyCode: 13
-          });
-          await chrome.debugger.detach(target);
           respond({ success: true });
         } catch (err) {
-          try { await chrome.debugger.detach({ tabId }); } catch(e) {}
           respond({ success: false, error: err.message });
         }
       })();
@@ -734,15 +775,20 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       respond({ ok: true });
       return true;
 
+    case 'GET_ACTIVE_JOB':
+      respond({ job: state.currentJob, state: state.currentState });
+      return true;
+
     case MSG.MANUAL_JOB:
       // Submit job directly from popup
       enqueueJob({
         id: 'manual_' + Date.now(),
-        projectId: msg.projectId || 'manual',
+        projectId: msg.projectId || (msg.action === 'create_character' ? null : 'manual'),
         sceneId: msg.sceneId || 'scene_' + Date.now(),
         character: msg.character || '',
         prompt: msg.prompt,
         images: msg.images || [],
+        action: msg.action || 'generate',
         callbackUrl: msg.callbackUrl || null,
         driveFolderId: msg.driveFolderId || null
       });
@@ -757,11 +803,30 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
             respond({ ok: false, error: 'Không tìm thấy tab Google Flow đang mở. Vui lòng mở trang Flow trước!' });
             return;
           }
-          addLog('🖼️ Đang gửi ' + (msg.files?.length || 1) + ' ảnh vào Flow...');
+
+          // Ensure content script is alive, if not, auto-inject it!
+          const alive = await healthCheckContentScript(tab.id);
+          if (!alive) {
+            addLog('💉 Content script chưa nạp trên tab #' + tab.id + ', đang inject...');
+            try {
+              await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['constants.js', 'content.js']
+              });
+              await new Promise(r => setTimeout(r, 1200));
+            } catch (injectErr) {
+              addLog('❌ Không thể inject script vào tab: ' + injectErr.message);
+              respond({ ok: false, error: 'Tab Flow chưa được tải lại (F5). Vui lòng nhấn F5 tab Flow rồi thử lại!' });
+              return;
+            }
+          }
+
+          addLog('🖼️ Đang gửi ' + (msg.files?.length || 1) + ' ảnh vào Flow...' + (msg.characterName ? ' (Đặt tên: ' + msg.characterName + ')' : ''));
           chrome.tabs.sendMessage(tab.id, {
             type: MSG.UPLOAD_IMAGE_TO_FLOW,
             files: msg.files,
-            images: msg.images
+            images: msg.images,
+            characterName: msg.characterName
           }, (response) => {
             if (chrome.runtime.lastError) {
               respond({ ok: false, error: chrome.runtime.lastError.message });

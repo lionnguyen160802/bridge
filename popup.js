@@ -1,23 +1,44 @@
 // popup.js — Dashboard logic for Flow Auto Generator v4.0
+const tabDashboard = document.getElementById('tabDashboard');
+const tabWorkflow = document.getElementById('tabWorkflow');
+const dashboardPanel = document.getElementById('dashboardPanel');
+const workflowPanel = document.getElementById('workflowPanel');
+
+function selectMainTab(tab) {
+  const workflow = tab === 'workflow';
+  tabDashboard.classList.toggle('active', !workflow);
+  tabWorkflow.classList.toggle('active', workflow);
+  tabDashboard.setAttribute('aria-selected', String(!workflow));
+  tabWorkflow.setAttribute('aria-selected', String(workflow));
+  dashboardPanel.hidden = workflow;
+  workflowPanel.hidden = !workflow;
+  if (workflow) loadDashboard();
+}
+
+tabDashboard.addEventListener('click', () => selectMainTab('dashboard'));
+tabWorkflow.addEventListener('click', () => selectMainTab('workflow'));
 
 // Vietnamese state labels (duplicated here since popup can't importScripts)
 const STATE_LABELS_POPUP = {
-  IDLE:             '⏸️ Chờ job',
-  FIND_CHARACTER:   '🔍 Tìm nhân vật',
-  HOVER_CHARACTER:  '👆 Hover nhân vật',
-  CLICK_MORE_MENU:  '🖱️ Click ⋮ menu',
-  WAIT_MENU:        '⏳ Chờ dropdown',
-  CLICK_ADD_BUTTON: '🖱️ Thêm vào câu lệnh',
-  WAIT_TEXTAREA:    '⏳ Chờ ô nhập',
-  INJECT_PROMPT:    '✏️ Nhập prompt',
-  VERIFY_INPUT:     '✅ Xác nhận',
-  PRESS_ENTER:      '⏎ Ấn Enter',
-  WAIT_RENDER:      '🎬 Rendering...',
-  DETECT_COMPLETE:  '🔎 Kiểm tra',
-  DOWNLOAD_VIDEO:   '💾 Tải video',
-  CALLBACK_RESULT:  '📤 Gửi kết quả',
-  DONE:             '✅ Hoàn tất',
-  ERROR:            '❌ Lỗi'
+  IDLE:               '⏸️ Chờ job',
+  CREATE_PROJECT:     '✨ Tạo Project',
+  UPLOAD_IMAGE:       '🖼️ Tải ảnh lên',
+  GENERATE_CHARACTER: '🎨 Tạo ảnh nhân vật',
+  FIND_CHARACTER:     '🔍 Tìm nhân vật',
+  HOVER_CHARACTER:    '👆 Hover nhân vật',
+  CLICK_MORE_MENU:    '🖱️ Click ⋮ menu',
+  WAIT_MENU:          '⏳ Chờ dropdown',
+  CLICK_ADD_BUTTON:   '🖱️ Thêm vào câu lệnh',
+  WAIT_TEXTAREA:      '⏳ Chờ ô nhập',
+  INJECT_PROMPT:      '✏️ Nhập prompt',
+  VERIFY_INPUT:       '✅ Xác nhận',
+  PRESS_ENTER:        '⏎ Ấn Enter',
+  WAIT_RENDER:        '🎬 Rendering...',
+  DETECT_COMPLETE:    '🔎 Kiểm tra',
+  DOWNLOAD_VIDEO:     '💾 Tải video',
+  CALLBACK_RESULT:    '📤 Gửi kết quả',
+  DONE:               '✅ Hoàn tất',
+  ERROR:              '❌ Lỗi'
 };
 
 // State sequence for progress calculation
@@ -254,6 +275,30 @@ document.getElementById('btnManual').addEventListener('click', async () => {
   setTimeout(loadDashboard, 500);
 });
 
+document.getElementById('btnManualChar').addEventListener('click', async () => {
+  const character = document.getElementById('manualChar').value.trim();
+  const prompt = document.getElementById('manualPrompt').value.trim();
+  const webhookUrl = document.getElementById('manualWebhook').value.trim();
+
+  if (!prompt) {
+    alert('Vui lòng nhập prompt để tạo ảnh nhân vật');
+    return;
+  }
+
+  await chrome.runtime.sendMessage({
+    type: 'MANUAL_JOB',
+    action: 'create_character',
+    character: character || '',
+    sceneId: 'char_' + Date.now(),
+    prompt: prompt,
+    callbackUrl: webhookUrl || null
+  });
+
+  // Clear inputs
+  document.getElementById('manualPrompt').value = '';
+  setTimeout(loadDashboard, 500);
+});
+
 document.getElementById('btnClearHistory').addEventListener('click', async () => {
   if (!confirm('Xóa toàn bộ lịch sử Done/Failed?')) return;
   await chrome.runtime.sendMessage({ type: 'CLEAR_HISTORY' });
@@ -476,21 +521,28 @@ if (btnUploadToFlow) {
         }
       }
       if (url) {
-        filesPayload.push({ url: url });
+        filesPayload.push({ url: url, name: charName || url.split('/').pop().split('?')[0] });
       }
+
+      const charName = document.getElementById('uploadCharName')?.value.trim() || '';
 
       const response = await chrome.runtime.sendMessage({
         type: 'UPLOAD_IMAGE_TO_FLOW',
-        files: filesPayload
+        files: filesPayload,
+        characterName: charName
       });
 
       if (response && response.ok) {
         uploadStatus.style.background = 'rgba(34, 197, 94, 0.2)';
         uploadStatus.style.color = '#4ade80';
-        uploadStatus.textContent = '✅ Đã nạp thành công ' + filesPayload.length + ' ảnh vào Flow!';
+        uploadStatus.textContent = response.data?.log || (charName 
+          ? '✅ Đã nạp ảnh và đổi tên thành "' + charName + '"!'
+          : '✅ Đã nạp thành công ' + filesPayload.length + ' ảnh vào Flow!');
         selectedFiles = [];
         if (filePickerInput) filePickerInput.value = '';
         if (uploadImageUrl) uploadImageUrl.value = '';
+        const nameInput = document.getElementById('uploadCharName');
+        if (nameInput) nameInput.value = '';
         renderSelectedFiles();
       } else {
         uploadStatus.style.background = 'rgba(239, 68, 68, 0.2)';
@@ -506,7 +558,7 @@ if (btnUploadToFlow) {
       btnUploadToFlow.textContent = '🚀 Tải ảnh lên Flow ngay';
       setTimeout(() => {
         if (uploadStatus) uploadStatus.style.display = 'none';
-      }, 6000);
+      }, 7000);
     }
   });
 }

@@ -15,7 +15,11 @@
   "host_permissions": [
     "https://flow.google.com/*",
     "https://labs.google/*",
-    "http://localhost:3500/*"
+    "https://*.onrender.com/*",
+    "https://www.googleapis.com/*",
+    "https://oauth2.googleapis.com/*",
+    "http://localhost:*/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"

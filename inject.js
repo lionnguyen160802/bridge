@@ -64,6 +64,18 @@
     log('📸 Captured ' + preexistingVideos.size + ' pre-existing video URLs to ignore.');
   }
 
+  let preexistingImages = new Set();
+
+  function capturePreexistingImages() {
+    preexistingImages.clear();
+    document.querySelectorAll('img').forEach(im => {
+      if (im.closest('#flowauto-floating-widget') || im.closest('#flowauto-toast')) return;
+      if (im.src) preexistingImages.add(im.src);
+      if (im.currentSrc) preexistingImages.add(im.currentSrc);
+    });
+    log('📸 Captured ' + preexistingImages.size + ' pre-existing image URLs to ignore.');
+  }
+
   function log(msg) {
     console.log(TAG, msg);
     window.postMessage({ type: 'FLOW_LOG', message: msg }, '*');
@@ -457,6 +469,7 @@
 
     // Strategy 1: img alt text
     for (const img of document.querySelectorAll('img')) {
+      if (img.closest('#flowauto-floating-widget') || img.closest('#flowauto-toast')) continue;
       const alt = (img.alt || '').toLowerCase();
       if (alt && alt.includes(nameLower)) {
         const card = climbToCard(img);
@@ -465,14 +478,22 @@
     }
     // Strategy 2: aria-label
     for (const el of document.querySelectorAll('[aria-label]')) {
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
       if (el.getAttribute('aria-label').toLowerCase().includes(nameLower) && isVisible(el)) {
-        return { card: climbToCard(el), img: null, method: 'aria-label' };
+        return { card: climbToCard(el), img: el.querySelector('img'), method: 'aria-label' };
       }
     }
-    // Strategy 3: text content
-    for (const el of document.querySelectorAll('[role="button"], [role="listitem"], [tabindex]')) {
-      if ((el.textContent?.trim().toLowerCase() || '').includes(nameLower) && isVisible(el)) {
-        return { card: el, img: null, method: 'text' };
+    // Strategy 3: broad text content search across common tags
+    for (const el of document.querySelectorAll('div, span, p, [role="button"], [role="listitem"], [tabindex]')) {
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+      // Only match if this element's direct or trimmed text includes the character name
+      const text = (el.textContent?.trim().toLowerCase() || '');
+      if (text.includes(nameLower) && isVisible(el)) {
+        const card = climbToCard(el);
+        if (card && isVisible(card) && card !== document.body) {
+          const img = card.querySelector('img');
+          return { card, img, method: 'text' };
+        }
       }
     }
     return null;
@@ -493,62 +514,121 @@
     return el.parentElement?.parentElement || el.parentElement;
   }
 
-  /** Find ⋮ (three-dots "Khác") button on/near a character card */
-  function findMoreButton(characterName) {
-    const cardResult = findCharacterCard(characterName);
-    if (!cardResult) return null;
-    const card = cardResult.card;
-    const img = cardResult.img;
+  /** Find a media card on Flow's canvas by hint (filename / part of name) or newest */
+  function findMediaCardOnCanvas(hint) {
+    // 1. If hint (like filename or part of filename or previous name) is provided:
+    if (hint && typeof hint === 'string' && hint.trim()) {
+      const clean = hint.replace(/\.[^/.]+$/, '').trim().toLowerCase();
+      const prefix = clean.substring(0, 12);
 
-    log('🔍 Searching ⋮ on card (tag=' + card.tagName + ')');
-
-    // Strategy 1: aria-label up to 4 parent levels
-    const ariaKW = ['Khác', 'More', 'more', 'Menu', 'Options'];
-    let root = card;
-    for (let lvl = 0; lvl < 4; lvl++) {
-      for (const kw of ariaKW) {
-        const btn = root.querySelector('[aria-label*="' + kw + '"]');
-        if (btn && isVisible(btn)) { log('✓ ⋮ via aria (lvl ' + lvl + ')'); return btn; }
-      }
-      const tb = root.querySelector('[data-tooltip*="Khác"], [title*="Khác"], [data-tooltip*="More"], [title*="More"]');
-      if (tb && isVisible(tb)) { log('✓ ⋮ via tooltip'); return tb; }
-      root = root.parentElement || root;
-    }
-
-    // Strategy 2: icon-only buttons in expanded area
-    const area = card.parentElement?.parentElement || card.parentElement || card;
-    for (const btn of area.querySelectorAll('button, [role="button"]')) {
-      if (btn === card) continue;
-      const text = btn.textContent?.trim() || '';
-      const al = (btn.getAttribute('aria-label') || '').toLowerCase();
-      if (text === '⋮' || text === '︙' || text === '…' ||
-        al.includes('more') || al.includes('khác') || al.includes('menu')) {
-        if (isVisible(btn)) { log('✓ ⋮ via text/aria'); return btn; }
-      }
-      if (text.length <= 2 && btn.querySelector('svg, [class*="icon"]')) {
-        const r = btn.getBoundingClientRect();
-        const cr = (img || card).getBoundingClientRect();
-        if (r.width > 0 && r.width < 50 && Math.abs(r.right - cr.right) < 60 && Math.abs(r.top - cr.top) < 60) {
-          log('✓ ⋮ via icon position'); return btn;
+      for (const el of document.querySelectorAll('div, span, p, [role="button"], [role="listitem"], [tabindex]')) {
+        if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+        const text = (el.textContent || '').trim().toLowerCase();
+        if (text && (text.includes(clean) || (prefix.length >= 4 && text.includes(prefix)))) {
+          const card = climbToCard(el);
+          if (card && isVisible(card) && card !== document.body) {
+            const img = card.querySelector('img');
+            log('✓ Found media card matching hint "' + hint + '"');
+            return { card, img };
+          }
         }
       }
     }
 
-    // Strategy 3: elementFromPoint probes
+    // 2. Look for media card images in the main workspace (excluding header avatar / sidebar)
+    const candidates = [];
+    for (const img of document.querySelectorAll('img')) {
+      if (!isVisible(img)) continue;
+      if (img.closest('#flowauto-floating-widget') || img.closest('#flowauto-toast')) continue;
+
+      const r = img.getBoundingClientRect();
+      // Must be a media card image: width >= 80, height >= 80, y > 50 (below header), x > 160 (right of sidebar)
+      if (r.width >= 80 && r.height >= 80 && r.top >= 50 && r.left >= 160) {
+        const card = climbToCard(img);
+        if (card && card !== document.body) {
+          candidates.push({ card, img, top: r.top, left: r.left });
+        }
+      }
+    }
+
+    if (candidates.length > 0) {
+      // Flow grid puts cards in rows. Top-left card is candidates[0]
+      candidates.sort((a, b) => (a.top - b.top) || (a.left - b.left));
+      log('✓ Found ' + candidates.length + ' media card(s) on canvas, using first card');
+      return candidates[0];
+    }
+
+    return null;
+  }
+
+  /** Find ⋮ (three-dots "Khác" / "More") button on/near a character card */
+  function findMoreButton(characterNameOrCard) {
+    let card = null;
+    let img = null;
+
+    if (typeof characterNameOrCard === 'string') {
+      const cardResult = findCharacterCard(characterNameOrCard) || findMediaCardOnCanvas(characterNameOrCard);
+      if (cardResult) {
+        card = cardResult.card;
+        img = cardResult.img;
+      }
+    } else if (characterNameOrCard && characterNameOrCard.nodeType) {
+      card = climbToCard(characterNameOrCard);
+      img = characterNameOrCard.tagName === 'IMG' ? characterNameOrCard : characterNameOrCard.querySelector('img');
+    }
+
+    if (!card) return null;
+
+    log('🔍 Searching ⋮ on card (tag=' + card.tagName + ')');
+
+    // Strategy 1: Buttons inside or around the card
+    const area = card.parentElement?.parentElement || card.parentElement || card;
+    const btns = Array.from(area.querySelectorAll('button, [role="button"]'));
+    for (const btn of btns) {
+      if (btn === card) continue;
+      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+      const title = (btn.getAttribute('title') || '').toLowerCase();
+      const text = (btn.textContent || '').trim();
+
+      // Exclude favorite/heart button
+      if (aria.includes('thích') || aria.includes('like') || aria.includes('favorite') || title.includes('thích')) continue;
+
+      if (text === '⋮' || text === '︙' || text === '…' ||
+          aria.includes('khác') || aria.includes('more') || aria.includes('menu') || aria.includes('options') ||
+          title.includes('khác') || title.includes('more') ||
+          btn.querySelector('svg path[d*="m12 8"], svg path[d*="M12 8"], svg [d*="12 2"]')) {
+        if (isVisible(btn)) { log('✓ ⋮ via button text/aria/svg'); return btn; }
+      }
+    }
+
+    // Strategy 2: Check buttons in top-right corner of the card
     const target = img || card;
-    const tr = target.getBoundingClientRect();
+    const cr = target.getBoundingClientRect();
+    for (const btn of btns) {
+      if (btn === card) continue;
+      const br = btn.getBoundingClientRect();
+      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+      if (!aria.includes('thích') && !aria.includes('like') && !aria.includes('favorite')) {
+        if (Math.abs(br.right - cr.right) < 70 && Math.abs(br.top - cr.top) < 70 && br.width > 0 && br.width < 60) {
+          log('✓ ⋮ via top-right geometry (' + Math.round(br.left) + ',' + Math.round(br.top) + ')');
+          return btn;
+        }
+      }
+    }
+
+    // Strategy 3: elementFromPoint probes at top-right corner
     const probes = [
-      { x: tr.right - 18, y: tr.top + 18 }, { x: tr.right - 12, y: tr.top + 24 },
-      { x: tr.right - 24, y: tr.top + 12 }, { x: tr.right - 8, y: tr.top + 8 },
-      { x: tr.right - 18, y: tr.top + 30 }, { x: tr.right - 40, y: tr.top + 18 },
+      { x: cr.right - 18, y: cr.top + 18 }, { x: cr.right - 12, y: cr.top + 24 },
+      { x: cr.right - 26, y: cr.top + 14 }, { x: cr.right - 10, y: cr.top + 10 },
+      { x: cr.right - 34, y: cr.top + 20 }
     ];
     for (const p of probes) {
       if (p.x < 0 || p.y < 0) continue;
       let el = document.elementFromPoint(p.x, p.y);
-      for (let d = 0; d < 5 && el; d++) {
+      for (let d = 0; d < 5 && el && el !== card && el !== document.body; d++) {
         if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
           const ca = (el.getAttribute('aria-label') || '').toLowerCase();
-          if (el !== card && !ca.includes('thích') && !ca.includes('like') && !ca.includes('favorite')) {
+          if (!ca.includes('thích') && !ca.includes('like') && !ca.includes('favorite')) {
             log('✓ ⋮ via elementFromPoint (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
             return el;
           }
@@ -557,28 +637,179 @@
       }
     }
 
-    // Strategy 4: global
-    for (const btn of document.querySelectorAll('button, [role="button"]')) {
-      const al = (btn.getAttribute('aria-label') || '').toLowerCase();
-      const ti = (btn.getAttribute('title') || '').toLowerCase();
-      if ((al.includes('khác') || ti.includes('khác') || al === 'more_vert') && isVisible(btn)) {
-        log('✓ ⋮ via global'); return btn;
+    return null;
+  }
+
+  /** Rename a character card via ⋮ menu -> Đổi tên */
+  async function renameCharacterCard(targetElementOrName, newName) {
+    if (!newName) return false;
+    newName = newName.trim();
+    log('🏷️ Bắt đầu đổi tên nhân vật thành: "' + newName + '"...');
+    showFlowToast('🏷️ Đang đổi tên thành: "' + newName + '"...', 3000);
+
+    let card = null;
+    let img = null;
+
+    // 1. Locate card via name hint or element
+    if (typeof targetElementOrName === 'string' && targetElementOrName.trim()) {
+      const found = findCharacterCard(targetElementOrName) || findMediaCardOnCanvas(targetElementOrName);
+      if (found) { card = found.card; img = found.img; }
+    } else if (targetElementOrName && targetElementOrName.nodeType) {
+      card = climbToCard(targetElementOrName);
+      img = targetElementOrName.tagName === 'IMG' ? targetElementOrName : targetElementOrName.querySelector('img');
+    }
+
+    // 2. Fallback: newest media card on canvas
+    if (!card) {
+      log('🔍 Tìm thẻ media mới nhất trên canvas...');
+      const mc = findMediaCardOnCanvas(null);
+      if (mc) {
+        card = mc.card;
+        img = mc.img;
       }
     }
 
-    // Debug dump
-    log('❌ ⋮ not found. Dumping card area:');
-    let dc = 0;
-    for (const el of area.querySelectorAll('*')) {
-      if (dc > 25) break;
-      const tag = el.tagName.toLowerCase(), role = el.getAttribute('role') || '';
-      const aria = el.getAttribute('aria-label') || '', title = el.getAttribute('title') || '';
-      if (tag === 'button' || role === 'button' || aria || title || tag === 'svg') {
-        log('  <' + tag + '> role="' + role + '" aria="' + aria + '" title="' + title + '" vis=' + isVisible(el));
-        dc++;
-      }
+    if (!card) {
+      log('❌ Không tìm thấy thẻ ảnh trên Flow để đổi tên');
+      showFlowToast('❌ Không tìm thấy thẻ ảnh để đổi tên', 3000);
+      return false;
     }
-    return null;
+
+    log('🎯 Đã định vị thẻ ảnh: <' + card.tagName + '> class="' + (card.className || '') + '"');
+
+    // 3. Hover card to reveal buttons
+    simulateHover(card);
+    if (img) simulateHover(img);
+    await new Promise(r => setTimeout(r, 600));
+
+    // 4. Find and click ⋮ button
+    let moreBtn = findMoreButton(card);
+    if (!moreBtn && img) moreBtn = findMoreButton(img);
+
+    if (!moreBtn) {
+      log('❌ Không tìm thấy nút ⋮ trên thẻ ảnh');
+      showFlowToast('❌ Không tìm thấy nút ⋮ trên thẻ', 3000);
+      return false;
+    }
+
+    log('🖱️ Click nút ⋮...');
+    simulateClick(moreBtn);
+    await new Promise(r => setTimeout(r, 800));
+
+    // 5. Find and click "Đổi tên" / "Rename" in the popup menu
+    log('🔍 Tìm mục "Đổi tên" trong menu...');
+    const renameBtn = await waitForCondition(() => {
+      for (const el of document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"], li, div, span')) {
+        if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+        const text = (el.textContent || '').trim();
+        if ((text === 'Đổi tên' || text === 'Rename' || text.startsWith('Đổi tên') || text.startsWith('Rename')) && isVisible(el)) {
+          return el.closest('button, [role="button"], [role="menuitem"], [role="option"], li') || el;
+        }
+      }
+      return null;
+    }, 4000);
+
+    if (!renameBtn) {
+      log('❌ Không tìm thấy menu item "Đổi tên"');
+      showFlowToast('❌ Không tìm thấy menu item "Đổi tên"', 3000);
+      return false;
+    }
+
+    log('🖱️ Click "Đổi tên"...');
+    simulateClick(renameBtn);
+    await new Promise(r => setTimeout(r, 800));
+
+    // 6. Find the rename input field
+    log('🔍 Tìm ô nhập tên mới...');
+    const searchBar = findSearchBar();
+    const promptInput = findPromptInput();
+
+    const renameInput = await waitForCondition(() => {
+      // 6a. Check inline input inside the card
+      const inlineInput = card.querySelector('input, textarea, [contenteditable="true"]');
+      if (inlineInput && isVisible(inlineInput)) {
+        log('✓ Tìm thấy ô nhập tên inline trong thẻ ảnh');
+        return inlineInput;
+      }
+
+      // 6b. Check modal / dialog
+      const dialogInput = document.querySelector('[role="dialog"] input, [role="alertdialog"] input, [aria-modal="true"] input');
+      if (dialogInput && isVisible(dialogInput)) {
+        log('✓ Tìm thấy ô nhập tên trong hộp thoại modal');
+        return dialogInput;
+      }
+
+      // 6c. Check active focused element
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== searchBar && active !== promptInput && isVisible(active)) {
+        if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true') {
+          log('✓ Tìm thấy ô nhập tên đang focus');
+          return active;
+        }
+      }
+
+      // 6d. Filter all visible inputs, excluding search bar & prompt
+      const allInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]'));
+      return allInputs.find(i => {
+        if (!isVisible(i)) return false;
+        if (i === searchBar || i === promptInput) return false;
+        if (i.closest('#flowauto-floating-widget') || i.closest('#flowauto-toast')) return false;
+        const ph = (i.getAttribute('placeholder') || '').toLowerCase();
+        if (ph.includes('bạn muốn tạo') || ph.includes('what do you want') || ph.includes('tìm kiếm') || ph.includes('search')) return false;
+        return true;
+      });
+    }, 4000);
+
+    if (!renameInput) {
+      log('❌ Không tìm thấy ô nhập tên mới');
+      showFlowToast('❌ Không tìm thấy ô nhập tên mới', 3000);
+      return false;
+    }
+
+    log('✍️ Điền tên nhân vật mới: "' + newName + '"...');
+    renameInput.focus();
+    renameInput.click();
+
+    if (typeof renameInput.select === 'function') {
+      renameInput.select();
+    }
+    clearSearchInput(renameInput);
+    await new Promise(r => setTimeout(r, 200));
+
+    // Inject the new name via React-compatible setters
+    injectTextToReactInput(renameInput, newName);
+
+    try {
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeSetter) nativeSetter.call(renameInput, newName);
+      else renameInput.value = newName;
+      renameInput.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      renameInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    } catch(e) {}
+
+    await new Promise(r => setTimeout(r, 300));
+
+    // 7. Submit rename: Enter key + blur + click Save if button exists
+    log('💾 Xác nhận lưu tên...');
+    const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+    renameInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+    renameInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+    renameInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+
+    renameInput.dispatchEvent(new Event('blur', { bubbles: true, composed: true }));
+
+    setTimeout(() => {
+      const saveBtn = findButtonByText('Lưu') || findButtonByText('Save') || findButtonByText('Xong') || findButtonByText('Done') || findButtonByText('Xác nhận');
+      if (saveBtn) {
+        log('🖱️ Click nút Xác nhận/Lưu...');
+        simulateClick(saveBtn);
+      }
+    }, 300);
+
+    await new Promise(r => setTimeout(r, 600));
+    log('🎉 Đổi tên nhân vật thành công: "' + newName + '"');
+    showFlowToast('🏷️ Đã đổi tên nhân vật thành: "' + newName + '"', 4000);
+    return true;
   }
 
   /** Find button by text content */
@@ -688,6 +919,62 @@
     return null;
   }
 
+  function getProjectId() {
+    const m = window.location.href.match(/\/project\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : null;
+  }
+
+  /** Find prompt input specifically on https://flow.google.com/project/{projectId}/character */
+  function findCharacterPromptInput() {
+    const allInputs = Array.from(document.querySelectorAll('textarea, input[type="text"], input:not([type]), [contenteditable="true"]'));
+    const charPlaceholders = [
+      'mô tả nhân vật của bạn',
+      'mô tả nhân vật',
+      'nhân vật của bạn',
+      'describe your character',
+      'describe a character',
+      'describe'
+    ];
+
+    // 1. Check placeholder & aria-label
+    for (const el of allInputs) {
+      if (!isVisible(el)) continue;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+      const ph = (el.getAttribute('placeholder') || el.getAttribute('data-placeholder') || '').toLowerCase();
+      const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      for (const p of charPlaceholders) {
+        if (ph.includes(p) || aria.includes(p)) {
+          log('✓ findCharacterPromptInput: matched placeholder/aria "' + p + '" at y=' + Math.round(el.getBoundingClientRect().top));
+          return el;
+        }
+      }
+    }
+
+    // 2. Check parent/container text for keywords
+    for (const el of allInputs) {
+      if (!isVisible(el)) continue;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+      const container = el.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') || el.parentElement?.parentElement;
+      if (container) {
+        const text = (container.textContent || '').toLowerCase();
+        if (text.includes('mô tả nhân vật') || text.includes('describe your character') || text.includes('định dạng') || text.includes('banana')) {
+          log('✓ findCharacterPromptInput: matched container keyword at y=' + Math.round(el.getBoundingClientRect().top));
+          return el;
+        }
+      }
+    }
+
+    // 3. Fallback: Any visible textarea on /character
+    const visibleTextareas = allInputs.filter(el => el.tagName === 'TEXTAREA' && isVisible(el) && !el.closest('#flowauto-floating-widget') && !el.closest('#flowauto-toast'));
+    if (visibleTextareas.length > 0) {
+      log('✓ findCharacterPromptInput: fallback visible textarea');
+      return visibleTextareas[0];
+    }
+
+    // 4. Fallback to general findPromptInput
+    return findPromptInput();
+  }
+
   /** Find '+' button in prompt bar */
   function findPlusButton() {
     const promptInput = findPromptInput();
@@ -705,6 +992,79 @@
       }
     }
     return null;
+  }
+
+  /** Switch prompt bar creation mode between 'image' and 'video' */
+  async function switchCreationMode(targetMode) {
+    targetMode = (targetMode || 'image').toLowerCase();
+    log('🎨 Đang chuyển chế độ tạo sang: ' + targetMode);
+
+    const isImageTarget = targetMode === 'image';
+    const modeKeywords = isImageTarget ? ['hình ảnh', 'image', 'ảnh', 'photo'] : ['video', 'phim'];
+
+    // 1. Check prompt bar buttons
+    const promptInput = findPromptInput();
+    const promptBar = promptInput?.closest('form, [class*="prompt"], [class*="composer"]') || document.body;
+    const promptButtons = Array.from(promptBar.querySelectorAll('button, [role="button"], [role="combobox"]'));
+
+    const currentModeBtn = promptButtons.find(b => {
+      if (!isVisible(b)) return false;
+      const text = (b.textContent || '').trim().toLowerCase();
+      const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+      return text.includes('video') || text.includes('hình ảnh') || text.includes('image') || aria.includes('video') || aria.includes('image');
+    });
+
+    if (currentModeBtn) {
+      const btnText = (currentModeBtn.textContent || '').toLowerCase();
+      const btnAria = (currentModeBtn.getAttribute('aria-label') || '').toLowerCase();
+
+      // If already in target mode, we're good!
+      if (modeKeywords.some(kw => btnText.includes(kw) || btnAria.includes(kw))) {
+        log('✓ Đã ở chế độ: ' + targetMode);
+        return true;
+      }
+
+      log('🖱️ Click nút chuyển chế độ: "' + currentModeBtn.textContent.trim() + '"');
+      simulateClick(currentModeBtn);
+      await new Promise(r => setTimeout(r, 600));
+
+      // Wait for dropdown option
+      const option = await waitForCondition(() => {
+        for (const el of document.querySelectorAll('[role="option"], [role="menuitem"], button, div, span, li')) {
+          if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+          const text = (el.textContent || '').trim().toLowerCase();
+          if (isVisible(el) && modeKeywords.some(kw => text === kw || text.startsWith(kw))) {
+            return el.closest('[role="option"], [role="menuitem"], button, li') || el;
+          }
+        }
+        return null;
+      }, 3000);
+
+      if (option) {
+        log('✓ Chọn tùy chọn: "' + option.textContent.trim() + '"');
+        simulateClick(option);
+        await new Promise(r => setTimeout(r, 600));
+        return true;
+      }
+    }
+
+    // 2. Fallback: Click sidebar "Hình ảnh"
+    if (isImageTarget) {
+      const sidebarItems = Array.from(document.querySelectorAll('nav [role="button"], aside [role="button"], [role="navigation"] button, button, a'));
+      const imgTab = sidebarItems.find(el => {
+        if (!isVisible(el)) return false;
+        const text = (el.textContent || '').trim().toLowerCase();
+        return text === 'hình ảnh' || text === 'images' || text === 'image';
+      });
+      if (imgTab) {
+        log('🖱️ Click tab "Hình ảnh" ở menu bên trái...');
+        simulateClick(imgTab);
+        await new Promise(r => setTimeout(r, 800));
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function base64ToFile(base64Str, filename, mimeType) {
@@ -1127,12 +1487,13 @@
       // ── Step -1: Create New Project ──
       case 'createProject': {
         try {
-          // Check if already in a project
           const currentUrl = window.location.href;
-          const match = currentUrl.match(/\/project\/([a-zA-Z0-9_-]+)/);
-          if (match && match[1]) {
-            log('✓ Already inside project: ' + match[1]);
-            sendResult(action, true, { log: '✓ Đang ở trong project: ' + match[1], projectId: match[1] });
+          const initialMatch = currentUrl.match(/\/project\/([a-zA-Z0-9_-]+)/);
+          const oldProjectId = initialMatch ? initialMatch[1] : null;
+
+          if (oldProjectId && params.allowExisting) {
+            log('✓ Already inside project: ' + oldProjectId);
+            sendResult(action, true, { log: '✓ Đang ở trong project: ' + oldProjectId, projectId: oldProjectId });
             return;
           }
 
@@ -1140,6 +1501,7 @@
           const newProjectKeywords = ['dự án mới', 'new project', 'tạo dự án', 'create project'];
           let targetBtn = null;
 
+          // 1. Search by text, aria-label, title
           for (const btn of document.querySelectorAll('button, [role="button"], a, div')) {
             const text = (btn.textContent || '').trim().toLowerCase();
             const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
@@ -1147,12 +1509,35 @@
             
             for (const kw of newProjectKeywords) {
               if ((text.includes(kw) || aria.includes(kw) || title.includes(kw)) && isVisible(btn)) {
-                // Climb up to clickable button if needed
                 targetBtn = btn.closest('button, [role="button"], a') || btn;
                 break;
               }
             }
             if (targetBtn) break;
+          }
+
+          // 2. If inside a project, look for header '+' button
+          if (!targetBtn && oldProjectId) {
+            const headerBtns = Array.from(document.querySelectorAll('header button, [role="banner"] button, nav button, button'));
+            for (const b of headerBtns) {
+              if (!isVisible(b)) continue;
+              const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+              const text = (b.textContent || '').trim();
+              if (text === '+' || aria.includes('tạo') || aria.includes('mới') || aria.includes('create') || aria.includes('new') || aria.includes('add')) {
+                const r = b.getBoundingClientRect();
+                if (r.top < 80) { // In top header
+                  targetBtn = b;
+                  break;
+                }
+              }
+            }
+          }
+
+          // 3. Fallback: navigate to https://flow.google.com/ home if button not on page
+          if (!targetBtn && oldProjectId) {
+            log('🌐 Navigating back to home to click "Dự án mới"...');
+            window.location.href = 'https://flow.google.com/';
+            return; // Page will reload at home
           }
 
           if (!targetBtn) {
@@ -1163,18 +1548,22 @@
           log('🖱️ Clicking "+ Dự án mới" button...');
           simulateClick(targetBtn);
 
-          // Wait for URL to update with project ID (up to 15 seconds)
+          // Wait for URL to update with a NEW project ID (up to 20 seconds)
           const startWait = Date.now();
           const checkInterval = setInterval(() => {
             const cur = window.location.href;
             const m = cur.match(/\/project\/([a-zA-Z0-9_-]+)/);
-            if (m && m[1]) {
+            if (m && m[1] && m[1] !== oldProjectId) {
               clearInterval(checkInterval);
               log('🎉 Created new project successfully: ' + m[1]);
               sendResult(action, true, { log: '✓ Đã tạo dự án mới: ' + m[1], projectId: m[1] });
-            } else if (Date.now() - startWait > 15000) {
+            } else if (Date.now() - startWait > 20000) {
               clearInterval(checkInterval);
-              sendResult(action, false, null, 'Hết thời gian chờ tạo dự án (URL không đổi)');
+              if (m && m[1]) {
+                sendResult(action, true, { log: '✓ Đang ở trong project: ' + m[1], projectId: m[1] });
+              } else {
+                sendResult(action, false, null, 'Hết thời gian chờ tạo dự án (URL không đổi)');
+              }
             }
           }, 500);
 
@@ -1191,15 +1580,204 @@
           if (filesData.length === 0 && params.imageUrl) filesData.push({ url: params.imageUrl });
           if (filesData.length === 0 && params.base64) filesData.push({ base64: params.base64, name: params.name });
 
-          log('🖼️ uploadImage action: ' + filesData.length + ' image(s)');
+          const charName = (params.characterName || params.character || '').trim();
+          const firstFileName = filesData[0]?.name || (filesData[0]?.url ? filesData[0].url.split('/').pop().split('?')[0] : '') || '';
+
+          log('🖼️ uploadImage action: ' + filesData.length + ' image(s)' + (charName ? ' (Đổi tên: ' + charName + ')' : ''));
           const res = await uploadFilesToFlow(filesData);
           if (res.success) {
-            sendResult(action, true, { log: '✓ Đã nạp ' + res.count + ' ảnh vào Flow' });
+            // If characterName was provided, wait for card to appear and rename it!
+            if (charName) {
+              log('⏳ Chờ Flow hiển thị thẻ ảnh để đổi tên thành: "' + charName + '"...');
+              showFlowToast('⏳ Đang chờ ảnh hiển thị để đổi tên...', 4000);
+              
+              let renamed = false;
+              // Poll for card up to 15 seconds
+              const startWait = Date.now();
+              while (Date.now() - startWait < 15000) {
+                await new Promise(r => setTimeout(r, 1200));
+                renamed = await renameCharacterCard(firstFileName, charName);
+                if (renamed) break;
+              }
+
+              if (!renamed) {
+                // Fallback: try without hint
+                log('⚠️ Thử đổi tên thẻ ảnh đầu tiên không cần hint...');
+                renamed = await renameCharacterCard(null, charName);
+              }
+
+              if (renamed) {
+                sendResult(action, true, { log: '✓ Đã upload ảnh và đổi tên thành: "' + charName + '"' });
+              } else {
+                sendResult(action, true, { log: '✓ Đã nạp ' + res.count + ' ảnh vào Flow (chưa kịp đổi tên thẻ)' });
+              }
+            } else {
+              sendResult(action, true, { log: '✓ Đã nạp ' + res.count + ' ảnh vào Flow' });
+            }
           } else {
             sendResult(action, false, null, res.error || 'Upload ảnh thất bại');
           }
         } catch (err) {
           sendResult(action, false, null, 'uploadImage exception: ' + err.message);
+        }
+        break;
+      }
+
+      // ── Step 0.5: Direct rename character card ──
+      case 'renameCharacter': {
+        const ok = await renameCharacterCard(params.target || params.oldName || null, params.name || params.newName);
+        sendResult(action, ok, { log: ok ? '✓ Đã đổi tên thành: ' + (params.name || params.newName) : 'Đổi tên thất bại' });
+        break;
+      }
+
+      // ── Step 0.6: Generate Character Image from Prompt on /character ──
+      case 'generateCharacterImage': {
+        try {
+          const promptText = (params.prompt || params.characterPrompt || '').trim();
+          const charName = (params.characterName || params.character || '').trim();
+          const projectId = params.projectId || getProjectId();
+
+          if (!promptText) {
+            sendResult(action, false, null, 'Prompt tạo ảnh không được để trống');
+            return;
+          }
+
+          // 1. Ensure we are on https://flow.google.com/project/{projectId}/character
+          if (projectId) {
+            const isAlreadyOnCharPage = window.location.href.includes('/character');
+            if (!isAlreadyOnCharPage) {
+              const targetUrl = 'https://flow.google.com/project/' + projectId + '/character';
+              log('🌐 Chuyển sang URL tạo nhân vật: ' + targetUrl);
+              showFlowToast('🌐 Đang chuyển sang trang tạo nhân vật...', 3000);
+
+              // Try clicking in-page link to /character first (SPA navigation)
+              const charLink = document.querySelector('a[href*="/character"]') ||
+                               Array.from(document.querySelectorAll('nav a, aside a, [role="navigation"] a, a')).find(a => a.href && a.href.includes('/character'));
+              
+              let navigated = false;
+              if (charLink) {
+                simulateClick(charLink);
+                for (let i = 0; i < 8; i++) {
+                  await new Promise(r => setTimeout(r, 400));
+                  if (window.location.href.includes('/character')) {
+                    navigated = true;
+                    break;
+                  }
+                }
+              }
+
+              if (!navigated) {
+                // Navigate via browser URL
+                window.location.href = targetUrl;
+                // Page unloads; content.js resumes automatically on load via GET_ACTIVE_JOB
+                return;
+              }
+            }
+          }
+
+          log('🎨 Bắt đầu tạo ảnh nhân vật: "' + (charName || 'unnamed') + '"...');
+          showFlowToast('🎨 Đang tạo ảnh nhân vật: ' + (charName || '') + '...', 4000);
+
+          // 2. Wait for character prompt input to appear on /character
+          const input = await waitForCondition(() => findCharacterPromptInput(), 10000);
+          if (!input) {
+            sendResult(action, false, null, 'Không tìm thấy ô nhập prompt "Mô tả nhân vật của bạn..." trên trang /character');
+            return;
+          }
+
+          // 3. Capture pre-existing images
+          capturePreexistingImages();
+
+          // 4. Inject prompt
+          input.focus();
+          clearSearchInput(input);
+          injectTextToReactInput(input, promptText);
+          await new Promise(r => setTimeout(r, 400));
+
+          // 5. Submit prompt (Enter key)
+          log('⏎ Nhấn Enter để gửi prompt tạo nhân vật...');
+          const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+          input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+          input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+          input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+
+          // Also click submit arrow button if present
+          setTimeout(() => {
+            const promptContainer = input.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') || input.parentElement?.parentElement || input.parentElement;
+            if (promptContainer) {
+              const buttons = Array.from(promptContainer.querySelectorAll('button:not([disabled]), [role="button"]:not([aria-disabled="true"])'));
+              const inputRect = input.getBoundingClientRect();
+              const submitBtn = buttons.find(b => {
+                const br = b.getBoundingClientRect();
+                if (br.right < inputRect.left + 50) return false;
+                const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+                if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send')) return true;
+                if (b.querySelector('svg')) return true;
+                return false;
+              });
+              if (submitBtn) simulateClick(submitBtn);
+            }
+          }, 400);
+
+          // 6. Wait for new image card to appear (up to 45s)
+          log('⏳ Chờ Google Flow tạo ảnh nhân vật (khoảng 5-25s)...');
+          showFlowToast('⏳ Đang chờ ảnh nhân vật xuất hiện...', 8000);
+
+          let newCardObj = null;
+          const startWait = Date.now();
+          const MAX_IMAGE_WAIT = 45000;
+
+          while (Date.now() - startWait < MAX_IMAGE_WAIT) {
+            await new Promise(r => setTimeout(r, 1500));
+
+            for (const im of document.querySelectorAll('img')) {
+              if (im.closest('#flowauto-floating-widget') || im.closest('#flowauto-toast')) continue;
+              const src = im.src || im.currentSrc;
+              const r = im.getBoundingClientRect();
+              if (src && isVisible(im) && r.width >= 80 && r.height >= 80) {
+                if (!preexistingImages.has(src)) {
+                  const card = climbToCard(im);
+                  newCardObj = { card: card !== document.body ? card : null, img: im, src };
+                  log('🎉 Phát hiện ảnh nhân vật mới tạo: ' + src.substring(0, 45) + '...');
+                  break;
+                }
+              }
+            }
+            if (newCardObj) break;
+          }
+
+          // Fallback if preexisting check didn't catch: pick top-left card
+          if (!newCardObj) {
+            const fallback = findMediaCardOnCanvas(null);
+            if (fallback) newCardObj = { card: fallback.card, img: fallback.img, src: fallback.img?.src || '' };
+          }
+
+          if (!newCardObj) {
+            sendResult(action, false, null, 'Hết thời gian chờ tạo ảnh nhân vật (không thấy thẻ ảnh mới xuất hiện)');
+            return;
+          }
+
+          // 7. Rename the character card if characterName was given and rename menu is available
+          if (charName && newCardObj.card) {
+            try {
+              log('🏷️ Đổi tên thẻ ảnh nhân vật thành: "' + charName + '"...');
+              showFlowToast('🏷️ Đổi tên thẻ nhân vật: ' + charName + '...', 3000);
+              await new Promise(r => setTimeout(r, 1000));
+              await renameCharacterCard(newCardObj.card, charName);
+            } catch (renameErr) {
+              log('⚠️ Rename character notice: ' + renameErr.message);
+            }
+          }
+
+          showFlowToast('✅ Đã tạo ảnh nhân vật "' + (charName || 'mới') + '" thành công!', 4000);
+          sendResult(action, true, {
+            log: '✓ Đã tạo thành công ảnh nhân vật' + (charName ? ': "' + charName + '"' : ''),
+            character: charName,
+            imageSrc: newCardObj.src
+          });
+
+        } catch (err) {
+          sendResult(action, false, null, 'generateCharacterImage exception: ' + err.message);
         }
         break;
       }
@@ -1468,13 +2046,18 @@
              
              // Also try forcefully clicking the submit button directly as a safety measure
              setTimeout(() => {
-                const container = input.closest('form, [role="dialog"], body');
-                if (container) {
-                   const buttons = Array.from(container.querySelectorAll('button:not([disabled]), [role="button"]:not([aria-disabled="true"])'));
+                const promptContainer = input.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') || input.parentElement?.parentElement || input.parentElement;
+                if (promptContainer) {
+                   const buttons = Array.from(promptContainer.querySelectorAll('button:not([disabled]), [role="button"]:not([aria-disabled="true"])'));
+                   const inputRect = input.getBoundingClientRect();
                    const submitBtn = buttons.find(b => {
+                      const br = b.getBoundingClientRect();
+                      // Must be near the prompt input vertically and to the right
+                      if (Math.abs(br.top - inputRect.top) > 100) return false;
+                      if (br.left < inputRect.left + 50) return false;
                       const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-                      if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create')) return true;
-                      if (b.querySelector('svg path[d*="m12 4"]')) return true; 
+                      if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send')) return true;
+                      if (b.querySelector('svg')) return true; 
                       return false;
                    });
                    

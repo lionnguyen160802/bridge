@@ -35,6 +35,7 @@ let currentCharacterIndex = 0;
 const STATE_SEQUENCE = [
   FLOW_STATES.CREATE_PROJECT,
   FLOW_STATES.UPLOAD_IMAGE,
+  FLOW_STATES.GENERATE_CHARACTER,
   FLOW_STATES.FIND_CHARACTER,
   FLOW_STATES.HOVER_CHARACTER,
   FLOW_STATES.CLICK_MORE_MENU,
@@ -51,8 +52,12 @@ const STATE_SEQUENCE = [
 ];
 
 function nextState(state) {
-  // If action is create_project_only, stop right after project is created
-  if (currentJob?.action === 'create_project' && state === FLOW_STATES.CREATE_PROJECT) {
+  // If action is create_project or create_character, handle project creation branching
+  if ((currentJob?.action === 'create_project' || currentJob?.action === 'create_character') && state === FLOW_STATES.CREATE_PROJECT) {
+    // If prompt is provided, generate character image next!
+    if (currentJob.prompt && currentJob.prompt.trim()) {
+      return FLOW_STATES.GENERATE_CHARACTER;
+    }
     // If images are provided with create_project, proceed to upload image first
     if (currentJob.images && currentJob.images.length > 0) {
       return FLOW_STATES.UPLOAD_IMAGE;
@@ -62,6 +67,14 @@ function nextState(state) {
 
   // If action is upload_only, stop right after upload completes
   if ((currentJob?.action === 'upload_only' || currentJob?.action === 'create_project') && state === FLOW_STATES.UPLOAD_IMAGE) {
+    if (currentJob.prompt && currentJob.prompt.trim()) {
+      return FLOW_STATES.GENERATE_CHARACTER;
+    }
+    return FLOW_STATES.DONE;
+  }
+
+  // After generating character, we are done!
+  if (state === FLOW_STATES.GENERATE_CHARACTER) {
     return FLOW_STATES.DONE;
   }
 
@@ -171,7 +184,14 @@ function executeState(state) {
         transitionTo(FLOW_STATES.FIND_CHARACTER, '⏭️ Không có ảnh — chuyển sang tìm nhân vật');
         return;
       }
-      sendAction('uploadImage', { files: currentJob.images });
+      sendAction('uploadImage', { files: currentJob.images, characterName: currentJob.character || '' });
+      break;
+
+    case FLOW_STATES.GENERATE_CHARACTER:
+      sendAction('generateCharacterImage', {
+        prompt: currentJob.prompt,
+        characterName: currentJob.character || ''
+      });
       break;
 
     case FLOW_STATES.FIND_CHARACTER:
@@ -271,6 +291,14 @@ window.addEventListener('message', (event) => {
         currentJob.result.projectId = data.projectId;
       }
 
+      // Save character generation result
+      if (currentState === FLOW_STATES.GENERATE_CHARACTER && data) {
+        if (!currentJob.result) currentJob.result = {};
+        if (data.character) currentJob.result.character = data.character;
+        if (data.imageSrc) currentJob.result.imageSrc = data.imageSrc;
+        if (data.cardId) currentJob.result.cardId = data.cardId;
+      }
+
       // Advance character index BEFORE computing next state
       if (currentState === FLOW_STATES.CLICK_ADD_BUTTON) {
         currentCharacterIndex++;
@@ -315,10 +343,11 @@ window.addEventListener('message', (event) => {
       type: 'DEBUGGER_TYPE',
       text: event.data.text
     }, (response) => {
+      const err = chrome.runtime.lastError;
       window.postMessage({
         type: 'FLOW_DEBUGGER_RESULT',
-        success: response?.success,
-        error: response?.error
+        success: !err && !!response?.success,
+        error: err ? err.message : response?.error
       }, '*');
     });
   }
@@ -327,10 +356,11 @@ window.addEventListener('message', (event) => {
     chrome.runtime.sendMessage({
       type: 'DEBUGGER_ENTER'
     }, (response) => {
+      const err = chrome.runtime.lastError;
       window.postMessage({
         type: 'FLOW_DEBUGGER_ENTER_RESULT',
-        success: response?.success,
-        error: response?.error
+        success: !err && !!response?.success,
+        error: err ? err.message : response?.error
       }, '*');
     });
   }
@@ -339,7 +369,7 @@ window.addEventListener('message', (event) => {
 // ==========================================
 // JOB LIFECYCLE
 // ==========================================
-function startJob(job) {
+function startJob(job, resumeState) {
   stopped = false;
   currentJob = job;
   retryCount = 0;
@@ -355,8 +385,21 @@ function startJob(job) {
 
   reportState(FLOW_STATES.IDLE, '🚀 Job started: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : ''));
   
-  if (job.action === 'create_project' || (!job.projectId && !window.location.href.includes('/project/'))) {
+  if (resumeState && resumeState !== FLOW_STATES.IDLE) {
+    transitionTo(resumeState, '🔄 Resuming job at: ' + resumeState);
+    return;
+  }
+
+  if (window.location.href.includes('/character') && job.prompt) {
+    transitionTo(FLOW_STATES.GENERATE_CHARACTER, '🎨 Generating character image on /character...');
+  } else if (job.action === 'create_project' || (!job.projectId && !window.location.href.includes('/project/'))) {
     transitionTo(FLOW_STATES.CREATE_PROJECT, '✨ Creating new project in Flow...');
+  } else if (job.action === 'create_character') {
+    if (job.projectId || window.location.href.includes('/project/')) {
+      transitionTo(FLOW_STATES.GENERATE_CHARACTER, '🎨 Generating character image...');
+    } else {
+      transitionTo(FLOW_STATES.CREATE_PROJECT, '✨ Creating new project in Flow...');
+    }
   } else if (job.images && job.images.length > 0) {
     transitionTo(FLOW_STATES.UPLOAD_IMAGE, '🖼️ Uploading ' + job.images.length + ' image(s) to Flow...');
   } else {
@@ -445,7 +488,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 
   if (msg.type === MSG.UPLOAD_IMAGE_TO_FLOW) {
     const files = msg.files || msg.images || [];
-    sendAction('uploadImage', { files: files });
+    sendAction('uploadImage', { files: files, characterName: msg.characterName });
     
     // Listen for inject result or timeout
     const onResult = (event) => {
@@ -459,7 +502,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     setTimeout(() => {
       window.removeEventListener('message', onResult);
       respond({ ok: true, message: 'Upload command sent' });
-    }, 15000);
+    }, 30000);
     return true;
   }
 
@@ -469,9 +512,18 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 });
 
 // ==========================================
-// INIT
+// INIT & RESUME
 // ==========================================
 console.log('[FlowAuto v4.4] Content script loaded on:', window.location.href);
 reportState(FLOW_STATES.IDLE, '📌 Content script ready');
+
+// Check if background has an ongoing job that needs resuming on this tab
+chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
+  if (chrome.runtime.lastError || !response || !response.job) return;
+  if (!currentJob) {
+    console.log('[FlowAuto] Resuming active job from background:', response.job, 'state:', response.state);
+    startJob(response.job, response.state);
+  }
+});
 
 } // end of re-injection guard else block

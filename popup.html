@@ -96,6 +96,13 @@
     /* ─── Content ─── */
     .content { padding: 12px 14px; }
 
+    /* ─── Main Tabs ─── */
+    .main-tabs { display:flex; gap:6px; padding:10px 14px 0; background:#0c0c16; }
+    .main-tab { flex:1; border:1px solid #1e1e36; border-bottom:none; border-radius:8px 8px 0 0; padding:8px 10px; background:#0f0f1c; color:#888; cursor:pointer; font-size:11px; font-weight:700; }
+    .main-tab.active { color:#c4b5fd; border-color:#7c3aed60; background:#17152a; }
+    .tab-panel[hidden] { display:none; }
+    .workflow-empty { padding:24px 12px; text-align:center; color:#777; border:1px dashed #2a2a4e; border-radius:10px; }
+
     /* ─── Stats Grid ─── */
     .stats {
       display: grid; grid-template-columns: repeat(4, 1fr);
@@ -356,6 +363,12 @@
   </div>
 
   <div class="content">
+    <div class="main-tabs" role="tablist" aria-label="Các khu vực">
+      <button class="main-tab active" id="tabDashboard" role="tab" aria-selected="true">📊 Dashboard</button>
+      <button class="main-tab" id="tabWorkflow" role="tab" aria-selected="false">🔄 Workflow</button>
+    </div>
+
+    <div id="dashboardPanel" class="tab-panel">
     <!-- Stats -->
     <div class="stats">
       <div class="stat">
@@ -452,8 +465,14 @@
         <div id="selectedThumbnails" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; max-height:60px;"></div>
       </div>
 
+      <!-- Optional Character Name Input -->
+      <div style="margin-top:8px;">
+        <label style="font-size:10px; color:#c084fc; font-weight:600; display:block; margin-bottom:3px;">🏷️ Tên nhân vật (Tự động đổi tên thẻ trên Flow):</label>
+        <input class="manual-input" id="uploadCharName" type="text" placeholder="Nhập tên nhân vật (VD: Gia Cát Lượng)" style="width:100%; border-color: rgba(168,85,247,0.5); background: rgba(168,85,247,0.08);">
+      </div>
+
       <!-- Or Image URL Input -->
-      <div style="display:flex; gap:6px; margin-top:8px;">
+      <div style="display:flex; gap:6px; margin-top:6px;">
         <input class="manual-input" id="uploadImageUrl" type="text" placeholder="Hoặc dán URL ảnh (https://...)" style="flex:1;">
       </div>
 
@@ -478,7 +497,10 @@
         <input class="manual-input" id="manualDriveFolderId" type="text" placeholder="Drive Folder ID (optional)">
       </div>
       <textarea class="manual-input" id="manualPrompt" placeholder="Nhập prompt..." style="margin-top:4px"></textarea>
-      <button class="btn btn-submit" id="btnManual" style="margin-top:6px">🚀 Gửi Job</button>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <button class="btn btn-submit" id="btnManual" style="flex:1;">🚀 Gửi Job Tạo Video</button>
+        <button class="btn" id="btnManualChar" style="flex:1; background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; font-weight:600; font-size:11px;" title="Tạo ảnh nhân vật (Imagen 3) vào Flow">🎨 Tạo Ảnh Nhân Vật</button>
+      </div>
     </div>
 
     <!-- Settings -->
@@ -514,6 +536,24 @@
       </div>
       <div class="logs-wrap" id="logsWrap">
         <div class="logs-empty">Chưa có hoạt động</div>
+      </div>
+    </div>
+    </div>
+
+    <div id="workflowPanel" class="tab-panel" hidden>
+      <div class="section">
+        <div class="section-header"><span class="section-title">🔄 Workflow tạo video</span><span class="state-chip" id="workflowMode">Manual</span></div>
+        <div class="workflow-empty" id="workflowOverview">Đang tải trạng thái workflow...</div>
+      </div>
+      <div class="section">
+        <div class="section-header"><span class="section-title">📋 Các bước xử lý</span></div>
+        <div class="queue-list">
+          <div class="job-detail"><span class="job-detail-key">1. Get Scene</span><span class="job-detail-val">Lấy scene chờ xử lý</span></div>
+          <div class="job-detail"><span class="job-detail-key">2. Filter</span><span class="job-detail-val">Pending + đủ Project/Folder</span></div>
+          <div class="job-detail"><span class="job-detail-key">3. Loop</span><span class="job-detail-val">Xử lý tuần tự từng scene</span></div>
+          <div class="job-detail"><span class="job-detail-key">4. Call API</span><span class="job-detail-val">Gửi sang Flow Bridge</span></div>
+          <div class="job-detail"><span class="job-detail-key">5. Wait</span><span class="job-detail-val">Cooldown 3 phút</span></div>
+        </div>
       </div>
     </div>
   </div>

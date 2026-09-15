@@ -5,6 +5,7 @@ const FLOW_STATES = {
   IDLE: 'IDLE',
   CREATE_PROJECT: 'CREATE_PROJECT',
   UPLOAD_IMAGE: 'UPLOAD_IMAGE',
+  GENERATE_CHARACTER: 'GENERATE_CHARACTER',
   FIND_CHARACTER: 'FIND_CHARACTER',
   HOVER_CHARACTER: 'HOVER_CHARACTER',
   CLICK_MORE_MENU: 'CLICK_MORE_MENU',
@@ -24,38 +25,40 @@ const FLOW_STATES = {
 
 // Retry delays (ms) per state — array length = max retries
 const RETRY_DELAYS = {
-  CREATE_PROJECT:   [1000, 2000, 3000, 5000],
-  UPLOAD_IMAGE:     [1000, 2000, 5000],
-  FIND_CHARACTER:   [1000, 2000, 5000, 10000, 10000],
-  HOVER_CHARACTER:  [1000, 2000, 5000],
-  CLICK_MORE_MENU:  [500, 1000, 2000, 3000, 5000],
-  WAIT_MENU:        [500, 1000, 2000, 3000, 5000],
-  CLICK_ADD_BUTTON: [1000, 2000, 5000],
-  WAIT_TEXTAREA:    [500, 1000, 2000, 3000, 5000],
-  INJECT_PROMPT:    [1000, 2000, 5000],
-  VERIFY_INPUT:     [500, 1000, 2000],
-  PRESS_ENTER:      [1000, 2000, 3000],
-  WAIT_RENDER:      [5000, 10000, 30000, 60000, 120000],
-  DETECT_COMPLETE:  [2000, 5000, 10000, 20000],
-  DOWNLOAD_VIDEO:   [5000, 10000, 15000]
+  CREATE_PROJECT:      [1000, 2000, 3000, 5000],
+  UPLOAD_IMAGE:        [1000, 2000, 5000],
+  GENERATE_CHARACTER:  [2000, 5000, 10000],
+  FIND_CHARACTER:      [1000, 2000, 5000, 10000, 10000],
+  HOVER_CHARACTER:     [1000, 2000, 5000],
+  CLICK_MORE_MENU:     [500, 1000, 2000, 3000, 5000],
+  WAIT_MENU:           [500, 1000, 2000, 3000, 5000],
+  CLICK_ADD_BUTTON:    [1000, 2000, 5000],
+  WAIT_TEXTAREA:       [500, 1000, 2000, 3000, 5000],
+  INJECT_PROMPT:       [1000, 2000, 5000],
+  VERIFY_INPUT:        [500, 1000, 2000],
+  PRESS_ENTER:         [1000, 2000, 3000],
+  WAIT_RENDER:         [5000, 10000, 30000, 60000, 120000],
+  DETECT_COMPLETE:     [2000, 5000, 10000, 20000],
+  DOWNLOAD_VIDEO:      [5000, 10000, 15000]
 };
 
 // Max time (ms) allowed in each state before timeout triggers retry
 const STATE_TIMEOUTS = {
-  CREATE_PROJECT:   25000,
-  UPLOAD_IMAGE:     30000,
-  FIND_CHARACTER:   30000,
-  HOVER_CHARACTER:  10000,
-  CLICK_MORE_MENU:  10000,
-  WAIT_MENU:        15000,
-  CLICK_ADD_BUTTON: 10000,
-  WAIT_TEXTAREA:    15000,
-  INJECT_PROMPT:    10000,
-  VERIFY_INPUT:     10000,
-  PRESS_ENTER:      10000,
-  WAIT_RENDER:      600000,   // 10 minutes
-  DETECT_COMPLETE:  60000,
-  DOWNLOAD_VIDEO:   60000
+  CREATE_PROJECT:      25000,
+  UPLOAD_IMAGE:        30000,
+  GENERATE_CHARACTER:  60000,
+  FIND_CHARACTER:      30000,
+  HOVER_CHARACTER:     10000,
+  CLICK_MORE_MENU:     10000,
+  WAIT_MENU:           15000,
+  CLICK_ADD_BUTTON:    10000,
+  WAIT_TEXTAREA:       15000,
+  INJECT_PROMPT:       10000,
+  VERIFY_INPUT:        10000,
+  PRESS_ENTER:         10000,
+  WAIT_RENDER:         600000,   // 10 minutes
+  DETECT_COMPLETE:     60000,
+  DOWNLOAD_VIDEO:      60000
 };
 
 // WebSocket / Bridge configuration
@@ -90,22 +93,23 @@ const MSG = {
 
 // State display names (Vietnamese)
 const STATE_LABELS = {
-  IDLE:             '⏸️ Chờ job',
-  CREATE_PROJECT:   '✨ Tạo dự án mới',
-  UPLOAD_IMAGE:     '🖼️ Upload ảnh',
-  FIND_CHARACTER:   '🔍 Tìm nhân vật',
-  HOVER_CHARACTER:  '👆 Hover nhân vật',
-  CLICK_MORE_MENU:  '🖱️ Click ⋮ menu',
-  WAIT_MENU:        '⏳ Chờ dropdown',
-  CLICK_ADD_BUTTON: '🖱️ Thêm vào câu lệnh',
-  WAIT_TEXTAREA:    '⏳ Chờ ô nhập',
-  INJECT_PROMPT:    '✏️ Nhập prompt',
-  VERIFY_INPUT:     '✅ Xác nhận input',
-  PRESS_ENTER:      '⏎ Ấn Enter',
-  WAIT_RENDER:      '🎬 Đang render...',
-  DETECT_COMPLETE:  '🔎 Kiểm tra hoàn tất',
-  DOWNLOAD_VIDEO:   '💾 Tải video',
-  CALLBACK_RESULT:  '📤 Gửi kết quả',
-  DONE:             '✅ Hoàn tất',
-  ERROR:            '❌ Lỗi'
+  IDLE:                '⏸️ Chờ job',
+  CREATE_PROJECT:      '✨ Tạo dự án mới',
+  UPLOAD_IMAGE:        '🖼️ Upload ảnh',
+  GENERATE_CHARACTER:  '🎨 Tạo ảnh nhân vật',
+  FIND_CHARACTER:      '🔍 Tìm nhân vật',
+  HOVER_CHARACTER:     '👆 Hover nhân vật',
+  CLICK_MORE_MENU:     '🖱️ Click ⋮ menu',
+  WAIT_MENU:           '⏳ Chờ dropdown',
+  CLICK_ADD_BUTTON:    '🖱️ Thêm vào câu lệnh',
+  WAIT_TEXTAREA:       '⏳ Chờ ô nhập',
+  INJECT_PROMPT:       '✏️ Nhập prompt',
+  VERIFY_INPUT:        '✅ Xác nhận input',
+  PRESS_ENTER:         '⏎ Ấn Enter',
+  WAIT_RENDER:         '🎬 Đang render...',
+  DETECT_COMPLETE:     '🔎 Kiểm tra hoàn tất',
+  DOWNLOAD_VIDEO:      '💾 Tải video',
+  CALLBACK_RESULT:     '📤 Gửi kết quả',
+  DONE:                '✅ Hoàn tất',
+  ERROR:               '❌ Lỗi'
 };
