@@ -190,7 +190,8 @@ function executeState(state) {
     case FLOW_STATES.GENERATE_CHARACTER:
       sendAction('generateCharacterImage', {
         prompt: currentJob.prompt,
-        characterName: currentJob.character || ''
+        characterName: currentJob.character || '',
+        projectId: currentJob.projectId || null
       });
       break;
 
@@ -255,8 +256,23 @@ function executeState(state) {
 // ==========================================
 // COMMUNICATION WITH inject.js
 // ==========================================
+let injectReady = !!window._flowAutoInjectReady;
+let pendingActionQueue = null;
+
 function sendAction(action, params) {
   pendingAction = action;
+  if (!injectReady && !window._flowAutoInjectReady) {
+    console.log('[FlowAuto] inject.js not ready yet, queuing action:', action);
+    pendingActionQueue = { action, params };
+    setTimeout(() => {
+      if (pendingActionQueue) {
+        console.log('[FlowAuto] Timeout waiting for inject.js, forcing postMessage:', action);
+        window.postMessage({ type: MSG.INJECT_ACTION, action: pendingActionQueue.action, params: pendingActionQueue.params }, '*');
+        pendingActionQueue = null;
+      }
+    }, 1200);
+    return;
+  }
   window.postMessage({
     type: MSG.INJECT_ACTION,
     action: action,
@@ -266,6 +282,20 @@ function sendAction(action, params) {
 
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
+
+  if (event.data.type === 'FLOW_INJECT_READY') {
+    injectReady = true;
+    if (pendingActionQueue) {
+      console.log('[FlowAuto] inject.js is ready, executing queued action:', pendingActionQueue.action);
+      window.postMessage({
+        type: MSG.INJECT_ACTION,
+        action: pendingActionQueue.action,
+        params: pendingActionQueue.params
+      }, '*');
+      pendingActionQueue = null;
+    }
+    return;
+  }
 
   if (event.data.type === MSG.INJECT_RESULT) {
     const { action, success, data, error } = event.data;
@@ -284,11 +314,15 @@ window.addEventListener('message', (event) => {
         return;
       }
 
-      // Save newly created projectId to currentJob
+      // Save newly created projectId to currentJob and background
       if (currentState === FLOW_STATES.CREATE_PROJECT && data?.projectId) {
         currentJob.projectId = data.projectId;
         if (!currentJob.result) currentJob.result = {};
         currentJob.result.projectId = data.projectId;
+        chrome.runtime.sendMessage({
+          type: 'UPDATE_JOB_PROJECT_ID',
+          projectId: data.projectId
+        }).catch(() => {});
       }
 
       // Save character generation result
@@ -383,7 +417,10 @@ function startJob(job, resumeState) {
   }
   currentCharacterIndex = 0;
 
-  reportState(FLOW_STATES.IDLE, '🚀 Job started: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : ''));
+  chrome.runtime.sendMessage({
+    type: 'LOG',
+    message: '🚀 Job started: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : '')
+  }).catch(() => {});
   
   if (resumeState && resumeState !== FLOW_STATES.IDLE) {
     transitionTo(resumeState, '🔄 Resuming job at: ' + resumeState);

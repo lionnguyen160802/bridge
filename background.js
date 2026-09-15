@@ -552,11 +552,26 @@ async function findOrOpenFlowTab(projectId, action) {
   if (tab) {
     // Check if the existing tab needs navigation
     const currentUrl = tab.url || '';
-    const needsNav = !isSpecialId && (
-      action === 'create_character'
-        ? !currentUrl.includes(`/project/${projectId}/character`)
-        : !currentUrl.includes(`/project/${projectId}`)
-    );
+    let needsNav = false;
+
+    if (action === 'create_project') {
+      // If we need to create a project, we MUST be at https://flow.google.com/ home (not inside an existing project!)
+      if (currentUrl.includes('/project/')) {
+        needsNav = true;
+        targetUrl = 'https://flow.google.com/';
+      }
+    } else if (action === 'create_character') {
+      if (projectId && !currentUrl.includes(`/project/${projectId}/character`)) {
+        needsNav = true;
+        targetUrl = `https://flow.google.com/project/${projectId}/character`;
+      } else if (!projectId && currentUrl.includes('/project/')) {
+        needsNav = true;
+        targetUrl = 'https://flow.google.com/';
+      }
+    } else if (!isSpecialId && !currentUrl.includes(`/project/${projectId}`)) {
+      needsNav = true;
+    }
+
     if (needsNav) {
        addLog('🌐 Navigating to ' + targetUrl + ' (waiting 7s for page load)');
        await chrome.tabs.update(tab.id, { url: targetUrl, active: true });
@@ -777,6 +792,15 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 
     case 'GET_ACTIVE_JOB':
       respond({ job: state.currentJob, state: state.currentState });
+      return true;
+
+    case 'UPDATE_JOB_PROJECT_ID':
+      if (state.currentJob) {
+        state.currentJob.projectId = msg.projectId;
+        saveState();
+        addLog('📌 Saved project ID: ' + msg.projectId);
+      }
+      respond({ ok: true });
       return true;
 
     case MSG.MANUAL_JOB:

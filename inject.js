@@ -10,9 +10,13 @@
   // RE-INJECTION GUARD — prevent duplicate listeners & fetch wrapper chains on 24/7 VPS
   if (window._flowAutoInjectLoaded) {
     console.log('[FlowAuto:inject] Already loaded, skipping re-injection');
+    window._flowAutoInjectReady = true;
+    window.postMessage({ type: 'FLOW_INJECT_READY' }, '*');
     return;
   }
   window._flowAutoInjectLoaded = true;
+  window._flowAutoInjectReady = true;
+  window.postMessage({ type: 'FLOW_INJECT_READY' }, '*');
 
   let authToken = '';
 
@@ -2158,6 +2162,8 @@
       handleAction(event.data.action, event.data.params || {});
     }
   });
+
+  window.postMessage({ type: 'FLOW_INJECT_READY' }, '*');
 
   // Injects floating upload widget on Flow interface
   setTimeout(injectFloatingUploadWidget, 1500);
