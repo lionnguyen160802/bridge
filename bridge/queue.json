@@ -16,6 +16,47 @@
       "driveFolderId": null,
       "status": "QUEUED",
       "createdAt": 1789121519778
+    },
+    {
+      "id": "proj_scene_6_1789497508634",
+      "rowId": null,
+      "projectId": null,
+      "sceneId": "scene_006",
+      "character": "Gia Cát Lượng",
+      "prompt": "Chân dung Gia Cát Lượng thời Tam Quốc, mặc áo choàng đạo sĩ, tay cầm quạt lông vũ, phong cách điện ảnh 8k",
+      "images": [],
+      "action": "generate",
+      "callbackUrl": null,
+      "driveFolderId": null,
+      "status": "QUEUED",
+      "createdAt": 1789497508634
+    },
+    {
+      "id": "proj_scene_7_1789497644758",
+      "rowId": null,
+      "projectId": null,
+      "sceneId": "scene_007",
+      "character": "Gia Cát Lượng",
+      "prompt": "Chân dung Gia Cát Lượng thời Tam Quốc, mặc áo choàng đạo sĩ, tay cầm quạt lông vũ, phong cách điện ảnh 8k",
+      "images": [],
+      "action": "generate",
+      "callbackUrl": null,
+      "driveFolderId": null,
+      "status": "QUEUED",
+      "createdAt": 1789497644758
+    },
+    {
+      "id": "create_proj_8_1789497670485",
+      "rowId": null,
+      "projectId": null,
+      "sceneId": "create_project_008",
+      "character": "Gia Cát Lượng",
+      "prompt": "Chân dung Gia Cát Lượng thời Tam Quốc, mặc áo choàng đạo sĩ, tay cầm quạt lông vũ, phong cách điện ảnh 8k",
+      "images": [],
+      "action": "create_project",
+      "callbackUrl": null,
+      "status": "QUEUED",
+      "createdAt": 1789497670485
     }
   ],
   "completed": [
@@ -80,5 +121,5 @@
       "error": "Content script unreachable"
     }
   ],
-  "counter": 5
+  "counter": 8
 }
