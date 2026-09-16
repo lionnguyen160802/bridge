@@ -240,6 +240,16 @@ document.getElementById('btnCancel').addEventListener('click', async () => {
   setTimeout(loadDashboard, 500);
 });
 
+async function handleClearQueue() {
+  if (confirm('Bạn có chắc muốn xóa sạch toàn bộ hàng đợi (Queue) không?')) {
+    await chrome.runtime.sendMessage({ type: 'CLEAR_QUEUE' });
+    setTimeout(loadDashboard, 300);
+  }
+}
+
+document.getElementById('btnClearQueue')?.addEventListener('click', handleClearQueue);
+document.getElementById('btnClearAllJobs')?.addEventListener('click', handleClearQueue);
+
 document.getElementById('btnClearLog').addEventListener('click', async () => {
   await chrome.runtime.sendMessage({ type: 'CLEAR_LOGS' });
   loadDashboard();

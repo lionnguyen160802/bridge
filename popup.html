@@ -412,6 +412,7 @@
       <button class="btn btn-resume" id="btnResume" title="Resume queue" style="display:none">▶ Resume</button>
       <button class="btn btn-skip" id="btnSkip" title="Skip current job" disabled>⏭ Skip</button>
       <button class="btn btn-cancel" id="btnCancel" title="Cancel current job" disabled>✖ Cancel</button>
+      <button class="btn" id="btnClearAllJobs" title="Xóa toàn bộ hàng đợi và dừng job" style="background:linear-gradient(135deg, #b91c1c, #991b1b); color:#fff; box-shadow:0 3px 12px rgba(239,68,68,0.25);">🗑 Xóa Queue</button>
     </div>
 
     <!-- Auto-Refresh Settings -->
@@ -432,9 +433,10 @@
 
     <!-- Queue -->
     <div class="section">
-      <div class="section-header">
+      <div class="section-header" style="display:flex; align-items:center; gap:8px;">
         <span class="section-title">📋 Queue</span>
         <span class="section-count" id="queueCount">0</span>
+        <button class="btn-clear" id="btnClearQueue" title="Xóa toàn bộ hàng đợi" style="margin-left:auto; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#f87171; font-size:10px; padding:3px 9px; border-radius:5px; cursor:pointer; font-weight:700; display:flex; align-items:center; gap:4px; transition:all 0.2s;">🗑️ Xóa hết</button>
       </div>
       <div class="queue-list" id="queueList">
         <div class="queue-empty">Queue trống</div>

@@ -83,6 +83,7 @@ const MSG = {
   PAUSE_QUEUE:           'PAUSE_QUEUE',
   RESUME_QUEUE:          'RESUME_QUEUE',
   CANCEL_JOB:            'CANCEL_JOB',
+  CLEAR_QUEUE:           'CLEAR_QUEUE',
   CLEAR_LOGS:            'CLEAR_LOGS',
   RETRY_JOB:             'RETRY_JOB',
   SKIP_JOB:              'SKIP_JOB',

@@ -203,6 +203,10 @@ function handleBridgeMessage(msg) {
       cancelJob(msg.jobId);
       break;
 
+    case 'clear_queue':
+      clearAllQueue(true);
+      break;
+
     case 'pause':
       state.paused = true;
       addLog('⏸️ Queue paused by bridge');
@@ -532,6 +536,31 @@ function cancelJob(jobId) {
   }
 }
 
+function clearAllQueue(fromBridge = false) {
+  const count = state.queue.length;
+  state.queue = [];
+
+  // Hủy job đang chạy nếu có
+  if (state.currentJob) {
+    const activeId = state.currentJob.sceneId || state.currentJob.id;
+    addLog('🛑 Dừng job đang chạy: ' + activeId);
+    findFlowTab().then(tab => {
+      if (tab) chrome.tabs.sendMessage(tab.id, { type: MSG.STOP_JOB }).catch(() => {});
+    });
+    failCurrentJob('Queue cleared by user');
+  }
+
+  state.currentState = FLOW_STATES.IDLE;
+  state.retryCount = 0;
+  addLog('🗑️ Đã xóa sạch toàn bộ hàng đợi (' + count + ' jobs)');
+  saveStateNow();
+
+  // Báo cho Bridge server xóa hàng đợi trên server luôn
+  if (!fromBridge) {
+    sendToBridge({ type: 'clear_queue' });
+  }
+}
+
 // ==========================================
 // TAB MANAGEMENT
 // ==========================================
@@ -776,6 +805,12 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 
     case MSG.CANCEL_JOB:
       if (state.currentJob) cancelJob(state.currentJob.id);
+      respond({ ok: true });
+      return true;
+
+    case MSG.CLEAR_QUEUE:
+    case 'CLEAR_QUEUE':
+      clearAllQueue(false);
       respond({ ok: true });
       return true;
 

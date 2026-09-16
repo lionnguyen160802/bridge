@@ -355,6 +355,28 @@ app.get('/job/:jobId', (req, res) => {
   res.status(404).json({ error: 'Job not found: ' + jobId });
 });
 
+// Clear queue endpoint
+app.post('/clear-queue', (req, res) => {
+  const count = jobQueue.length;
+  jobQueue = [];
+  if (currentJob) {
+    currentJob.status = 'CANCELLED';
+    currentJob = null;
+  }
+  saveQueue();
+  log('🗑️ Queue cleared via HTTP endpoint (' + count + ' jobs removed)');
+
+  if (extensionSocket && extensionSocket.readyState === WebSocket.OPEN) {
+    extensionSocket.send(JSON.stringify({ type: 'clear_queue' }));
+  }
+
+  res.json({
+    success: true,
+    message: 'Queue cleared successfully',
+    removedJobsCount: count
+  });
+});
+
 // Get current status
 app.get('/status', (req, res) => {
   res.json({
@@ -519,6 +541,18 @@ function handleExtensionMessage(ws, msg) {
     case 'pong':
       // Keepalive response
       break;
+
+    case 'clear_queue': {
+      const qCount = jobQueue.length;
+      jobQueue = [];
+      if (currentJob) {
+        currentJob.status = 'CANCELLED';
+        currentJob = null;
+      }
+      saveQueue();
+      log('🗑️ Bridge queue cleared by extension (' + qCount + ' queued jobs removed)');
+      break;
+    }
 
     case 'job_queued':
       log('📋 Extension acknowledged job: ' + msg.jobId);
