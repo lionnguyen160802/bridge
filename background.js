@@ -38,6 +38,19 @@ async function loadState() {
       // Don't restore WebSocket state — always start fresh
       state.wsConnected = false;
       
+      // Filter out stale queue items older than 15 minutes
+      const MAX_AGE = 15 * 60 * 1000;
+      if (Array.isArray(state.queue)) {
+        state.queue = state.queue.filter(j => !j.queuedAt || (Date.now() - j.queuedAt < MAX_AGE));
+      } else {
+        state.queue = [];
+      }
+
+      // Do NOT keep leftover currentJob across restarts — prevents re-running old jobs!
+      state.currentJob = null;
+      state.currentState = FLOW_STATES.IDLE;
+      state.retryCount = 0;
+
       // Ensure settings object exists
       if (!state.settings) {
         state.settings = {
@@ -233,13 +246,45 @@ function handleBridgeMessage(msg) {
 // JOB QUEUE
 // ==========================================
 function enqueueJob(job) {
+  if (!job || !job.id) return;
+
+  // 1. Bỏ qua nếu job này đã hoàn thành trước đó (triệt để chống chạy lại job cũ)
+  const alreadyCompleted = state.completedJobs.find(j => j.id === job.id);
+  if (alreadyCompleted) {
+    addLog('⚠️ Bỏ qua job đã hoàn thành: ' + (job.sceneId || job.id));
+    sendToBridge({
+      type: 'job_completed',
+      jobId: job.id,
+      result: alreadyCompleted.result || {}
+    });
+    return;
+  }
+
+  // 2. Bỏ qua nếu job này đang chạy
+  if (state.currentJob && state.currentJob.id === job.id) {
+    addLog('⚠️ Bỏ qua job đang trong tiến trình: ' + (job.sceneId || job.id));
+    return;
+  }
+
+  // 3. Bỏ qua nếu job này đã có sẵn trong queue
+  if (state.queue.some(j => j.id === job.id)) {
+    addLog('⚠️ Bỏ qua job đã nằm trong hàng đợi: ' + (job.sceneId || job.id));
+    return;
+  }
+
+  // 4. Bỏ qua nếu job đã tạo quá 15 phút trước (tránh zombie job từ server cũ)
+  if (job.createdAt && (Date.now() - job.createdAt > 15 * 60 * 1000)) {
+    addLog('⚠️ Bỏ qua job đã hết hạn (>15 phút): ' + (job.sceneId || job.id));
+    return;
+  }
+
   job.status = 'QUEUED';
   job.queuedAt = Date.now();
   job.id = job.id || (job.projectId + '_' + job.sceneId + '_' + Date.now());
 
   state.queue.push(job);
   addLog('📥 Queued: ' + job.sceneId + (job.character ? ' (' + job.character + ')' : ''));
-  saveState();
+  saveStateNow();
 
   sendToBridge({ type: 'job_queued', jobId: job.id });
   processQueue();
@@ -393,6 +438,12 @@ async function completeCurrentJob(result) {
   if (!state.currentJob) return;
 
   const job = { ...state.currentJob };
+
+  // Immediately clear current job so any concurrent messages/reloads won't see or re-run it
+  state.currentJob = null;
+  state.currentState = FLOW_STATES.IDLE;
+  state.retryCount = 0;
+  saveStateNow(); // Critical state change — save immediately
   
   // Upload videos to Google Drive if configured
   const driveFolderId = job.driveFolderId || state.settings?.driveFolderId || null;
@@ -459,10 +510,7 @@ async function completeCurrentJob(result) {
     callbackUrl: finalCallbackUrl
   });
 
-  state.currentJob = null;
-  state.currentState = FLOW_STATES.IDLE;
-  state.retryCount = 0;
-  saveStateNow(); // Critical state change — save immediately
+  saveStateNow();
 
   // Đảm bảo tab quay về trang Canvas https://flow.google.com/project/{projectId} nếu vừa hoàn thành tạo nhân vật
   if (job.action === 'create_character' || (job.action === 'create_project' && job.prompt)) {
@@ -486,6 +534,13 @@ function failCurrentJob(error) {
   if (!state.currentJob) return;
 
   const job = { ...state.currentJob };
+
+  // Immediately clear current job so any concurrent messages/reloads won't see or re-run it
+  state.currentJob = null;
+  state.currentState = FLOW_STATES.IDLE;
+  state.retryCount = 0;
+  saveStateNow(); // Critical state change — save immediately
+
   job.status = 'FAILED';
   job.failedAt = Date.now();
   job.error = error;
@@ -508,10 +563,7 @@ function failCurrentJob(error) {
     callbackUrl: finalCallbackUrl
   });
 
-  state.currentJob = null;
-  state.currentState = FLOW_STATES.IDLE;
-  state.retryCount = 0;
-  saveState();
+  saveStateNow();
 
   setTimeout(processQueue, 3000);
 }
@@ -850,7 +902,17 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       return true;
 
     case 'GET_ACTIVE_JOB':
-      respond({ job: state.currentJob, state: state.currentState });
+      if (
+        state.currentJob &&
+        state.currentJob.status === 'PROCESSING' &&
+        state.currentState !== FLOW_STATES.IDLE &&
+        state.currentState !== FLOW_STATES.DONE &&
+        state.currentState !== FLOW_STATES.ERROR
+      ) {
+        respond({ job: state.currentJob, state: state.currentState });
+      } else {
+        respond({ job: null, state: FLOW_STATES.IDLE });
+      }
       return true;
 
     case 'UPDATE_JOB_PROJECT_ID':
@@ -1007,11 +1069,10 @@ loadState().then(() => {
   connectWS();
   setupAutoRefreshAlarm();
 
-  // Resume interrupted job
-  if (state.currentJob && state.currentJob.status === 'PROCESSING') {
-    addLog('🔄 Resuming interrupted job: ' + state.currentJob.sceneId);
-    setTimeout(() => dispatchJobToContentScript(state.currentJob), 3000);
-  }
+  // Reset currentJob to null on extension start/reload to prevent zombie job execution
+  state.currentJob = null;
+  state.currentState = FLOW_STATES.IDLE;
+  saveStateNow();
 });
 
 // ==========================================

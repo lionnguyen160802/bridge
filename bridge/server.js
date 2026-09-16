@@ -32,6 +32,16 @@ function loadQueue() {
       completedJobs = data.completed || [];
       failedJobs = data.failed || [];
       jobCounter = data.counter || 0;
+
+      // Filter out stale jobs older than 15 minutes (to avoid re-running ancient zombie jobs)
+      const MAX_AGE_MS = 15 * 60 * 1000;
+      const initialCount = jobQueue.length;
+      jobQueue = jobQueue.filter(j => (Date.now() - (j.createdAt || 0)) < MAX_AGE_MS);
+      if (jobQueue.length !== initialCount) {
+        log('🧹 Bỏ qua ' + (initialCount - jobQueue.length) + ' job cũ quá hạn trong queue');
+        saveQueue();
+      }
+
       log('📂 Loaded queue: ' + jobQueue.length + ' pending, ' + completedJobs.length + ' completed');
     }
   } catch (e) {
@@ -633,9 +643,32 @@ function dispatchNext() {
     return;
   }
   if (currentJob) {
-    log('⏳ Job already running: ' + currentJob.id);
-    return;
+    // If currentJob has been running for more than 15 minutes, force expire it
+    if (currentJob.startedAt && Date.now() - currentJob.startedAt > 15 * 60 * 1000) {
+      log('⚠️ Current job timed out on server: ' + currentJob.id);
+      currentJob.status = 'FAILED';
+      currentJob.error = 'Global timeout';
+      failedJobs.unshift(currentJob);
+      currentJob = null;
+      saveQueue();
+    } else {
+      log('⏳ Job already running: ' + currentJob.id);
+      return;
+    }
   }
+
+  // Filter out any stale jobs before dispatching
+  const MAX_AGE_MS = 15 * 60 * 1000;
+  let droppedCount = 0;
+  while (jobQueue.length > 0 && (Date.now() - (jobQueue[0].createdAt || 0)) >= MAX_AGE_MS) {
+    jobQueue.shift();
+    droppedCount++;
+  }
+  if (droppedCount > 0) {
+    log('🗑️ Bỏ qua ' + droppedCount + ' job quá hạn (>15 phút)');
+    saveQueue();
+  }
+
   if (jobQueue.length === 0) {
     log('📭 Queue empty');
     return;

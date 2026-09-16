@@ -563,9 +563,24 @@ reportState(FLOW_STATES.IDLE, '📌 Content script ready');
 // Check if background has an ongoing job that needs resuming on this tab
 chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
   if (chrome.runtime.lastError || !response || !response.job) return;
-  if (!currentJob) {
-    console.log('[FlowAuto] Resuming active job from background:', response.job, 'state:', response.state);
-    startJob(response.job, response.state);
+  if (!currentJob && response.job.status === 'PROCESSING') {
+    const validStates = [
+      FLOW_STATES.CREATE_PROJECT,
+      FLOW_STATES.GENERATE_CHARACTER,
+      FLOW_STATES.UPLOAD_IMAGE,
+      FLOW_STATES.FIND_CHARACTER,
+      FLOW_STATES.WAIT_TEXTAREA,
+      FLOW_STATES.FILL_PROMPT,
+      FLOW_STATES.CLICK_CREATE,
+      FLOW_STATES.WAIT_RENDER,
+      FLOW_STATES.DOWNLOAD_VIDEO
+    ];
+    if (validStates.includes(response.state)) {
+      console.log('[FlowAuto] Resuming active job from background:', response.job, 'state:', response.state);
+      startJob(response.job, response.state);
+    } else {
+      console.log('[FlowAuto] Ignoring inactive/terminal job state:', response.state);
+    }
   }
 });
 
