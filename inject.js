@@ -644,10 +644,278 @@
     return null;
   }
 
-  /** Rename a character card via ⋮ menu -> Đổi tên */
+  /**
+   * Sửa tên nhân vật trên trang chi tiết /character/{characterId}:
+   * Click vào ô đặt tên (hoặc icon cây bút) -> xóa chữ cũ -> viết tên mới -> xác nhận
+   */
+  async function editCharacterPageName(newName) {
+    if (!newName || !newName.trim()) return false;
+    newName = newName.trim();
+
+    log('✏️ Bắt đầu sửa tên nhân vật trên trang chi tiết: "' + newName + '"...');
+    showFlowToast('✏️ Đang sửa tên nhân vật: "' + newName + '"...', 3500);
+
+    // Điểm neo "Chọn giọng nói" trên trang để giới hạn khu vực tiêu đề ở phía trên
+    const voiceAnchor = Array.from(document.querySelectorAll('button, [role="button"], div, span')).find(el => {
+      if (!isVisible(el)) return false;
+      const t = (el.textContent || '').trim().toLowerCase();
+      const r = el.getBoundingClientRect();
+      return (t === 'chọn giọng nói' || t.includes('giọng nói') || t.includes('voice')) && r.left < window.innerWidth * 0.5 && r.top > 100;
+    });
+    const voiceTop = voiceAnchor ? voiceAnchor.getBoundingClientRect().top : (window.innerHeight * 0.55);
+
+    log('🔍 Tìm kiếm ô đặt tên / icon bút (khu vực y: 50 -> ' + Math.round(voiceTop) + ')...');
+
+    let targetInput = null;
+    let titleEl = null;
+    let editBtn = null;
+
+    // 1. Kiểm tra xem ô input/contenteditable đã sẵn sàng hiển thị chưa
+    const existingInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]')).filter(el => {
+      if (!isVisible(el)) return false;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+      const r = el.getBoundingClientRect();
+      return r.left < window.innerWidth * 0.45 && r.top > 50 && r.top < voiceTop;
+    });
+
+    if (existingInputs.length > 0) {
+      targetInput = existingInputs[0];
+      log('✓ Tìm thấy ô input tên trực tiếp: <' + targetInput.tagName + '>');
+    }
+
+    // 2. Nếu chưa có input trực tiếp, tìm tiêu đề và icon bút
+    if (!targetInput) {
+      // Tìm các button hoặc icon có thể là nút sửa / cây bút
+      const candidateButtons = Array.from(document.querySelectorAll('button, [role="button"], span, div, svg')).filter(el => {
+        if (!isVisible(el)) return false;
+        if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+        const r = el.getBoundingClientRect();
+        if (r.left >= window.innerWidth * 0.5 || r.top <= 50 || r.top >= voiceTop) return false;
+
+        const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+        const title = (el.getAttribute('title') || '').toLowerCase();
+        const text = (el.textContent || '').trim().toLowerCase();
+        
+        if (aria.includes('sửa') || aria.includes('edit') || aria.includes('tên') || aria.includes('name') ||
+            title.includes('sửa') || title.includes('edit') || title.includes('tên') ||
+            text === 'edit' || text === 'stylus' || text === 'draw') {
+          return true;
+        }
+
+        // Icon SVG có kích thước nhỏ (cây bút thường khoảng 16-36px)
+        const isSmallIcon = (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') && r.width <= 48 && r.height <= 48;
+        if (isSmallIcon && (el.querySelector('svg') || el.querySelector('i'))) {
+          return true;
+        }
+        return false;
+      });
+
+      if (candidateButtons.length > 0) {
+        editBtn = candidateButtons[0];
+        log('✓ Tìm thấy nút/icon sửa tên (pencil button)');
+      }
+
+      // Tìm tiêu đề tên nhân vật
+      const headings = Array.from(document.querySelectorAll('h1, h2, h3, [role="heading"], div, span')).filter(el => {
+        if (!isVisible(el)) return false;
+        if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+        const r = el.getBoundingClientRect();
+        if (r.left >= window.innerWidth * 0.45 || r.top <= 60 || r.top >= voiceTop) return false;
+        if (r.height < 18 || r.width < 25) return false;
+
+        const fs = parseFloat(window.getComputedStyle(el).fontSize) || 14;
+        return fs >= 18 || el.tagName.startsWith('H') || el.getAttribute('role') === 'heading';
+      });
+
+      if (headings.length > 0) {
+        headings.sort((a, b) => {
+          const fsA = parseFloat(window.getComputedStyle(a).fontSize) || 0;
+          const fsB = parseFloat(window.getComputedStyle(b).fontSize) || 0;
+          return fsB - fsA;
+        });
+        titleEl = headings[0];
+        log('✓ Tìm thấy tiêu đề nhân vật: "' + (titleEl.textContent || '').trim() + '"');
+      }
+
+      // 3. Click vào ô đặt tên hoặc icon cây bút
+      if (editBtn) {
+        log('🖱️ Click vào icon cây bút...');
+        simulateClick(editBtn);
+        try { editBtn.click(); } catch(e) {}
+      } else if (titleEl) {
+        log('🖱️ Click vào ô đặt tên / tiêu đề...');
+        simulateClick(titleEl);
+        try { titleEl.click(); } catch(e) {}
+      }
+
+      await new Promise(r => setTimeout(r, 600));
+
+      // Chờ ô input xuất hiện sau khi click
+      targetInput = await waitForCondition(() => {
+        const act = document.activeElement;
+        if (act && act !== document.body && isVisible(act)) {
+          if (act.tagName === 'INPUT' || act.tagName === 'TEXTAREA' || act.isContentEditable || act.getAttribute('contenteditable') === 'true') {
+            return act;
+          }
+        }
+
+        const container = (titleEl ? titleEl.parentElement : null) || (editBtn ? editBtn.parentElement : null);
+        if (container) {
+          const inp = container.querySelector('input, textarea, [contenteditable="true"]');
+          if (inp && isVisible(inp)) return inp;
+        }
+
+        const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="file"]), textarea, [contenteditable="true"]')).filter(el => {
+          if (!isVisible(el)) return false;
+          if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+          const r = el.getBoundingClientRect();
+          return r.left < window.innerWidth * 0.45 && r.top > 50 && r.top < voiceTop;
+        });
+        if (inputs.length > 0) return inputs[0];
+
+        if (titleEl && (titleEl.isContentEditable || titleEl.getAttribute('contenteditable') === 'true')) {
+          return titleEl;
+        }
+        return null;
+      }, 3000);
+    }
+
+    if (!targetInput && titleEl) {
+      log('🖱️ Thử double-click vào tiêu đề...');
+      titleEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+      await new Promise(r => setTimeout(r, 500));
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.isContentEditable)) {
+        targetInput = document.activeElement;
+      }
+    }
+
+    if (!targetInput) {
+      log('⚠️ Không tìm thấy ô đặt tên nhân vật để sửa');
+      return false;
+    }
+
+    // 4. Click và Focus vào ô đặt tên
+    log('🎯 Focus vào ô đặt tên: <' + targetInput.tagName + '>');
+    scrollIntoViewIfNeeded(targetInput);
+    simulateClick(targetInput);
+    targetInput.focus();
+    await new Promise(r => setTimeout(r, 400));
+
+    // 5. XÓA CHỮ CŨ (clear old text)
+    log('🧹 Xóa chữ cũ trong ô đặt tên...');
+    if (typeof targetInput.select === 'function') {
+      try { targetInput.select(); } catch(e) {}
+    }
+    if (targetInput.setSelectionRange && targetInput.value) {
+      try { targetInput.setSelectionRange(0, targetInput.value.length); } catch(e) {}
+    }
+    if (targetInput.isContentEditable) {
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(targetInput);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch(e) {}
+    }
+
+    setNativeValue(targetInput, '');
+    if (targetInput.isContentEditable) {
+      targetInput.textContent = '';
+      targetInput.innerHTML = '';
+    }
+    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+    targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Gửi phím Backspace / Delete
+    const backOpts = { key: 'Backspace', code: 'Backspace', keyCode: 8, which: 8, bubbles: true, cancelable: true };
+    targetInput.dispatchEvent(new KeyboardEvent('keydown', backOpts));
+    targetInput.dispatchEvent(new KeyboardEvent('keyup', backOpts));
+    await new Promise(r => setTimeout(r, 300));
+
+    // 6. VIẾT TÊN MỚI (type new name)
+    log('⌨️ Viết tên mới: "' + newName + '"...');
+    try {
+      document.execCommand('insertText', false, newName);
+    } catch(e) {}
+
+    const curVal = (targetInput.value || targetInput.textContent || '').trim();
+    if (curVal !== newName) {
+      setNativeValue(targetInput, newName);
+      if (targetInput.isContentEditable) {
+        targetInput.textContent = newName;
+      }
+      targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+      targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+      targetInput.dispatchEvent(new InputEvent('input', { bubbles: true, data: newName, inputType: 'insertText' }));
+    }
+
+    await new Promise(r => setTimeout(r, 500));
+
+    // 7. XÁC NHẬN LƯU TÊN MỚI (Enter + Blur + Click Save/Check nếu có)
+    log('⏎ Nhấn Enter để xác nhận tên mới...');
+    const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
+    targetInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+    targetInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+    targetInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+
+    // Kiểm tra nếu có nút tick (✓ / Lưu / Save)
+    const saveCheckBtn = Array.from(document.querySelectorAll('button, [role="button"], span')).find(el => {
+      if (!isVisible(el)) return false;
+      const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      const t = (el.textContent || '').trim().toLowerCase();
+      const r = el.getBoundingClientRect();
+      return (r.left < window.innerWidth * 0.5 && r.top < voiceTop) &&
+             (aria.includes('save') || aria.includes('lưu') || aria.includes('done') || aria.includes('xong') || t === '✓' || t === 'check');
+    });
+    if (saveCheckBtn) {
+      log('🖱️ Click nút xác nhận lưu tên...');
+      simulateClick(saveCheckBtn);
+    }
+
+    try { targetInput.blur(); } catch(e) {}
+    await new Promise(r => setTimeout(r, 600));
+
+    log('✅ Đã sửa tên nhân vật thành công: "' + newName + '"');
+    showFlowToast('✅ Đã đổi tên nhân vật thành: "' + newName + '"', 3000);
+    return true;
+  }
+
+  /** Click nút "Xong" (Done) ở góc trên bên phải trang chi tiết nhân vật để lưu và trở về Canvas */
+  async function clickCharacterDoneButton() {
+    log('🔍 Tìm nút "Xong" ở góc trên bên phải trang nhân vật...');
+    const doneBtn = Array.from(document.querySelectorAll('button, [role="button"], a')).find(el => {
+      if (!isVisible(el)) return false;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+      const t = (el.textContent || '').trim().toLowerCase();
+      const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      const r = el.getBoundingClientRect();
+      // Nằm ở góc trên bên phải (top < 120, right half)
+      const isTopRight = r.top < 120 && r.left > window.innerWidth * 0.5;
+      return (t === 'xong' || t === 'done' || aria === 'xong' || aria === 'done') ||
+             (isTopRight && (t.includes('xong') || t.includes('done')));
+    });
+
+    if (doneBtn) {
+      log('🖱️ Bấm nút "Xong" để lưu và quay về Canvas...');
+      simulateClick(doneBtn);
+      try { doneBtn.click(); } catch(e) {}
+      return true;
+    }
+    return false;
+  }
+
+  /** Rename a character card via ⋮ menu -> Đổi tên (hoặc trên trang chi tiết nhân vật) */
   async function renameCharacterCard(targetElementOrName, newName) {
     if (!newName) return false;
     newName = newName.trim();
+
+    // 0. Nếu đang ở trên trang chi tiết nhân vật (/character/{id}), sửa trực tiếp bằng ô đặt tên
+    if (window.location.href.includes('/character')) {
+      const ok = await editCharacterPageName(newName);
+      if (ok) return true;
+    }
+
     log('🏷️ Bắt đầu đổi tên nhân vật thành: "' + newName + '"...');
     showFlowToast('🏷️ Đang đổi tên thành: "' + newName + '"...', 3000);
 
@@ -1699,10 +1967,18 @@
         break;
       }
 
-      // ── Step 0.5: Direct rename character card ──
-      case 'renameCharacter': {
-        const ok = await renameCharacterCard(params.target || params.oldName || null, params.name || params.newName);
-        sendResult(action, ok, { log: ok ? '✓ Đã đổi tên thành: ' + (params.name || params.newName) : 'Đổi tên thất bại' });
+      // ── Step 0.5: Direct rename character card or page title ──
+      case 'renameCharacter':
+      case 'editCharacterName': {
+        const targetName = params.name || params.newName || params.characterName || params.character;
+        let ok = false;
+        if (window.location.href.includes('/character')) {
+          ok = await editCharacterPageName(targetName);
+        }
+        if (!ok) {
+          ok = await renameCharacterCard(params.target || params.oldName || null, targetName);
+        }
+        sendResult(action, ok, { log: ok ? '✓ Đã đổi tên thành: ' + targetName : 'Đổi tên thất bại' });
         break;
       }
 
@@ -1886,13 +2162,20 @@
             return;
           }
 
-          // 7. Rename the character card if characterName was given and rename menu is available
-          if (charName && newCardObj.card) {
+          // 7. Sửa tên nhân vật nếu có charName (click vào ô đặt tên -> xóa chữ cũ -> viết tên mới)
+          if (charName) {
             try {
-              log('🏷️ Đổi tên thẻ ảnh nhân vật thành: "' + charName + '"...');
-              showFlowToast('🏷️ Đổi tên thẻ nhân vật: ' + charName + '...', 3000);
+              log('🏷️ Đổi tên nhân vật thành: "' + charName + '"...');
+              showFlowToast('🏷️ Đang sửa tên nhân vật: ' + charName + '...', 3000);
               await new Promise(r => setTimeout(r, 1000));
-              await renameCharacterCard(newCardObj.card, charName);
+
+              let renamed = false;
+              if (window.location.href.includes('/character')) {
+                renamed = await editCharacterPageName(charName);
+              }
+              if (!renamed && newCardObj?.card) {
+                await renameCharacterCard(newCardObj.card, charName);
+              }
             } catch (renameErr) {
               log('⚠️ Rename character notice: ' + renameErr.message);
             }
@@ -1906,34 +2189,50 @@
             log('🌐 Chuẩn bị chuyển về trang Canvas: ' + canvasUrl);
             showFlowToast('🌐 Đang chuyển về trang Canvas dự án...', 3000);
 
-            // Tìm link/nút "Khung vẽ" / "Canvas" trên sidebar hoặc header để chuyển mượt dạng SPA
-            const canvasLink = Array.from(document.querySelectorAll('a, button, [role="button"], [role="tab"], [role="link"], li, div[tabindex]')).find(el => {
-              const href = el.getAttribute('href') || el.href || '';
-              const text = (el.textContent || '').trim().toLowerCase();
-              const aria = (el.getAttribute('aria-label') || '').toLowerCase();
-
-              if (href) {
-                const cleanHref = href.split('?')[0].replace(/\/$/, '');
-                if (cleanHref.endsWith('/project/' + projectId) || cleanHref === canvasUrl) {
-                  return true;
-                }
-              }
-              if ((text === 'khung vẽ' || text === 'canvas' || aria === 'khung vẽ' || aria === 'canvas') && !href.includes('/character')) {
-                return true;
-              }
-              return false;
-            });
-
             let navigatedToCanvas = false;
-            if (canvasLink) {
-              log('🖱️ Tìm thấy link/nút Canvas trên thanh điều hướng, click để chuyển trang...');
-              simulateClick(canvasLink);
+
+            // 8a. Thử bấm nút "Xong" ở góc trên bên phải trang chi tiết nhân vật (lưu và thoát về Canvas)
+            const clickedDone = await clickCharacterDoneButton();
+            if (clickedDone) {
               for (let i = 0; i < 10; i++) {
                 await new Promise(r => setTimeout(r, 400));
                 if (!window.location.href.includes('/character')) {
                   navigatedToCanvas = true;
-                  log('✅ Đã chuyển về Canvas qua SPA thành công!');
+                  log('✅ Đã chuyển về Canvas sau khi bấm nút "Xong"!');
                   break;
+                }
+              }
+            }
+
+            // 8b. Nếu chưa chuyển, tìm link/nút "Khung vẽ" / "Canvas" trên thanh điều hướng
+            if (!navigatedToCanvas) {
+              const canvasLink = Array.from(document.querySelectorAll('a, button, [role="button"], [role="tab"], [role="link"], li, div[tabindex]')).find(el => {
+                const href = el.getAttribute('href') || el.href || '';
+                const text = (el.textContent || '').trim().toLowerCase();
+                const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+
+                if (href) {
+                  const cleanHref = href.split('?')[0].replace(/\/$/, '');
+                  if (cleanHref.endsWith('/project/' + projectId) || cleanHref === canvasUrl) {
+                    return true;
+                  }
+                }
+                if ((text === 'khung vẽ' || text === 'canvas' || aria === 'khung vẽ' || aria === 'canvas') && !href.includes('/character')) {
+                  return true;
+                }
+                return false;
+              });
+
+              if (canvasLink) {
+                log('🖱️ Tìm thấy link/nút Canvas trên thanh điều hướng, click để chuyển trang...');
+                simulateClick(canvasLink);
+                for (let i = 0; i < 10; i++) {
+                  await new Promise(r => setTimeout(r, 400));
+                  if (!window.location.href.includes('/character')) {
+                    navigatedToCanvas = true;
+                    log('✅ Đã chuyển về Canvas qua SPA thành công!');
+                    break;
+                  }
                 }
               }
             }
@@ -1946,7 +2245,7 @@
               projectId: projectId
             });
 
-            // Nếu SPA click chưa đổi URL, điều hướng trực tiếp bằng window.location.href
+            // 8c. Nếu vẫn chưa đổi URL, điều hướng trực tiếp bằng window.location.href
             if (!navigatedToCanvas && window.location.href.includes('/character')) {
               log('🌐 Điều hướng window.location.href về: ' + canvasUrl);
               await new Promise(r => setTimeout(r, 600));
