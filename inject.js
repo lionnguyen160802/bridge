@@ -979,6 +979,78 @@
     return findPromptInput();
   }
 
+  /** Find the submit arrow button (->) on https://flow.google.com/project/{projectId}/character */
+  function findCharacterSubmitArrowButton(inputEl) {
+    if (!inputEl) return null;
+    const container = inputEl.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') ||
+                      inputEl.parentElement?.parentElement?.parentElement ||
+                      inputEl.parentElement?.parentElement ||
+                      inputEl.parentElement;
+
+    const roots = [container, document].filter(Boolean);
+
+    for (const root of roots) {
+      const allButtons = Array.from(root.querySelectorAll('button, [role="button"], div[tabindex="0"], a[role="button"]'));
+
+      // 1. By aria-label or title matching submit/create/arrow
+      for (const btn of allButtons) {
+        if (!isVisible(btn)) continue;
+        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const title = (btn.getAttribute('title') || '').toLowerCase();
+        if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') ||
+            aria.includes('create') || aria.includes('send') || aria.includes('generate') ||
+            aria.includes('mũi tên') || aria.includes('arrow') || aria.includes('forward') ||
+            title.includes('tạo') || title.includes('gửi') || title.includes('submit') ||
+            title.includes('create') || title.includes('send') || title.includes('arrow')) {
+          log('✓ findCharacterSubmitArrowButton: matched aria/title: "' + (aria || title) + '"');
+          return btn;
+        }
+      }
+
+      // 2. By SVG arrow icon inside the button
+      for (const btn of allButtons) {
+        if (!isVisible(btn)) continue;
+        const svg = btn.querySelector('svg');
+        if (svg) {
+          const pathDs = Array.from(svg.querySelectorAll('path')).map(p => p.getAttribute('d') || '').join(' ');
+          if (pathDs.includes('M5 12') || pathDs.includes('M12 4') || pathDs.includes('l8-8') ||
+              pathDs.includes('16.17') || pathDs.includes('M10 6') || pathDs.includes('2.01') ||
+              pathDs.includes('M4 12') || pathDs.includes('arrow') || pathDs.includes('forward') ||
+              pathDs.includes('send') || pathDs.includes('M12 2L2 22')) {
+            log('✓ findCharacterSubmitArrowButton: matched arrow path in SVG');
+            return btn;
+          }
+        }
+      }
+
+      // 3. Position-based: the rightmost icon button in the prompt bar
+      const inputRect = inputEl.getBoundingClientRect();
+      const candidates = allButtons.filter(btn => {
+        if (!isVisible(btn)) return false;
+        const text = (btn.textContent || '').trim().toLowerCase();
+        // Exclude "+" button, format button, model dropdown, etc.
+        if (text === '+' || text.includes('định dạng') || text.includes('format') || text.includes('banana') || text.includes('tải lên') || text.includes('dự án')) return false;
+        
+        const br = btn.getBoundingClientRect();
+        // Must be in vertical range of prompt box
+        if (br.top < inputRect.top - 60 || br.bottom > inputRect.bottom + 150) return false;
+        // Must be in right half of prompt box
+        if (br.left < inputRect.left + 50) return false;
+        // Must have an SVG or look like an icon button
+        return !!btn.querySelector('svg') || (br.width <= 70 && br.height <= 70);
+      });
+
+      if (candidates.length > 0) {
+        // Sort descending by right coordinate
+        candidates.sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+        log('✓ findCharacterSubmitArrowButton: picked rightmost candidate button at x=' + Math.round(candidates[0].getBoundingClientRect().right));
+        return candidates[0];
+      }
+    }
+
+    return null;
+  }
+
   /** Find '+' button in prompt bar */
   function findPlusButton() {
     const promptInput = findPromptInput();
@@ -1680,7 +1752,10 @@
           }
 
           log('🎨 Bắt đầu tạo ảnh nhân vật: "' + (charName || 'unnamed') + '"...');
-          showFlowToast('🎨 Đang tạo ảnh nhân vật: ' + (charName || '') + '...', 4000);
+          showFlowToast('🎨 Đang chuẩn bị tạo ảnh nhân vật: ' + (charName || '') + '...', 4000);
+
+          // Pacing: Chờ 1 giây để giao diện trang /character ổn định
+          await new Promise(r => setTimeout(r, 1000));
 
           // 2. Wait for character prompt input to appear on /character
           const input = await waitForCondition(() => findCharacterPromptInput(), 10000);
@@ -1689,41 +1764,91 @@
             return;
           }
 
-          // 3. Capture pre-existing images
+          scrollIntoViewIfNeeded(input);
+          await new Promise(r => setTimeout(r, 500));
+
+          // 3. Focus & Clear input một cách chậm rãi, an toàn
+          log('🖱️ Focus vào ô nhập prompt...');
+          simulateClick(input);
+          input.focus();
+          await new Promise(r => setTimeout(r, 500));
+
+          clearSearchInput(input);
+          await new Promise(r => setTimeout(r, 500));
+
+          // 4. Inject prompt vào React/Lit input
+          log('✍️ Điền prompt mô tả nhân vật: "' + promptText.substring(0, 45) + '..."');
+          showFlowToast('✍️ Đang nhập prompt mô tả nhân vật...', 3000);
+          injectTextToReactInput(input, promptText);
+          
+          // Bổ sung các sự kiện input/change/blur để chắc chắn React nhận giá trị
+          input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+          await new Promise(r => setTimeout(r, 400));
+          input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+          input.focus();
+
+          // Pacing: Chờ 1.5 giây để React cập nhật state và mở khóa nút mũi tên (enable)
+          log('⏳ Chờ giao diện xác nhận prompt và kích hoạt nút mũi tên (1.5s)...');
+          await new Promise(r => setTimeout(r, 1500));
+
+          // 5. Chụp danh sách ảnh hiện có TRƯỚC KHI bấm gửi
           capturePreexistingImages();
 
-          // 4. Inject prompt
-          input.focus();
-          clearSearchInput(input);
-          injectTextToReactInput(input, promptText);
-          await new Promise(r => setTimeout(r, 400));
+          // 6. Tìm và bấm nút MŨI TÊN (Submit)
+          log('🔍 Đang tìm nút mũi tên gửi (submit)...');
+          let arrowBtn = null;
+          const findArrowStart = Date.now();
+          while (Date.now() - findArrowStart < 4000) {
+            arrowBtn = findCharacterSubmitArrowButton(input);
+            if (arrowBtn) {
+              const isDisabled = arrowBtn.hasAttribute('disabled') || 
+                                 arrowBtn.getAttribute('aria-disabled') === 'true' || 
+                                 arrowBtn.disabled;
+              if (!isDisabled) {
+                log('✓ Đã tìm thấy nút mũi tên ở trạng thái sẵn sàng!');
+                break;
+              }
+            }
+            await new Promise(r => setTimeout(r, 300));
+          }
 
-          // 5. Submit prompt (Enter key)
-          log('⏎ Nhấn Enter để gửi prompt tạo nhân vật...');
+          if (arrowBtn) {
+            scrollIntoViewIfNeeded(arrowBtn);
+            log('👆 Hover chuột vào nút mũi tên gửi...');
+            simulateHover(arrowBtn);
+            await new Promise(r => setTimeout(r, 400));
+
+            log('🖱️ Click nút mũi tên gửi nội dung!');
+            showFlowToast('🚀 Đang ấn mũi tên gửi tạo ảnh...', 3000);
+            simulateClick(arrowBtn);
+            try { arrowBtn.click(); } catch(e) {}
+            await new Promise(r => setTimeout(r, 600));
+          } else {
+            log('⚠️ Không tìm thấy nút mũi tên riêng biệt, dùng phím Enter...');
+          }
+
+          // Dự phòng song song: Dispatch phím Enter
+          log('⏎ Gửi sự kiện Enter dự phòng...');
           const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
           input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
           input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
           input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
 
-          // Also click submit arrow button if present
-          setTimeout(() => {
-            const promptContainer = input.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') || input.parentElement?.parentElement || input.parentElement;
-            if (promptContainer) {
-              const buttons = Array.from(promptContainer.querySelectorAll('button:not([disabled]), [role="button"]:not([aria-disabled="true"])'));
-              const inputRect = input.getBoundingClientRect();
-              const submitBtn = buttons.find(b => {
-                const br = b.getBoundingClientRect();
-                if (br.right < inputRect.left + 50) return false;
-                const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-                if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send')) return true;
-                if (b.querySelector('svg')) return true;
-                return false;
-              });
-              if (submitBtn) simulateClick(submitBtn);
+          // Pacing: Chờ 1.2 giây rồi kiểm tra lại xem có cần bấm lại lần 2 không
+          await new Promise(r => setTimeout(r, 1200));
+          const recheckBtn = arrowBtn || findCharacterSubmitArrowButton(input);
+          if (recheckBtn && !recheckBtn.disabled && recheckBtn.getAttribute('aria-disabled') !== 'true') {
+            const curVal = (input.value || input.textContent || '').trim();
+            if (curVal.length > 5) {
+              log('🔄 Bấm bổ sung nút mũi tên lần 2 để đảm bảo gửi thành công...');
+              simulateClick(recheckBtn);
+              try { recheckBtn.click(); } catch(e) {}
+              await new Promise(r => setTimeout(r, 800));
             }
-          }, 400);
+          }
 
-          // 6. Wait for new image card to appear (up to 45s)
+          // 7. Wait for new image card to appear (up to 45s)
           log('⏳ Chờ Google Flow tạo ảnh nhân vật (khoảng 5-25s)...');
           showFlowToast('⏳ Đang chờ ảnh nhân vật xuất hiện...', 8000);
 
