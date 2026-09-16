@@ -450,6 +450,20 @@ async function completeCurrentJob(result) {
   state.retryCount = 0;
   saveStateNow(); // Critical state change — save immediately
 
+  // Đảm bảo tab quay về trang Canvas https://flow.google.com/project/{projectId} nếu vừa hoàn thành tạo nhân vật
+  if (job.action === 'create_character' || (job.action === 'create_project' && job.prompt)) {
+    const targetProjectId = job.projectId || result?.projectId;
+    if (targetProjectId && targetProjectId !== 'manual' && targetProjectId !== 'new') {
+      const canvasUrl = `https://flow.google.com/project/${targetProjectId}`;
+      findFlowTab().then(tab => {
+        if (tab && tab.url && tab.url.includes('/character')) {
+          addLog('🌐 Đưa tab về lại Canvas: ' + canvasUrl);
+          chrome.tabs.update(tab.id, { url: canvasUrl });
+        }
+      }).catch(() => {});
+    }
+  }
+
   // Process next after delay
   setTimeout(processQueue, 2000);
 }

@@ -1899,11 +1899,66 @@
           }
 
           showFlowToast('✅ Đã tạo ảnh nhân vật "' + (charName || 'mới') + '" thành công!', 4000);
-          sendResult(action, true, {
-            log: '✓ Đã tạo thành công ảnh nhân vật' + (charName ? ': "' + charName + '"' : ''),
-            character: charName,
-            imageSrc: newCardObj.src
-          });
+
+          // 8. Chuyển về trang Canvas: https://flow.google.com/project/{projectId}
+          if (projectId) {
+            const canvasUrl = 'https://flow.google.com/project/' + projectId;
+            log('🌐 Chuẩn bị chuyển về trang Canvas: ' + canvasUrl);
+            showFlowToast('🌐 Đang chuyển về trang Canvas dự án...', 3000);
+
+            // Tìm link/nút "Khung vẽ" / "Canvas" trên sidebar hoặc header để chuyển mượt dạng SPA
+            const canvasLink = Array.from(document.querySelectorAll('a, button, [role="button"], [role="tab"], [role="link"], li, div[tabindex]')).find(el => {
+              const href = el.getAttribute('href') || el.href || '';
+              const text = (el.textContent || '').trim().toLowerCase();
+              const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+
+              if (href) {
+                const cleanHref = href.split('?')[0].replace(/\/$/, '');
+                if (cleanHref.endsWith('/project/' + projectId) || cleanHref === canvasUrl) {
+                  return true;
+                }
+              }
+              if ((text === 'khung vẽ' || text === 'canvas' || aria === 'khung vẽ' || aria === 'canvas') && !href.includes('/character')) {
+                return true;
+              }
+              return false;
+            });
+
+            let navigatedToCanvas = false;
+            if (canvasLink) {
+              log('🖱️ Tìm thấy link/nút Canvas trên thanh điều hướng, click để chuyển trang...');
+              simulateClick(canvasLink);
+              for (let i = 0; i < 10; i++) {
+                await new Promise(r => setTimeout(r, 400));
+                if (!window.location.href.includes('/character')) {
+                  navigatedToCanvas = true;
+                  log('✅ Đã chuyển về Canvas qua SPA thành công!');
+                  break;
+                }
+              }
+            }
+
+            // Gửi kết quả hoàn thành cho content.js & Bridge
+            sendResult(action, true, {
+              log: '✓ Đã tạo thành công ảnh nhân vật' + (charName ? ': "' + charName + '"' : ''),
+              character: charName,
+              imageSrc: newCardObj.src,
+              projectId: projectId
+            });
+
+            // Nếu SPA click chưa đổi URL, điều hướng trực tiếp bằng window.location.href
+            if (!navigatedToCanvas && window.location.href.includes('/character')) {
+              log('🌐 Điều hướng window.location.href về: ' + canvasUrl);
+              await new Promise(r => setTimeout(r, 600));
+              window.location.href = canvasUrl;
+            }
+          } else {
+            sendResult(action, true, {
+              log: '✓ Đã tạo thành công ảnh nhân vật' + (charName ? ': "' + charName + '"' : ''),
+              character: charName,
+              imageSrc: newCardObj.src
+            });
+          }
 
         } catch (err) {
           sendResult(action, false, null, 'generateCharacterImage exception: ' + err.message);
