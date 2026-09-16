@@ -168,12 +168,15 @@ app.post('/create-project', async (req, res) => {
       const found = completedJobs.find(j => j.id === job.id);
       if (found) {
         clearInterval(checkDone);
+        const imgUrl = found.result?.characterImageUrl || found.result?.imageUrl || found.result?.imageSrc || found.characterImageUrl || found.imageUrl || found.imageSrc || null;
         return res.json({
           success: true,
           jobId: job.id,
           projectId: found.projectId || found.result?.projectId,
           character: found.result?.character || job.character,
-          imageSrc: found.result?.imageSrc,
+          characterImageUrl: imgUrl,
+          imageUrl: imgUrl,
+          imageSrc: imgUrl,
           status: 'completed',
           result: found.result
         });
@@ -253,12 +256,15 @@ app.post('/create-character', async (req, res) => {
       const found = completedJobs.find(j => j.id === job.id);
       if (found) {
         clearInterval(checkDone);
+        const imgUrl = found.result?.characterImageUrl || found.result?.imageUrl || found.result?.imageSrc || found.characterImageUrl || found.imageUrl || found.imageSrc || null;
         return res.json({
           success: true,
           jobId: job.id,
           projectId: found.projectId || found.result?.projectId,
           character: found.result?.character || job.character,
-          imageSrc: found.result?.imageSrc,
+          characterImageUrl: imgUrl,
+          imageUrl: imgUrl,
+          imageSrc: imgUrl,
           status: 'completed',
           result: found.result
         });
@@ -313,10 +319,15 @@ app.get('/job/:jobId', (req, res) => {
   // Check completed
   const completed = completedJobs.find(j => j.id === jobId);
   if (completed) {
+    const imgUrl = completed.characterImageUrl || completed.imageUrl || completed.imageSrc || completed.result?.characterImageUrl || completed.result?.imageUrl || completed.result?.imageSrc || null;
     return res.json({
       jobId: completed.id,
       status: 'COMPLETED',
       projectId: completed.projectId || completed.result?.projectId,
+      character: completed.character || completed.result?.character,
+      characterImageUrl: imgUrl,
+      imageUrl: imgUrl,
+      imageSrc: imgUrl,
       result: completed.result
     });
   }
@@ -536,6 +547,14 @@ function handleExtensionMessage(ws, msg) {
         currentJob.status = 'COMPLETED';
         currentJob.completedAt = Date.now();
         currentJob.result = msg.result;
+        currentJob.projectId = msg.projectId || msg.result?.projectId || currentJob.projectId;
+        currentJob.character = msg.character || msg.result?.character || currentJob.character;
+        const imgUrl = msg.characterImageUrl || msg.imageUrl || msg.imageSrc || msg.result?.characterImageUrl || msg.result?.imageUrl || msg.result?.imageSrc || null;
+        if (imgUrl) {
+          currentJob.characterImageUrl = imgUrl;
+          currentJob.imageUrl = imgUrl;
+          currentJob.imageSrc = imgUrl;
+        }
         completedJobs.unshift(currentJob);
         if (completedJobs.length > 100) completedJobs.pop();
         currentJob = null;
@@ -635,11 +654,16 @@ async function sendCallback(result) {
     return;
   }
 
+  const imgUrl = result.characterImageUrl || result.imageUrl || result.imageSrc || result.result?.characterImageUrl || result.result?.imageUrl || result.result?.imageSrc || job?.characterImageUrl || null;
   const payload = {
     jobId: result.jobId,
     rowId: result.rowId || job?.rowId || null,
-    projectId: result.projectId,
+    projectId: result.projectId || result.result?.projectId || job?.projectId || null,
     sceneId: result.sceneId,
+    character: result.character || result.result?.character || job?.character || null,
+    characterImageUrl: imgUrl,
+    imageUrl: imgUrl,
+    imageSrc: imgUrl,
     status: result.status || (result.type === 'job_completed' ? 'completed' : 'failed'),
     error: result.error || null,
     result: result.result || null,

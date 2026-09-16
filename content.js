@@ -329,7 +329,13 @@ window.addEventListener('message', (event) => {
       if (currentState === FLOW_STATES.GENERATE_CHARACTER && data) {
         if (!currentJob.result) currentJob.result = {};
         if (data.character) currentJob.result.character = data.character;
-        if (data.imageSrc) currentJob.result.imageSrc = data.imageSrc;
+        const imgUrl = data.characterImageUrl || data.imageUrl || data.imageSrc;
+        if (imgUrl) {
+          currentJob.result.characterImageUrl = imgUrl;
+          currentJob.result.imageUrl = imgUrl;
+          currentJob.result.imageSrc = imgUrl;
+        }
+        if (data.projectId) currentJob.result.projectId = data.projectId;
         if (data.cardId) currentJob.result.cardId = data.cardId;
       }
 

@@ -424,6 +424,12 @@ async function completeCurrentJob(result) {
   if (result?.character) {
     job.character = result.character;
   }
+  const imgUrl = result?.characterImageUrl || result?.imageUrl || result?.imageSrc;
+  if (imgUrl) {
+    job.characterImageUrl = imgUrl;
+    job.imageUrl = imgUrl;
+    job.imageSrc = imgUrl;
+  }
   job.result = result;
 
   state.completedJobs.unshift(job);
@@ -441,6 +447,10 @@ async function completeCurrentJob(result) {
     projectId: job.projectId || result?.projectId || null,
     sceneId: job.sceneId,
     status: 'completed',
+    character: job.character || result?.character || null,
+    characterImageUrl: imgUrl || null,
+    imageUrl: imgUrl || null,
+    imageSrc: imgUrl || null,
     result: result,
     callbackUrl: finalCallbackUrl
   });

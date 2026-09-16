@@ -645,6 +645,43 @@
   }
 
   /**
+   * Tìm URL ảnh nhân vật sắc nét nhất trên trang tạo/chi tiết nhân vật
+   * (ưu tiên ảnh preview trung tâm có kích thước lớn nhất hoặc link tải)
+   */
+  function findMainCharacterImageUrl() {
+    // 1. Quét tất cả thẻ img đang hiển thị
+    const allImgs = Array.from(document.querySelectorAll('img')).filter(im => {
+      if (!isVisible(im)) return false;
+      if (im.closest('#flowauto-floating-widget') || im.closest('#flowauto-toast')) return false;
+      const r = im.getBoundingClientRect();
+      return r.width >= 80 && r.height >= 80;
+    });
+
+    if (allImgs.length === 0) return null;
+
+    // 2. Sắp xếp theo diện tích lớn nhất (ảnh chính ở trung tâm luôn có kích thước hiển thị lớn nhất)
+    allImgs.sort((a, b) => {
+      const rA = a.getBoundingClientRect();
+      const rB = b.getBoundingClientRect();
+      return (rB.width * rB.height) - (rA.width * rA.height);
+    });
+
+    const bestImg = allImgs[0];
+    let bestUrl = bestImg.currentSrc || bestImg.src || bestImg.getAttribute('src') || '';
+
+    // 3. Kiểm tra xem có thẻ link download <a> ở gần ảnh không (nút download thường bọc link gốc)
+    const container = bestImg.closest('[class*="preview"], [class*="viewer"], [class*="character"], [class*="card"], div');
+    if (container) {
+      const downloadLink = container.querySelector('a[download], a[href*="googleusercontent"], a[href*="blob"], a[href*="flow"]');
+      if (downloadLink && downloadLink.href) {
+        bestUrl = downloadLink.href;
+      }
+    }
+
+    return { img: bestImg, url: bestUrl };
+  }
+
+  /**
    * Sửa tên nhân vật trên trang chi tiết /character/{characterId}:
    * Click vào ô đặt tên (hoặc icon cây bút) -> xóa chữ cũ -> viết tên mới -> xác nhận
    */
@@ -2162,6 +2199,11 @@
             return;
           }
 
+          // Trích xuất URL ảnh nhân vật rõ nét nhất (ưu tiên ảnh preview lớn ở trung tâm màn hình)
+          const mainImgObj = findMainCharacterImageUrl();
+          const finalImageUrl = (mainImgObj && mainImgObj.url) ? mainImgObj.url : (newCardObj?.src || '');
+          log('🖼️ Đã lấy URL ảnh nhân vật: ' + (finalImageUrl ? finalImageUrl.substring(0, 80) + '...' : '(không tìm thấy)'));
+
           // 7. Sửa tên nhân vật nếu có charName (click vào ô đặt tên -> xóa chữ cũ -> viết tên mới)
           if (charName) {
             try {
@@ -2241,7 +2283,9 @@
             sendResult(action, true, {
               log: '✓ Đã tạo thành công ảnh nhân vật' + (charName ? ': "' + charName + '"' : ''),
               character: charName,
-              imageSrc: newCardObj.src,
+              imageSrc: finalImageUrl,
+              imageUrl: finalImageUrl,
+              characterImageUrl: finalImageUrl,
               projectId: projectId
             });
 
@@ -2255,7 +2299,9 @@
             sendResult(action, true, {
               log: '✓ Đã tạo thành công ảnh nhân vật' + (charName ? ': "' + charName + '"' : ''),
               character: charName,
-              imageSrc: newCardObj.src
+              imageSrc: finalImageUrl,
+              imageUrl: finalImageUrl,
+              characterImageUrl: finalImageUrl
             });
           }
 
