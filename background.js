@@ -46,9 +46,10 @@ async function loadState() {
         state.queue = [];
       }
 
-      // Do NOT keep leftover currentJob across restarts — prevents re-running old jobs!
-      state.currentJob = null;
-      state.currentState = FLOW_STATES.IDLE;
+      // Retain correlation for a still-running content script. Initialization
+      // must NOT redispatch this job (create_project is not replay-safe).
+      if (state.currentJob) state.currentJob.recovered = true;
+      if (!state.currentJob) state.currentState = FLOW_STATES.IDLE;
       state.retryCount = 0;
 
       // Ensure settings object exists
@@ -208,6 +209,19 @@ function sendToBridge(msg) {
 // ==========================================
 function handleBridgeMessage(msg) {
   switch (msg.type) {
+    case 'reconcile_job': {
+      // Result replay only: an unknown job must never start new Flow work.
+      const completed = state.completedJobs.find(j => j.id === msg.jobId);
+      const failed = state.failedJobs.find(j => j.id === msg.jobId);
+      if (completed) {
+        sendToBridge({ type: 'job_completed', jobId: completed.id,
+          projectId: completed.projectId, result: completed.result || {} });
+      } else if (failed) {
+        sendToBridge({ type: 'job_failed', jobId: failed.id, error: failed.error });
+      }
+      break;
+    }
+
     case 'new_job':
       enqueueJob(msg.job);
       break;
@@ -766,10 +780,12 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       break;
 
     case MSG.JOB_COMPLETE:
+      if (!msg.jobId || msg.jobId !== state.currentJob?.id) break;
       completeCurrentJob(msg.result);
       break;
 
     case MSG.JOB_ERROR:
+      if (!msg.jobId || msg.jobId !== state.currentJob?.id) break;
       failCurrentJob(msg.error);
       break;
 
@@ -904,6 +920,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     case 'GET_ACTIVE_JOB':
       if (
         state.currentJob &&
+        !state.currentJob.recovered &&
         state.currentJob.status === 'PROCESSING' &&
         state.currentState !== FLOW_STATES.DONE &&
         state.currentState !== FLOW_STATES.ERROR
@@ -1068,9 +1085,7 @@ loadState().then(() => {
   connectWS();
   setupAutoRefreshAlarm();
 
-  // Reset currentJob to null on extension start/reload to prevent zombie job execution
-  state.currentJob = null;
-  state.currentState = FLOW_STATES.IDLE;
+  // Keep the active ID for late content completion; do not replay automation.
   saveStateNow();
 });
 

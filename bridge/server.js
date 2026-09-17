@@ -32,6 +32,8 @@ function loadQueue() {
       completedJobs = data.completed || [];
       failedJobs = data.failed || [];
       jobCounter = data.counter || 0;
+      // Restore correlation, never requeue an already dispatched side effect.
+      currentJob = data.currentJob || null;
 
       // Filter out stale jobs older than 15 minutes (to avoid re-running ancient zombie jobs)
       const MAX_AGE_MS = 15 * 60 * 1000;
@@ -53,6 +55,7 @@ function saveQueue() {
   try {
     fs.writeFileSync(QUEUE_FILE, JSON.stringify({
       queue: jobQueue,
+      currentJob,
       completed: completedJobs.slice(0, 100),
       failed: failedJobs.slice(0, 100),
       counter: jobCounter
@@ -544,6 +547,11 @@ function handleExtensionMessage(ws, msg) {
     case 'register':
       extensionSocket = ws;
       log('✅ Extension registered');
+      if (currentJob) {
+        // Ask for a retained result before considering timeout/dispatch.
+        sendToExtension({ type: 'reconcile_job', jobId: currentJob.id });
+        break;
+      }
       // Send pending jobs
       dispatchNext();
       break;
