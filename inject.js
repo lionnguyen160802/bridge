@@ -858,8 +858,12 @@
 
     setNativeValue(targetInput, '');
     if (targetInput.isContentEditable) {
-      targetInput.textContent = '';
-      targetInput.innerHTML = '';
+      try {
+        while (targetInput.firstChild) targetInput.removeChild(targetInput.firstChild);
+      } catch(e) {}
+      try {
+        targetInput.textContent = '';
+      } catch(e) {}
     }
     targetInput.dispatchEvent(new Event('input', { bubbles: true }));
     targetInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1402,8 +1406,12 @@
     } catch(e) {}
     if ('value' in input && typeof input.value === 'string') input.value = '';
     if (input.isContentEditable) {
-      input.textContent = '';
-      input.innerHTML = '';
+      try {
+        while (input.firstChild) input.removeChild(input.firstChild);
+      } catch(e) {}
+      try {
+        input.textContent = '';
+      } catch(e) {}
     }
 
     // Attempt 1: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
@@ -1760,10 +1768,20 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     `;
 
+    function setButtonLabel(button, icon, text) {
+      while (button.firstChild) button.removeChild(button.firstChild);
+      const iconNode = document.createTextNode(icon + ' ');
+      const span = document.createElement('span');
+      span.style.fontWeight = '700';
+      span.textContent = text;
+      button.appendChild(iconNode);
+      button.appendChild(span);
+    }
+
     // Inner upload button
     const btn = document.createElement('button');
     btn.id = 'flowauto-float-upload-btn';
-    btn.innerHTML = '📤 <span style="font-weight:700;">Upload Ảnh vào Flow</span>';
+    setButtonLabel(btn, '📤', 'Upload Ảnh vào Flow');
     btn.title = 'Bấm để chọn ảnh từ máy tính hoặc kéo thả ảnh vào đây để nạp vào Flow';
     btn.style.cssText = `
       background: linear-gradient(135deg, #7c3aed, #4f46e5);
@@ -1803,10 +1821,10 @@
     fileInput.onchange = async () => {
       if (fileInput.files && fileInput.files.length > 0) {
         btn.disabled = true;
-        btn.innerHTML = '⏳ <span>Đang nạp ảnh...</span>';
+        setButtonLabel(btn, '⏳', 'Đang nạp ảnh...');
         await uploadFilesToFlow(Array.from(fileInput.files));
         btn.disabled = false;
-        btn.innerHTML = '📤 <span style="font-weight:700;">Upload Ảnh vào Flow</span>';
+        setButtonLabel(btn, '📤', 'Upload Ảnh vào Flow');
         fileInput.value = '';
       }
     };
@@ -1832,10 +1850,10 @@
       const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
       if (files.length > 0) {
         btn.disabled = true;
-        btn.innerHTML = '⏳ <span>Đang nạp ảnh...</span>';
+        setButtonLabel(btn, '⏳', 'Đang nạp ảnh...');
         await uploadFilesToFlow(files);
         btn.disabled = false;
-        btn.innerHTML = '📤 <span style="font-weight:700;">Upload Ảnh vào Flow</span>';
+        setButtonLabel(btn, '📤', 'Upload Ảnh vào Flow');
       }
     };
 
