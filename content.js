@@ -558,7 +558,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
 // INIT & RESUME
 // ==========================================
 console.log('[FlowAuto v4.4] Content script loaded on:', window.location.href);
-reportState(FLOW_STATES.IDLE, '📌 Content script ready');
+chrome.runtime.sendMessage({ type: 'LOG', message: '📌 Content script ready on: ' + window.location.pathname }).catch(() => {});
 
 // Check if background has an ongoing job that needs resuming on this tab
 chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
@@ -575,12 +575,22 @@ chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
       FLOW_STATES.WAIT_RENDER,
       FLOW_STATES.DOWNLOAD_VIDEO
     ];
-    if (validStates.includes(response.state)) {
-      console.log('[FlowAuto] Resuming active job from background:', response.job, 'state:', response.state);
-      startJob(response.job, response.state);
-    } else {
-      console.log('[FlowAuto] Ignoring inactive/terminal job state:', response.state);
+
+    let targetState = response.state;
+    if (window.location.href.includes('/character')) {
+      targetState = FLOW_STATES.GENERATE_CHARACTER;
+    } else if (!validStates.includes(targetState)) {
+      if (response.job.action === 'create_character') {
+        targetState = FLOW_STATES.GENERATE_CHARACTER;
+      } else if (response.job.images && response.job.images.length > 0) {
+        targetState = FLOW_STATES.UPLOAD_IMAGE;
+      } else {
+        targetState = FLOW_STATES.FIND_CHARACTER;
+      }
     }
+
+    console.log('[FlowAuto] Resuming active job from background:', response.job, 'state:', targetState);
+    startJob(response.job, targetState);
   }
 });
 

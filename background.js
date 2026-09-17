@@ -905,7 +905,6 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       if (
         state.currentJob &&
         state.currentJob.status === 'PROCESSING' &&
-        state.currentState !== FLOW_STATES.IDLE &&
         state.currentState !== FLOW_STATES.DONE &&
         state.currentState !== FLOW_STATES.ERROR
       ) {

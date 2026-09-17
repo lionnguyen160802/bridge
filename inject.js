@@ -225,7 +225,7 @@
     el.focus();
     el.click();
 
-    const isContentEditable = el.getAttribute('contenteditable') === 'true';
+    const isContentEditable = !!(el.isContentEditable || el.getAttribute('contenteditable') === 'true' || el.getAttribute('contenteditable') === '' || el.getAttribute('contenteditable') === 'plaintext-only');
 
     // Find the deep leaf node inside contenteditable (e.g. <p> or <span>) to avoid breaking rich text models
     let targetContainer = el;
@@ -1235,21 +1235,22 @@
 
   /** Find prompt input specifically on https://flow.google.com/project/{projectId}/character */
   function findCharacterPromptInput() {
-    const allInputs = Array.from(document.querySelectorAll('textarea, input[type="text"], input:not([type]), [contenteditable="true"]'));
+    const allInputs = Array.from(document.querySelectorAll('textarea, input[type="text"], input:not([type]), [contenteditable], [role="textbox"], [role="combobox"]'));
     const charPlaceholders = [
       'mô tả nhân vật của bạn',
       'mô tả nhân vật',
       'nhân vật của bạn',
       'describe your character',
       'describe a character',
-      'describe'
+      'describe',
+      'character'
     ];
 
-    // 1. Check placeholder & aria-label
+    // 1. Check placeholder & aria-label on all editable elements
     for (const el of allInputs) {
       if (!isVisible(el)) continue;
       if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
-      const ph = (el.getAttribute('placeholder') || el.getAttribute('data-placeholder') || '').toLowerCase();
+      const ph = (el.getAttribute('placeholder') || el.getAttribute('data-placeholder') || el.getAttribute('aria-placeholder') || '').toLowerCase();
       const aria = (el.getAttribute('aria-label') || '').toLowerCase();
       for (const p of charPlaceholders) {
         if (ph.includes(p) || aria.includes(p)) {
@@ -1259,28 +1260,57 @@
       }
     }
 
-    // 2. Check parent/container text for keywords
-    for (const el of allInputs) {
-      if (!isVisible(el)) continue;
-      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
-      const container = el.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') || el.parentElement?.parentElement;
+    // 2. Look for any visible element on page containing the text "Mô tả nhân vật của bạn" (the placeholder element)
+    const textPlaceholders = Array.from(document.querySelectorAll('p, span, div, label')).filter(el => {
+      if (!isVisible(el)) return false;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+      if (el.children.length > 2) return false;
+      const t = (el.textContent || '').trim().toLowerCase();
+      return t.includes('mô tả nhân vật') || t.includes('describe your character');
+    });
+
+    for (const tEl of textPlaceholders) {
+      const container = tEl.closest('form, [class*="prompt"], [class*="composer"], [class*="input"], div') || tEl.parentElement;
       if (container) {
-        const text = (container.textContent || '').toLowerCase();
-        if (text.includes('mô tả nhân vật') || text.includes('describe your character') || text.includes('định dạng') || text.includes('banana')) {
-          log('✓ findCharacterPromptInput: matched container keyword at y=' + Math.round(el.getBoundingClientRect().top));
-          return el;
+        const editable = container.querySelector('textarea, [contenteditable], [role="textbox"], input[type="text"], input:not([type])');
+        if (editable && isVisible(editable)) {
+          log('✓ findCharacterPromptInput: found editable inside placeholder container at y=' + Math.round(editable.getBoundingClientRect().top));
+          return editable;
+        }
+      }
+      log('✓ findCharacterPromptInput: returning placeholder overlay element at y=' + Math.round(tEl.getBoundingClientRect().top));
+      return tEl;
+    }
+
+    // 3. Proximity to bottom prompt bar controls: Find container containing "Định dạng" or "Banana" or "+"
+    const formatBtn = Array.from(document.querySelectorAll('button, [role="button"]')).find(b => {
+      const t = (b.textContent || '').toLowerCase();
+      return isVisible(b) && (t.includes('định dạng') || t.includes('format') || t.includes('banana'));
+    });
+    if (formatBtn) {
+      const barContainer = formatBtn.closest('form, [class*="prompt"], [class*="composer"], div') || formatBtn.parentElement?.parentElement;
+      if (barContainer) {
+        const editable = barContainer.querySelector('textarea, [contenteditable], [role="textbox"], input');
+        if (editable && isVisible(editable)) {
+          log('✓ findCharacterPromptInput: found editable in prompt bar near "Định dạng"/"Banana" at y=' + Math.round(editable.getBoundingClientRect().top));
+          return editable;
         }
       }
     }
 
-    // 3. Fallback: Any visible textarea on /character
-    const visibleTextareas = allInputs.filter(el => el.tagName === 'TEXTAREA' && isVisible(el) && !el.closest('#flowauto-floating-widget') && !el.closest('#flowauto-toast'));
-    if (visibleTextareas.length > 0) {
-      log('✓ findCharacterPromptInput: fallback visible textarea');
-      return visibleTextareas[0];
+    // 4. Fallback: Any visible textarea / contenteditable in bottom half of screen
+    const bottomInputs = allInputs.filter(el => {
+      if (!isVisible(el)) return false;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+      const r = el.getBoundingClientRect();
+      return r.top > window.innerHeight * 0.35 && r.width >= 100;
+    });
+    if (bottomInputs.length > 0) {
+      log('✓ findCharacterPromptInput: fallback bottom input at y=' + Math.round(bottomInputs[0].getBoundingClientRect().top));
+      return bottomInputs[0];
     }
 
-    // 4. Fallback to general findPromptInput
+    // 5. Fallback to general findPromptInput
     return findPromptInput();
   }
 
@@ -1297,7 +1327,7 @@
     for (const root of roots) {
       const allButtons = Array.from(root.querySelectorAll('button, [role="button"], div[tabindex="0"], a[role="button"]'));
 
-      // 1. By aria-label or title matching submit/create/arrow
+      // 1. By aria-label or title matching submit/create/arrow/send
       for (const btn of allButtons) {
         if (!isVisible(btn)) continue;
         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
@@ -1317,11 +1347,11 @@
         if (!isVisible(btn)) continue;
         const svg = btn.querySelector('svg');
         if (svg) {
-          const pathDs = Array.from(svg.querySelectorAll('path')).map(p => p.getAttribute('d') || '').join(' ');
+          const pathDs = Array.from(svg.querySelectorAll('path, polygon, polyline')).map(p => (p.getAttribute('d') || '') + ' ' + (p.getAttribute('points') || '')).join(' ');
           if (pathDs.includes('M5 12') || pathDs.includes('M12 4') || pathDs.includes('l8-8') ||
               pathDs.includes('16.17') || pathDs.includes('M10 6') || pathDs.includes('2.01') ||
               pathDs.includes('M4 12') || pathDs.includes('arrow') || pathDs.includes('forward') ||
-              pathDs.includes('send') || pathDs.includes('M12 2L2 22')) {
+              pathDs.includes('send') || pathDs.includes('M12 2L2 22') || pathDs.includes('M2.01 21L23 12')) {
             log('✓ findCharacterSubmitArrowButton: matched arrow path in SVG');
             return btn;
           }
@@ -1354,6 +1384,79 @@
     }
 
     return null;
+  }
+
+  /** Type text into an input element using Debugger API with comprehensive fallbacks */
+  async function typeWithDebuggerOrFallback(input, text) {
+    if (!input) return false;
+    
+    // Ensure focused and clicked
+    simulateClick(input);
+    input.focus();
+    await new Promise(r => setTimeout(r, 300));
+
+    // Clear existing text first
+    try {
+      document.execCommand('selectAll', false, null);
+      document.execCommand('delete', false, null);
+    } catch(e) {}
+    if ('value' in input && typeof input.value === 'string') input.value = '';
+    if (input.isContentEditable) {
+      input.textContent = '';
+      input.innerHTML = '';
+    }
+
+    // Attempt 1: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
+    let debuggerTyped = false;
+    try {
+      debuggerTyped = await new Promise((resolve) => {
+        let done = false;
+        const handler = (e) => {
+          if (e.source !== window) return;
+          if (e.data && e.data.type === 'FLOW_DEBUGGER_RESULT') {
+            if (!done) {
+              done = true;
+              window.removeEventListener('message', handler);
+              resolve(!!e.data.success);
+            }
+          }
+        };
+        window.addEventListener('message', handler);
+        window.postMessage({ type: 'FLOW_DEBUGGER_TYPE', text: text }, '*');
+        setTimeout(() => {
+          if (!done) {
+            done = true;
+            window.removeEventListener('message', handler);
+            resolve(false);
+          }
+        }, 3500);
+      });
+    } catch(e) {
+      debuggerTyped = false;
+    }
+
+    // Verify if text appeared in input
+    let curVal = (input.value || input.textContent || '').trim();
+    if (!debuggerTyped || curVal.length === 0) {
+      log('ℹ️ Debugger typing fallback -> using execCommand & injectTextToReactInput...');
+      try {
+        document.execCommand('insertText', false, text);
+      } catch(e) {}
+      curVal = (input.value || input.textContent || '').trim();
+      if (curVal.length === 0) {
+        injectTextToReactInput(input, text);
+      }
+    }
+
+    // Fire input & change events to be 100% sure frameworks register it
+    const opts = { bubbles: true, composed: true };
+    input.dispatchEvent(new Event('input', opts));
+    input.dispatchEvent(new Event('change', opts));
+    input.dispatchEvent(new KeyboardEvent('keyup', { ...opts, key: 'Process', keyCode: 229 }));
+
+    curVal = (input.value || input.textContent || '').trim();
+    log('✍️ Text entered (' + curVal.length + ' chars): "' + curVal.substring(0, 50) + '..."');
+    return curVal.length > 0;
   }
 
   /** Find '+' button in prompt bar */
@@ -2071,35 +2174,33 @@
           await new Promise(r => setTimeout(r, 1000));
 
           // 2. Wait for character prompt input to appear on /character
-          const input = await waitForCondition(() => findCharacterPromptInput(), 10000);
+          let input = await waitForCondition(() => findCharacterPromptInput(), 10000);
           if (!input) {
             sendResult(action, false, null, 'Không tìm thấy ô nhập prompt "Mô tả nhân vật của bạn..." trên trang /character');
             return;
           }
 
           scrollIntoViewIfNeeded(input);
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(r => setTimeout(r, 400));
 
-          // 3. Focus & Clear input một cách chậm rãi, an toàn
+          // 3. Focus & Click input một cách an toàn
           log('🖱️ Focus vào ô nhập prompt...');
           simulateClick(input);
           input.focus();
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(r => setTimeout(r, 400));
 
-          clearSearchInput(input);
-          await new Promise(r => setTimeout(r, 500));
+          // If input is an overlay container/label, check if clicking it revealed or contains an inner editable
+          const innerEditable = input.querySelector('textarea, [contenteditable], [role="textbox"], input');
+          if (innerEditable && isVisible(innerEditable)) {
+            input = innerEditable;
+            simulateClick(input);
+            input.focus();
+          }
 
-          // 4. Inject prompt vào React/Lit input
+          // 4. Inject prompt vào input bằng Debugger OS-level + DOM fallback
           log('✍️ Điền prompt mô tả nhân vật: "' + promptText.substring(0, 45) + '..."');
           showFlowToast('✍️ Đang nhập prompt mô tả nhân vật...', 3000);
-          injectTextToReactInput(input, promptText);
-          
-          // Bổ sung các sự kiện input/change/blur để chắc chắn React nhận giá trị
-          input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-          await new Promise(r => setTimeout(r, 400));
-          input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
-          input.focus();
+          await typeWithDebuggerOrFallback(input, promptText);
 
           // Pacing: Chờ 1.5 giây để React cập nhật state và mở khóa nút mũi tên (enable)
           log('⏳ Chờ giao diện xác nhận prompt và kích hoạt nút mũi tên (1.5s)...');
@@ -2143,6 +2244,7 @@
 
           // Dự phòng song song: Dispatch phím Enter
           log('⏎ Gửi sự kiện Enter dự phòng...');
+          window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
           const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
           input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
           input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
