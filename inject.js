@@ -2143,9 +2143,31 @@
           const charName = (params.characterName || params.character || '').trim();
           const firstFileName = filesData[0]?.name || (filesData[0]?.url ? filesData[0].url.split('/').pop().split('?')[0] : '') || '';
 
+          if (params.assetRole === 'product' && filesData.length !== 1) {
+            sendResult(action, false, null, 'Luồng ảnh chung yêu cầu đúng một ảnh sản phẩm');
+            return;
+          }
           log('🖼️ uploadImage action: ' + filesData.length + ' image(s)' + (charName ? ' (Đổi tên: ' + charName + ')' : ''));
+          capturePreexistingImages();
           const res = await uploadFilesToFlow(filesData);
           if (res.success) {
+            let uploadedReference = null;
+            const uploadWaitStarted = Date.now();
+            while (!uploadedReference && Date.now() - uploadWaitStarted < 15000) {
+              await new Promise(r => setTimeout(r, 750));
+              for (const image of document.querySelectorAll('img')) {
+                const src = image.currentSrc || image.src;
+                const rect = image.getBoundingClientRect();
+                if (src && !preexistingImages.has(src) && isVisible(image) && rect.width >= 80 && rect.height >= 80) {
+                  uploadedReference = { card: climbToCard(image), img: image, src };
+                  break;
+                }
+              }
+            }
+            if (params.assetRole === 'product' && !uploadedReference) {
+              sendResult(action, false, null, 'Flow không hiển thị thẻ ảnh sản phẩm sau upload; không thể gắn reference an toàn');
+              return;
+            }
             // If characterName was provided, wait for card to appear and rename it!
             if (charName) {
               log('⏳ Chờ Flow hiển thị thẻ ảnh để đổi tên thành: "' + charName + '"...');
@@ -2172,13 +2194,120 @@
                 sendResult(action, true, { log: '✓ Đã nạp ' + res.count + ' ảnh vào Flow (chưa kịp đổi tên thẻ)' });
               }
             } else {
-              sendResult(action, true, { log: '✓ Đã nạp ' + res.count + ' ảnh vào Flow' });
+              const referenceHint = firstFileName || params.productName || '';
+              sendResult(action, true, { log: '✓ Đã nạp ảnh sản phẩm và xác nhận thẻ asset trên canvas', referenceHint });
             }
           } else {
             sendResult(action, false, null, res.error || 'Upload ảnh thất bại');
           }
         } catch (err) {
           sendResult(action, false, null, 'uploadImage exception: ' + err.message);
+        }
+        break;
+      }
+
+      // Product upload alone is not a generation reference. Explicitly add its
+      // media card to Flow's canvas composer and prove the composer changed.
+      case 'attachProductReference': {
+        try {
+          if (window.location.href.includes('/character')) {
+            sendResult(action, false, null, 'Trang /character không bảo đảm nhận ảnh reference; cần chạy trên canvas project');
+            return;
+          }
+          const hint = (params.referenceHint || params.productName || '').trim();
+          const found = findMediaCardOnCanvas(hint);
+          if (!found?.card) {
+            sendResult(action, false, null, 'Không tìm thấy đúng thẻ ảnh sản phẩm vừa upload để gắn vào câu lệnh');
+            return;
+          }
+          const promptBefore = findPromptInput();
+          const beforeSignature = promptBefore ? (promptBefore.innerHTML || promptBefore.value || promptBefore.textContent || '') : '';
+          simulateHover(found.card);
+          await new Promise(r => setTimeout(r, 500));
+          const more = findMoreButton(found.card);
+          if (!more) {
+            sendResult(action, false, null, 'Không tìm thấy menu của thẻ ảnh sản phẩm; chưa gắn reference');
+            return;
+          }
+          simulateClick(more);
+          await new Promise(r => setTimeout(r, 600));
+          const add = await waitForCondition(() => findButtonByText('Thêm vào câu lệnh') || findButtonByText('Add to prompt'), 5000);
+          if (!add) {
+            sendResult(action, false, null, 'Flow không cung cấp "Thêm vào câu lệnh" cho ảnh sản phẩm; dừng để tránh tạo ảnh không có sản phẩm');
+            return;
+          }
+          simulateClick(add);
+          await new Promise(r => setTimeout(r, 1000));
+          const promptAfter = findPromptInput();
+          const afterSignature = promptAfter ? (promptAfter.innerHTML || promptAfter.value || promptAfter.textContent || '') : '';
+          const hasReferenceUi = !!promptAfter && (
+            afterSignature !== beforeSignature ||
+            !!promptAfter.closest('form, [class*="prompt"], [class*="composer"]')?.querySelector('img, [class*="chip"], [class*="pill"], [data-type*="media"]')
+          );
+          if (!hasReferenceUi) {
+            sendResult(action, false, null, 'Đã bấm thêm nhưng composer không hiển thị reference sản phẩm; không gửi prompt');
+            return;
+          }
+          sendResult(action, true, { log: '✓ Ảnh sản phẩm đã được chọn làm reference trong composer', referenceAttached: true });
+        } catch (err) {
+          sendResult(action, false, null, 'attachProductReference exception: ' + err.message);
+        }
+        break;
+      }
+
+      case 'generateUnifiedImage': {
+        try {
+          const promptText = (params.prompt || '').trim();
+          if (!promptText) {
+            sendResult(action, false, null, 'Prompt ảnh chung không được để trống');
+            return;
+          }
+          if (window.location.href.includes('/character')) {
+            sendResult(action, false, null, 'Không tạo ảnh chung trên /character vì trang này không bảo đảm product reference');
+            return;
+          }
+          const input = await waitForCondition(() => findPromptInput(), 8000);
+          if (!input) {
+            sendResult(action, false, null, 'Không tìm thấy composer canvas chứa product reference');
+            return;
+          }
+          await switchCreationMode('image');
+          const requiredInstruction = ' Create exactly ONE image: every described character and the exact attached product reference must be fully visible together in the SAME single camera frame. No collage, split screen, separate product image, or product-only result.';
+          const entered = await typeWithDebuggerOrFallback(input, promptText + requiredInstruction);
+          if (!entered) {
+            sendResult(action, false, null, 'Không nhập được prompt ảnh chung vào composer');
+            return;
+          }
+          capturePreexistingImages();
+          window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
+          const enter = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+          input.dispatchEvent(new KeyboardEvent('keydown', enter));
+          input.dispatchEvent(new KeyboardEvent('keypress', enter));
+          input.dispatchEvent(new KeyboardEvent('keyup', enter));
+
+          let generated = null;
+          const started = Date.now();
+          while (!generated && Date.now() - started < 45000) {
+            await new Promise(r => setTimeout(r, 1500));
+            const fresh = [];
+            for (const image of document.querySelectorAll('img')) {
+              const src = image.currentSrc || image.src;
+              const rect = image.getBoundingClientRect();
+              if (src && !preexistingImages.has(src) && isVisible(image) && rect.width >= 80 && rect.height >= 80) fresh.push({ image, src });
+            }
+            if (fresh.length === 1) generated = fresh[0];
+            else if (fresh.length > 1) {
+              sendResult(action, false, null, 'Flow trả nhiều ảnh mới; không thể chứng minh một composition duy nhất');
+              return;
+            }
+          }
+          if (!generated) {
+            sendResult(action, false, null, 'Không phát hiện đúng một ảnh chung mới từ canvas');
+            return;
+          }
+          sendResult(action, true, { log: '✓ Đã tạo đúng một ảnh mới từ composer có product reference', imageUrl: generated.src, imageSrc: generated.src, projectId: getProjectId(), referenceAttached: true });
+        } catch (err) {
+          sendResult(action, false, null, 'generateUnifiedImage exception: ' + err.message);
         }
         break;
       }

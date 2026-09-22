@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3500;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 const LOG_FILE = path.join(__dirname, 'bridge.log');
 
@@ -79,7 +80,27 @@ function log(msg) {
 // ==========================================
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
+
+function normalizeImages(images) {
+  if (images == null) return [];
+  if (!Array.isArray(images) || images.length > 1) throw new Error('Exactly zero or one product image is supported');
+  return images.map(image => {
+    const type = String(image?.type || '');
+    const match = String(image?.base64 || '').match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+    if (!match || match[1] !== type) throw new Error('Invalid product image payload');
+    const bytes = Buffer.from(match[2], 'base64');
+    if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('Product image exceeds 5 MB');
+    const name = path.basename(String(image.name || 'product')).replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(0, 180);
+    return { role: image.role === 'product' ? 'product' : undefined, name, type, sha256: String(image.sha256 || ''), base64: image.base64 };
+  });
+}
+
+function publicJob(job) {
+  if (!job) return null;
+  const { images, ...safe } = job;
+  return { ...safe, images: Array.isArray(images) ? images.map(({ base64, ...image }) => image) : [] };
+}
 
 // Health check
 app.get('/', (req, res) => {
@@ -145,12 +166,14 @@ app.post('/generate', (req, res) => {
 // Dedicated endpoint to create project and optionally upload images and generate character image
 app.post('/create-project', async (req, res) => {
   const body = Array.isArray(req.body) ? req.body[0] : req.body;
-  const { rowId, row_id, images, character, characterName, prompt, characterPrompt, callbackUrl, wait, projectId } = body || {};
+  const { rowId, row_id, images, character, characterName, productName, prompt, characterPrompt, callbackUrl, wait, projectId } = body || {};
 
   const finalPrompt = (prompt || characterPrompt || '').trim();
   const finalProjectId = projectId || null;
   const finalAction = finalProjectId && finalPrompt ? 'create_character' : 'create_project';
 
+  let normalizedImages;
+  try { normalizedImages = normalizeImages(images); } catch (error) { return res.status(400).json({ error: error.message }); }
   jobCounter++;
   const job = {
     id: 'create_proj_' + jobCounter + '_' + Date.now(),
@@ -159,7 +182,8 @@ app.post('/create-project', async (req, res) => {
     sceneId: 'create_project_' + String(jobCounter).padStart(3, '0'),
     character: character || characterName || '',
     prompt: finalPrompt,
-    images: images || [],
+    images: normalizedImages,
+    productName: String(productName || '').trim().slice(0, 200),
     action: finalAction,
     callbackUrl: callbackUrl || null,
     status: 'QUEUED',
@@ -168,7 +192,7 @@ app.post('/create-project', async (req, res) => {
 
   jobQueue.push(job);
   saveQueue();
-  log('✨ Create project requested: ' + job.id + (images?.length ? ' [' + images.length + ' images]' : '') + (finalPrompt ? ' [Prompt: ' + finalPrompt.substring(0, 30) + '...]' : ''));
+  log('✨ Create project requested: ' + job.id + (normalizedImages.length ? ' [product image]' : '') + (finalPrompt ? ' [with prompt]' : ''));
 
   dispatchNext();
 
@@ -394,13 +418,13 @@ app.post('/clear-queue', (req, res) => {
 app.get('/status', (req, res) => {
   res.json({
     extensionConnected: extensionSocket !== null && extensionSocket.readyState === WebSocket.OPEN,
-    currentJob: currentJob,
+    currentJob: publicJob(currentJob),
     queueLength: jobQueue.length,
-    queue: jobQueue.slice(0, 20),
+    queue: jobQueue.slice(0, 20).map(publicJob),
     completedCount: completedJobs.length,
-    recentCompleted: completedJobs.slice(0, 10),
+    recentCompleted: completedJobs.slice(0, 10).map(publicJob),
     failedCount: failedJobs.length,
-    recentFailed: failedJobs.slice(0, 10),
+    recentFailed: failedJobs.slice(0, 10).map(publicJob),
     paused: paused
   });
 });
@@ -408,8 +432,8 @@ app.get('/status', (req, res) => {
 // Get queue details
 app.get('/queue', (req, res) => {
   res.json({
-    queue: jobQueue,
-    currentJob: currentJob,
+    queue: jobQueue.map(publicJob),
+    currentJob: publicJob(currentJob),
     paused: paused
   });
 });
@@ -701,6 +725,7 @@ function dispatchNext() {
       character: currentJob.character,
       prompt: currentJob.prompt,
       images: currentJob.images || [],
+      productName: currentJob.productName || '',
       action: currentJob.action || 'generate',
       callbackUrl: currentJob.callbackUrl,
       driveFolderId: currentJob.driveFolderId

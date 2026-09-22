@@ -35,6 +35,8 @@ let currentCharacterIndex = 0;
 const STATE_SEQUENCE = [
   FLOW_STATES.CREATE_PROJECT,
   FLOW_STATES.UPLOAD_IMAGE,
+  FLOW_STATES.ATTACH_PRODUCT_REFERENCE,
+  FLOW_STATES.GENERATE_UNIFIED_IMAGE,
   FLOW_STATES.GENERATE_CHARACTER,
   FLOW_STATES.FIND_CHARACTER,
   FLOW_STATES.HOVER_CHARACTER,
@@ -54,24 +56,25 @@ const STATE_SEQUENCE = [
 function nextState(state) {
   // If action is create_project or create_character, handle project creation branching
   if ((currentJob?.action === 'create_project' || currentJob?.action === 'create_character') && state === FLOW_STATES.CREATE_PROJECT) {
-    // If prompt is provided, generate character image next!
-    if (currentJob.prompt && currentJob.prompt.trim()) {
-      return FLOW_STATES.GENERATE_CHARACTER;
-    }
-    // If images are provided with create_project, proceed to upload image first
+    // Product references must reach Flow before prompt generation. They are media,
+    // never characters, so no characterName is supplied to the upload action.
     if (currentJob.images && currentJob.images.length > 0) {
       return FLOW_STATES.UPLOAD_IMAGE;
     }
+    if (currentJob.prompt && currentJob.prompt.trim()) return FLOW_STATES.GENERATE_CHARACTER;
     return FLOW_STATES.DONE;
   }
 
   // If action is upload_only, stop right after upload completes
   if ((currentJob?.action === 'upload_only' || currentJob?.action === 'create_project') && state === FLOW_STATES.UPLOAD_IMAGE) {
     if (currentJob.prompt && currentJob.prompt.trim()) {
-      return FLOW_STATES.GENERATE_CHARACTER;
+      return FLOW_STATES.ATTACH_PRODUCT_REFERENCE;
     }
     return FLOW_STATES.DONE;
   }
+
+  if (state === FLOW_STATES.ATTACH_PRODUCT_REFERENCE) return FLOW_STATES.GENERATE_UNIFIED_IMAGE;
+  if (state === FLOW_STATES.GENERATE_UNIFIED_IMAGE) return FLOW_STATES.DONE;
 
   // After generating character, we are done!
   if (state === FLOW_STATES.GENERATE_CHARACTER) {
@@ -184,7 +187,22 @@ function executeState(state) {
         transitionTo(FLOW_STATES.FIND_CHARACTER, '⏭️ Không có ảnh — chuyển sang tìm nhân vật');
         return;
       }
-      sendAction('uploadImage', { files: currentJob.images, characterName: currentJob.character || '' });
+      sendAction('uploadImage', { files: currentJob.images, characterName: '', assetRole: 'product', productName: currentJob.productName || '' });
+      break;
+
+    case FLOW_STATES.ATTACH_PRODUCT_REFERENCE:
+      sendAction('attachProductReference', {
+        referenceHint: currentJob.productReferenceHint || currentJob.images?.[0]?.name || currentJob.productName || '',
+        productName: currentJob.productName || ''
+      });
+      break;
+
+    case FLOW_STATES.GENERATE_UNIFIED_IMAGE:
+      sendAction('generateUnifiedImage', {
+        prompt: currentJob.prompt,
+        productName: currentJob.productName || '',
+        expectedReference: currentJob.productReferenceHint || currentJob.images?.[0]?.name || ''
+      });
       break;
 
     case FLOW_STATES.GENERATE_CHARACTER:
@@ -321,6 +339,23 @@ window.addEventListener('message', (event) => {
         }).catch(() => {});
       }
 
+      if (currentState === FLOW_STATES.UPLOAD_IMAGE && data?.referenceHint) {
+        currentJob.productReferenceHint = data.referenceHint;
+      }
+
+      if (currentState === FLOW_STATES.GENERATE_UNIFIED_IMAGE && data) {
+        if (!currentJob.result) currentJob.result = {};
+        const imgUrl = data.imageUrl || data.imageSrc;
+        if (imgUrl) {
+          currentJob.result.imageUrl = imgUrl;
+          currentJob.result.imageSrc = imgUrl;
+          currentJob.result.characterImageUrl = imgUrl;
+        }
+        currentJob.result.composition = 'characters_and_product_same_frame';
+        currentJob.result.productReferenceAttached = true;
+        currentJob.result.projectId = data.projectId || currentJob.projectId;
+      }
+
       // Save character generation result
       if (currentState === FLOW_STATES.GENERATE_CHARACTER && data) {
         if (!currentJob.result) currentJob.result = {};
@@ -429,7 +464,7 @@ function startJob(job, resumeState) {
     return;
   }
 
-  if (window.location.href.includes('/character') && job.prompt) {
+  if (window.location.href.includes('/character') && job.prompt && !job.images?.length) {
     transitionTo(FLOW_STATES.GENERATE_CHARACTER, '🎨 Generating character image on /character...');
   } else if (job.action === 'create_project' || (!job.projectId && !window.location.href.includes('/project/'))) {
     transitionTo(FLOW_STATES.CREATE_PROJECT, '✨ Creating new project in Flow...');
@@ -564,6 +599,8 @@ chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
       FLOW_STATES.CREATE_PROJECT,
       FLOW_STATES.GENERATE_CHARACTER,
       FLOW_STATES.UPLOAD_IMAGE,
+      FLOW_STATES.ATTACH_PRODUCT_REFERENCE,
+      FLOW_STATES.GENERATE_UNIFIED_IMAGE,
       FLOW_STATES.FIND_CHARACTER,
       FLOW_STATES.WAIT_TEXTAREA,
       FLOW_STATES.FILL_PROMPT,
