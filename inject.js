@@ -234,7 +234,7 @@
       let inner = el.querySelector('p');
       if (!inner) inner = el.querySelector('span');
       if (!inner && el.firstElementChild) inner = el.firstElementChild;
-      if (inner) {
+      if (inner && !(inner.textContent || '').includes('Mô tả nhân vật') && !(inner.textContent || '').includes('describe')) {
         targetContainer = inner;
         log('💉 Targeting leaf container: <' + inner.tagName + '>');
       }
@@ -257,6 +257,11 @@
     // Safely appends DOM content while bypassing React's value interceptor
     function appendDOMValue(val) {
       if (isContentEditable) {
+        // If placeholder element is still inside el, remove it
+        const ph = Array.from(el.querySelectorAll('*')).find(c => (c.textContent || '').includes('Mô tả nhân vật') || (c.textContent || '').includes('describe your character'));
+        if (ph && ph.parentElement && ph !== el) {
+          try { ph.parentElement.removeChild(ph); } catch(e) {}
+        }
         const textNode = document.createTextNode(val);
         targetContainer.appendChild(textNode);
         moveCursorToEnd();
@@ -1473,24 +1478,49 @@
     // Ensure focused and clicked
     simulateClick(input);
     input.focus();
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 200));
 
-    // Clear existing text first
+    // Clear existing text safely without breaking editor DOM nodes
     try {
-      document.execCommand('selectAll', false, null);
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      sel.removeAllRanges();
+      sel.addRange(range);
       document.execCommand('delete', false, null);
     } catch(e) {}
     if ('value' in input && typeof input.value === 'string') input.value = '';
-    if (input.isContentEditable) {
-      try {
-        while (input.firstChild) input.removeChild(input.firstChild);
-      } catch(e) {}
-      try {
-        input.textContent = '';
-      } catch(e) {}
+
+    const first20 = (text || '').trim().slice(0, 20);
+    const hasText = () => {
+      const v = (input.value || input.innerText || input.textContent || '').trim();
+      return first20.length > 0 && v.includes(first20);
+    };
+
+    // Strategy 1: Dispatch ClipboardEvent('paste') with DataTransfer (Google Flow native paste)
+    log('📋 Strategy 1: Synthetic paste event with DataTransfer...');
+    try {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      input.dispatchEvent(new ClipboardEvent('paste', {
+        bubbles: true, cancelable: true, composed: true, clipboardData: dt
+      }));
+      input.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
+      }));
+      input.dispatchEvent(new InputEvent('input', {
+        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
+      }));
+    } catch(e) {}
+
+    await new Promise(r => setTimeout(r, 300));
+    if (hasText()) {
+      log('✓ Text entered via synthetic paste event');
+      return true;
     }
 
-    // Attempt 1: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
+    // Strategy 2: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
+    log('⌨️ Strategy 2: Chrome Debugger typing...');
     let debuggerTyped = false;
     try {
       debuggerTyped = await new Promise((resolve) => {
@@ -1519,17 +1549,21 @@
       debuggerTyped = false;
     }
 
-    // Verify if text appeared in input
-    let curVal = (input.value || input.textContent || '').trim();
-    if (!debuggerTyped || curVal.length === 0) {
-      log('ℹ️ Debugger typing fallback -> using execCommand & injectTextToReactInput...');
-      try {
-        document.execCommand('insertText', false, text);
-      } catch(e) {}
-      curVal = (input.value || input.textContent || '').trim();
-      if (curVal.length === 0) {
-        injectTextToReactInput(input, text);
-      }
+    await new Promise(r => setTimeout(r, 300));
+    if (hasText()) {
+      log('✓ Text entered via Chrome Debugger');
+      return true;
+    }
+
+    // Strategy 3: execCommand insertText & injectTextToReactInput
+    log('✍️ Strategy 3: execCommand insertText & injectTextToReactInput fallback...');
+    try {
+      document.execCommand('insertText', false, text);
+    } catch(e) {}
+
+    await new Promise(r => setTimeout(r, 200));
+    if (!hasText()) {
+      injectTextToReactInput(input, text);
     }
 
     // Fire input & change events to be 100% sure frameworks register it
@@ -1538,9 +1572,10 @@
     input.dispatchEvent(new Event('change', opts));
     input.dispatchEvent(new KeyboardEvent('keyup', { ...opts, key: 'Process', keyCode: 229 }));
 
-    curVal = (input.value || input.textContent || '').trim();
+    await new Promise(r => setTimeout(r, 300));
+    const curVal = (input.value || input.innerText || input.textContent || '').trim();
     log('✍️ Text entered (' + curVal.length + ' chars): "' + curVal.substring(0, 50) + '..."');
-    return curVal.length > 0;
+    return hasText() || curVal.length > 0;
   }
 
   /** Find '+' button in prompt bar */
@@ -2535,7 +2570,7 @@
           }
           evidence.input = input;
           evidence.composer = composer;
-          const promptText = (params.prompt || '').trim();
+          const promptText = (params.prompt || params.characterPrompt || params.character_prompt || '').trim();
           if (!promptText) {
             sendResult(action, false, null, 'Prompt ảnh chung không được để trống');
             return;

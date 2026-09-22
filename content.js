@@ -201,7 +201,7 @@ function executeState(state) {
 
     case FLOW_STATES.INJECT_UNIFIED_PROMPT:
       sendAction('injectUnifiedPrompt', {
-        prompt: currentJob.prompt,
+        prompt: currentJob.prompt || currentJob.characterPrompt || currentJob.character_prompt || '',
         productName: currentJob.productName || ''
       });
       break;
