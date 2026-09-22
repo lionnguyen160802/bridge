@@ -1471,54 +1471,115 @@
     return null;
   }
 
-  /** Type text into an input element using Debugger API with comprehensive fallbacks */
+  /** Reliably focus, click, and position caret inside an input or contenteditable element */
+  async function focusAndClickInput(input) {
+    if (!input) return null;
+    scrollIntoViewIfNeeded(input);
+    await new Promise(r => setTimeout(r, 150));
+
+    // 1. Native focus and click
+    try { input.focus(); } catch(e) {}
+    try { input.click(); } catch(e) {}
+
+    // 2. Pointer & Mouse events
+    const { x, y } = getCenter(input);
+    const opts = {
+      bubbles: true, cancelable: true, composed: true, view: window,
+      clientX: x, clientY: y,
+      screenX: window.screenX + x, screenY: window.screenY + y,
+      button: 0, buttons: 1, detail: 1
+    };
+    input.dispatchEvent(new PointerEvent('pointerdown', opts));
+    input.dispatchEvent(new MouseEvent('mousedown', opts));
+    input.dispatchEvent(new PointerEvent('pointerup', { ...opts, buttons: 0 }));
+    input.dispatchEvent(new MouseEvent('mouseup', { ...opts, buttons: 0 }));
+    input.dispatchEvent(new MouseEvent('click', { ...opts, buttons: 0 }));
+    try { input.focus(); } catch(e) {}
+
+    await new Promise(r => setTimeout(r, 150));
+
+    // Resolve active element if focus shifted to an inner editable
+    let active = input;
+    if (document.activeElement && document.activeElement !== document.body &&
+        (document.activeElement.isContentEditable || document.activeElement.matches('textarea, input, [role="textbox"]'))) {
+      active = document.activeElement;
+    }
+
+    // Position cursor cleanly at end of input
+    try {
+      if (active.isContentEditable || active.getAttribute('contenteditable') === 'true' || active.getAttribute('role') === 'textbox') {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(active);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        active.selectionStart = active.selectionEnd = (active.value || '').length;
+      }
+    } catch(e) {}
+
+    return active;
+  }
+
+  /** Type text into an input element using multiple complementary strategies */
   async function typeWithDebuggerOrFallback(input, text) {
     if (!input) return false;
 
-    // 1. Focus the input element cleanly
-    simulateClick(input);
-    input.focus();
-    await new Promise(r => setTimeout(r, 200));
+    // 1. Focus and click the input cleanly
+    input = await focusAndClickInput(input) || input;
 
-    // If activeElement changed upon focus, use activeElement
-    if (document.activeElement && document.activeElement !== document.body &&
-        (document.activeElement.isContentEditable || document.activeElement.matches('textarea, input, [role="textbox"]'))) {
-      input = document.activeElement;
-    }
-
-    // 2. Position cursor cleanly at end of input without deleting internal DOM nodes
-    if (input.isContentEditable || input.getAttribute('contenteditable') === 'true' || input.getAttribute('role') === 'textbox') {
-      try {
-        let target = input;
-        let inner = input.querySelector('p') || input.querySelector('span') || input.firstElementChild;
-        if (inner && !(inner.textContent || '').includes('Mô tả nhân vật') && !(inner.textContent || '').includes('describe')) {
-          target = inner;
-        }
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(target);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } catch(e) {}
-    } else {
-      try { input.selectionStart = input.selectionEnd = (input.value || '').length; } catch(e) {}
-    }
-
-    const first20 = (text || '').trim().slice(0, 20);
+    const first15 = (text || '').trim().slice(0, 15);
     const hasText = () => {
-      const v = (input.value || input.innerText || input.textContent || input.parentElement?.innerText || '').trim();
-      if (first20.length > 0 && v.includes(first20)) return true;
+      const v = (input.value || input.innerText || input.textContent || '').trim();
+      if (first15.length > 0 && v.includes(first15)) return true;
       const arrowBtn = findCharacterSubmitArrowButton(input);
       if (arrowBtn && !arrowBtn.disabled && arrowBtn.getAttribute('aria-disabled') !== 'true') return true;
       return false;
     };
 
-    // 3. Attempt 1: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
-    log('⌨️ Attempt 1: Chrome Debugger typing...');
-    let debuggerTyped = false;
+    if (hasText()) return true;
+
+    // Strategy 1: document.execCommand('insertText')
+    log('✍️ Strategy 1: document.execCommand("insertText")...');
     try {
-      debuggerTyped = await new Promise((resolve) => {
+      input.focus();
+      document.execCommand('insertText', false, text);
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 200));
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: text }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    if (hasText()) {
+      log('✓ Text entered via execCommand');
+      return true;
+    }
+
+    // Strategy 2: Synthetic paste event with DataTransfer
+    log('📋 Strategy 2: Synthetic paste with DataTransfer...');
+    try {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      input.dispatchEvent(new ClipboardEvent('paste', {
+        bubbles: true, cancelable: true, composed: true, clipboardData: dt
+      }));
+      input.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
+      }));
+      input.dispatchEvent(new InputEvent('input', {
+        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
+      }));
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 200));
+    if (hasText()) {
+      log('✓ Text entered via synthetic paste');
+      return true;
+    }
+
+    // Strategy 3: OS-level Chrome Debugger typing
+    log('⌨️ Strategy 3: Chrome Debugger typing...');
+    try {
+      input = await focusAndClickInput(input) || input;
+      await new Promise((resolve) => {
         let done = false;
         const finish = (val) => {
           if (!done) {
@@ -1535,51 +1596,32 @@
         };
         window.addEventListener('message', handler);
         window.postMessage({ type: 'FLOW_DEBUGGER_TYPE', text: text }, '*');
-        setTimeout(() => finish(false), 4000);
+        setTimeout(() => finish(false), 3500);
       });
-    } catch(e) {
-      debuggerTyped = false;
-    }
-
-    await new Promise(r => setTimeout(r, 400));
-    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: 'Process', keyCode: 229 }));
-
-    if (hasText() || debuggerTyped) {
-      log('✓ Text entered via Chrome Debugger (typed=' + debuggerTyped + ')');
-      return true;
-    }
-
-    // 4. Attempt 2: document.execCommand('insertText')
-    log('✍️ Attempt 2: document.execCommand("insertText")...');
-    try {
-      input.focus();
-      document.execCommand('insertText', false, text);
     } catch(e) {}
 
     await new Promise(r => setTimeout(r, 300));
     input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: 'Process', keyCode: 229 }));
+
     if (hasText()) {
-      log('✓ Text entered via execCommand');
+      log('✓ Text entered via Chrome Debugger');
       return true;
     }
 
-    // 5. Attempt 3: injectTextToReactInput
-    log('💉 Attempt 3: injectTextToReactInput fallback...');
+    // Strategy 4: injectTextToReactInput fallback
+    log('💉 Strategy 4: injectTextToReactInput fallback...');
     injectTextToReactInput(input, text);
 
-    // Fire input & change events to be 100% sure frameworks register it
-    const opts = { bubbles: true, composed: true };
-    input.dispatchEvent(new Event('input', opts));
-    input.dispatchEvent(new Event('change', opts));
-    input.dispatchEvent(new KeyboardEvent('keyup', { ...opts, key: 'Process', keyCode: 229 }));
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: 'Process', keyCode: 229 }));
 
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 300));
     const curVal = (input.value || input.innerText || input.textContent || '').trim();
     log('✍️ Text check: "' + curVal.substring(0, 50) + '..."');
-    return hasText() || curVal.length > 0;
+    return hasText();
   }
 
   /** Find '+' button in prompt bar */
@@ -2563,13 +2605,7 @@
             if (inner && isVisible(inner)) {
               input = inner;
             } else {
-              simulateClick(input);
-              input.focus();
-              await new Promise(r => setTimeout(r, 200));
-              if (document.activeElement && document.activeElement !== document.body && 
-                  (document.activeElement.isContentEditable || document.activeElement.matches('textarea, input, [role="textbox"]'))) {
-                input = document.activeElement;
-              }
+              input = await focusAndClickInput(input) || input;
             }
           }
 
@@ -2587,15 +2623,17 @@
           }
           const instruction = ' Create exactly ONE image with ALL described characters and the exact ATTACHED product fully visible together in the SAME single camera frame. Preserve the attached product identity, packaging, label, colors, and proportions exactly. No collage, split screen, separate asset, product-only result, or extra image.';
           const textToInject = promptText + instruction;
-          const readInputText = () => (input.value || input.innerText || input.textContent || composer?.innerText || '').trim();
+          const readInputText = () => (input.value || input.innerText || input.textContent || '').trim();
           if (readInputText().includes(promptText.slice(0, 40))) {
             sendResult(action, true, { log: '✓ Unified prompt đã có trong composer; bỏ qua để tránh nhập trùng', injectionStrategy: 'existing-text' });
             return;
           }
 
-          simulateClick(input);
-          input.focus();
-          let injectionStrategy = 'debugger-type';
+          // Click into input to prepare for prompt insertion
+          log('🖱️ Clicking into character prompt input...');
+          input = await focusAndClickInput(input) || input;
+
+          let injectionStrategy = 'multistage-type';
           const typed = await typeWithDebuggerOrFallback(input, textToInject);
           let text = readInputText();
           if (!typed || !text.includes(promptText.slice(0, 20))) {
@@ -2611,7 +2649,7 @@
           };
 
           if (!isReady()) {
-            await waitForCondition(() => isReady(), 3000);
+            await waitForCondition(() => isReady(), 3500);
             text = readInputText();
           }
 
