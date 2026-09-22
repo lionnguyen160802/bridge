@@ -1333,6 +1333,10 @@
     });
 
     for (const tEl of textPlaceholders) {
+      if (tEl.isContentEditable || tEl.matches('textarea, input, [role="textbox"], [contenteditable]')) {
+        log('✓ findCharacterPromptInput: placeholder element itself is editable at y=' + Math.round(tEl.getBoundingClientRect().top));
+        return tEl;
+      }
       let curr = tEl.parentElement;
       let foundEditable = null;
       while (curr && curr !== document.body && curr !== document.documentElement) {
