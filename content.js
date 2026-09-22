@@ -196,12 +196,8 @@ function executeState(state) {
       break;
 
     case FLOW_STATES.FIND_CHARACTER:
-      if (!charName) {
-        // No character — skip to WAIT_TEXTAREA (find the prompt input directly)
-        transitionTo(FLOW_STATES.WAIT_TEXTAREA, '⏭️ No character — skipping to prompt input');
-        return;
-      }
-      sendAction('findCharacter', { name: charName });
+      const targetCharName = charName || 'Nhân vật chưa có tên';
+      sendAction('findCharacter', { name: targetCharName });
       break;
 
     case FLOW_STATES.HOVER_CHARACTER:

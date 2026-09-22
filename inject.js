@@ -466,6 +466,64 @@
     el.dispatchEvent(new Event('input', opts));
   }
 
+  let lastFoundCharacterCard = null;
+
+  /** Click vào menu "Nhân vật" ở thanh bên trái (sidebar) */
+  async function clickCharactersSidebarMenu() {
+    log('🧭 Đang tìm và bấm vào menu "Nhân vật" ở thanh bên trái...');
+    showFlowToast('🧭 Đang chuyển sang mục "Nhân vật"...', 2000);
+
+    // 1. Quét các phần tử bên thanh sidebar (bên trái màn hình, left < 280px)
+    const sidebarItems = Array.from(document.querySelectorAll('nav, aside, [role="navigation"], ul, li, div, a, button, [role="tab"], [role="button"], [role="listitem"], span')).filter(el => {
+      if (!isVisible(el)) return false;
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+      const r = el.getBoundingClientRect();
+      return r.left < 280 && r.top < window.innerHeight * 0.75 && r.width > 15;
+    });
+
+    // 2. Tìm phần tử có văn bản khớp chính xác hoặc bắt đầu bằng "Nhân vật" / "Characters"
+    let targetMenu = null;
+    for (const el of sidebarItems) {
+      const text = (el.textContent || '').trim();
+      const aria = (el.getAttribute('aria-label') || '').trim().toLowerCase();
+      
+      if (text === 'Nhân vật' || text === 'Characters' || text === 'Character' ||
+          aria === 'nhân vật' || aria === 'characters' || aria === 'character' ||
+          (text.startsWith('Nhân vật') && text.length <= 15) ||
+          (text.startsWith('Characters') && text.length <= 15)) {
+        // Ưu tiên thẻ có thể click (button, a, role="tab", role="button", hoặc thẻ cha)
+        const clickable = el.closest('button, a, [role="tab"], [role="button"], li') || el;
+        targetMenu = clickable;
+        break;
+      }
+    }
+
+    // 3. Dự phòng: Quét phần tử có chữ "Nhân vật" ở thanh bên trái
+    if (!targetMenu) {
+      const matchSpan = sidebarItems.find(el => {
+        const t = (el.textContent || '').trim();
+        return (t.includes('Nhân vật') || t.toLowerCase().includes('characters')) && t.length < 25;
+      });
+      if (matchSpan) {
+        targetMenu = matchSpan.closest('button, a, [role="tab"], [role="button"], li') || matchSpan;
+      }
+    }
+
+    if (targetMenu) {
+      log('✓ Tìm thấy nút menu "Nhân vật": <' + targetMenu.tagName + '> "' + targetMenu.textContent.trim().substring(0, 20) + '"');
+      scrollIntoViewIfNeeded(targetMenu);
+      simulateClick(targetMenu);
+      try { targetMenu.click(); } catch(e) {}
+      
+      // Chờ 1.5 giây để Google Flow cập nhật lưới thẻ nhân vật
+      await new Promise(r => setTimeout(r, 1500));
+      return true;
+    } else {
+      log('ℹ️ Không thấy nút menu "Nhân vật" riêng biệt (có thể đã ở sẵn trong tab hoặc màn hình thu gọn)');
+      return false;
+    }
+  }
+
   /** Find character card by name */
   function findCharacterCard(name) {
     if (!name) return null;
@@ -2433,94 +2491,116 @@
 
       // ── Step 1: Find character card ──
       case 'findCharacter': {
-        // Always clear leftover search filter from previous character
+        // Bước 1: Click vào menu "Nhân vật" ở thanh bên trái
+        await clickCharactersSidebarMenu();
+
+        // Xóa bộ lọc tìm kiếm cũ nếu còn sót
         const preSearchBar = findSearchBar();
         if (preSearchBar && preSearchBar.value && preSearchBar.value.trim().length > 0) {
           log('🧹 Clearing leftover search filter...');
           clearSearchInput(preSearchBar);
-          await new Promise(res => setTimeout(res, 1500));
+          await new Promise(res => setTimeout(res, 1200));
         }
 
-        // Attempt 1: Try finding directly in the visible grid
-        let r = findCharacterCard(params.name);
-        
-        // Attempt 2: Use Search Bar to filter (essential for large projects)
+        const charName = (params.name || '').trim();
+        log('🔍 Bắt đầu tìm thẻ nhân vật (tên yêu cầu: "' + (charName || 'Nhân vật chưa có tên') + '")...');
+
+        let r = null;
+
+        // 1. Thử tìm theo tên chỉ định nếu có (và khác default)
+        if (charName && charName !== 'Nhân vật chưa có tên') {
+          r = findCharacterCard(charName);
+        }
+
+        // 2. Tìm đến thẻ "Nhân vật chưa có tên" (hoặc biến thể tiếng Anh)
+        if (!r) {
+          log('🔍 Tìm thẻ mang tên "Nhân vật chưa có tên"...');
+          r = findCharacterCard('Nhân vật chưa có tên') ||
+              findCharacterCard('nhân vật chưa có tên') ||
+              findCharacterCard('Unnamed character') ||
+              findCharacterCard('Untitled character');
+        }
+
+        // 3. Nếu chưa thấy trên màn hình, thử gõ search bar để tìm kiếm
         if (!r) {
           const searchInput = findSearchBar();
           if (searchInput) {
-            log('🔍 Character not visible (' + params.name + '), using Search Bar...');
+            const queryName = (charName && charName !== 'Nhân vật chưa có tên') ? charName : 'Nhân vật chưa có tên';
+            log('🔍 Thử lọc bằng Search Bar: "' + queryName + '"...');
             clearSearchInput(searchInput);
             await new Promise(res => setTimeout(res, 500));
-            
-            // Type full character name
-            injectTextToReactInput(searchInput, params.name);
+
+            injectTextToReactInput(searchInput, queryName);
             const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
             searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
             searchInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
             searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-            
-            // Wait for search results
-            await new Promise(res => setTimeout(res, 2500));
-            r = findCharacterCard(params.name);
-            
-            // Attempt 3: Try with first word only (e.g. "Chanh Pink" → "Chanh")
-            if (!r) {
-              const words = params.name.trim().split(/\s+/);
-              if (words.length > 1) {
-                log('🔍 Full name not found, trying first word: "' + words[0] + '"...');
-                clearSearchInput(searchInput);
-                await new Promise(res => setTimeout(res, 500));
-                injectTextToReactInput(searchInput, words[0]);
-                searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-                searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-                await new Promise(res => setTimeout(res, 2500));
-                r = findCharacterCard(params.name); // Still match full name in results
-              }
-            }
-            
-            // Clear search bar after finding to reset grid for hover/click steps
-            if (r) {
-              log('🧹 Clearing search filter after finding character...');
-              clearSearchInput(searchInput);
-              await new Promise(res => setTimeout(res, 1500)); // Wait for grid to fully reset
-            }
+
+            await new Promise(res => setTimeout(res, 2000));
+            r = (charName ? findCharacterCard(charName) : null) || findCharacterCard('Nhân vật chưa có tên');
+
+            // Xóa search bar sau khi tìm để phục hồi lưới thẻ
+            clearSearchInput(searchInput);
+            await new Promise(res => setTimeout(res, 1200));
           }
         }
 
+        // 4. Fallback đặc biệt: Đã ở trong mục "Nhân vật", lấy thẻ nhân vật đầu tiên trong lưới
+        if (!r) {
+          log('🔍 Fallback: Lấy thẻ nhân vật đầu tiên trong mục "Nhân vật"...');
+          r = findMediaCardOnCanvas(null);
+        }
+
         if (r) {
-          log('✓ Found via ' + r.method);
-          sendResult(action, true, { log: '✓ Found: ' + params.name + ' (' + r.method + ')' });
+          lastFoundCharacterCard = r;
+          log('✓ Đã tìm thấy thẻ nhân vật via ' + r.method);
+          sendResult(action, true, { log: '✓ Tìm thấy: ' + (charName || 'Nhân vật chưa có tên') + ' (' + r.method + ')' });
         } else {
-          sendResult(action, false, null, 'Character not found: ' + params.name);
+          lastFoundCharacterCard = null;
+          sendResult(action, false, null, 'Không tìm thấy thẻ "Nhân vật chưa có tên" trong mục Nhân vật');
         }
         break;
       }
 
       // ── Step 2: Hover character card ──
       case 'hoverCharacter': {
-        const r = findCharacterCard(params.name);
+        const r = (lastFoundCharacterCard && isVisible(lastFoundCharacterCard.card))
+          ? lastFoundCharacterCard
+          : (findCharacterCard(params.name) || findCharacterCard('Nhân vật chưa có tên') || findMediaCardOnCanvas(null));
+
         if (r && simulateHover(r.card)) {
+          lastFoundCharacterCard = r;
           await new Promise(r => setTimeout(r, 1000));
-          sendResult(action, true, { log: '✓ Hover triggered: ' + params.name });
+          sendResult(action, true, { log: '✓ Hover triggered: ' + (params.name || 'Nhân vật chưa có tên') });
         } else {
-          sendResult(action, false, null, 'Cannot hover: ' + params.name);
+          sendResult(action, false, null, 'Cannot hover: ' + (params.name || 'Nhân vật chưa có tên'));
         }
         break;
       }
 
       // ── Step 3: Click ⋮ menu button ──
       case 'clickMoreMenu': {
-        const cardResult = findCharacterCard(params.name);
-        if (cardResult) { simulateHover(cardResult.card); await new Promise(r => setTimeout(r, 500)); }
+        const cardResult = (lastFoundCharacterCard && isVisible(lastFoundCharacterCard.card))
+          ? lastFoundCharacterCard
+          : (findCharacterCard(params.name) || findCharacterCard('Nhân vật chưa có tên') || findMediaCardOnCanvas(null));
 
-        const btn = findMoreButton(params.name);
+        if (cardResult) {
+          lastFoundCharacterCard = cardResult;
+          simulateHover(cardResult.card);
+          await new Promise(r => setTimeout(r, 500));
+        }
+
+        const btn = (cardResult ? findMoreButton(cardResult.card) : null) ||
+                    findMoreButton(params.name) ||
+                    findMoreButton('Nhân vật chưa có tên');
+
         if (btn) {
           simulateClick(btn);
           log('✓ Clicked ⋮');
           await new Promise(r => setTimeout(r, 600));
-          sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + params.name });
+          sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + (params.name || 'Nhân vật chưa có tên') });
         } else {
-          sendResult(action, false, null, '⋮ button not found on card: ' + params.name);
+          sendResult(action, false, null, '⋮ button not found on card: ' + (params.name || 'Nhân vật chưa có tên'));
         }
         break;
       }
