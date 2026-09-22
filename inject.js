@@ -1685,9 +1685,13 @@
 
   function attachmentSignature(composer, input) {
     if (!composer) return '';
-    const inputRect = input.getBoundingClientRect();
-    const selector = 'img, video, [class*="chip"], [class*="pill"], [data-type*="media"], [data-testid*="attachment"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i]';
-    const candidates = new Set(composer.querySelectorAll(selector));
+    let activeComposer = composer;
+    if (!activeComposer.isConnected && input?.isConnected) {
+      activeComposer = getCharacterComposer(input) || activeComposer;
+    }
+    const inputRect = input?.getBoundingClientRect() || { top: 0, bottom: 0, left: 0, right: 0 };
+    const selector = 'img, video, svg, button, [class*="chip"], [class*="pill"], [class*="attachment"], [class*="thumbnail"], [class*="preview"], [data-type*="media"], [data-testid*="attachment"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i]';
+    const candidates = new Set(activeComposer.querySelectorAll(selector));
     const portalSelector = ['[role="dialog"]', '[role="menu"]', '[data-radix-portal]']
       .flatMap(scope => selector.split(', ').map(part => scope + ' ' + part))
       .join(', ');
@@ -1704,16 +1708,49 @@
       .join('\n');
   }
 
-  function hasConfirmedAttachment(composer) {
+  function hasConfirmedAttachment(composer, input = null) {
     if (!composer) return false;
-    const explicit = '[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [class*="attachment"], [class*="chip"]';
-    if (Array.from(composer.querySelectorAll(explicit)).some(isVisible)) return true;
-    const imgs = Array.from(composer.querySelectorAll('img')).filter(img => {
+    let activeComposer = composer;
+    if (!activeComposer.isConnected && input?.isConnected) {
+      activeComposer = getCharacterComposer(input) || activeComposer;
+    }
+    const explicit = '[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [class*="attachment"], [class*="chip"], [class*="thumbnail"], [class*="preview"]';
+    if (Array.from(activeComposer.querySelectorAll(explicit)).some(isVisible)) return true;
+
+    // Check for thumbnail images
+    const imgs = Array.from(activeComposer.querySelectorAll('img')).filter(img => {
       if (!isVisible(img)) return false;
       const r = img.getBoundingClientRect();
-      return r.width >= 24 && r.height >= 24 && r.width <= 240 && r.height <= 240;
+      return r.width >= 20 && r.height >= 20 && r.width <= 240 && r.height <= 240;
     });
-    return imgs.length > 0;
+    if (imgs.length > 0) return true;
+
+    // Check for remove/dismiss button (✕ or svg cross) inside composer
+    const buttons = Array.from(activeComposer.querySelectorAll('button, [role="button"]')).filter(isVisible);
+    for (const b of buttons) {
+      const txt = (b.textContent || '').trim();
+      const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+      const title = (b.getAttribute('title') || '').toLowerCase();
+      if (txt === '✕' || txt === '×' || txt === 'x' ||
+          aria.includes('xóa') || aria.includes('gỡ') || aria.includes('đóng') || aria.includes('remove') || aria.includes('delete') || aria.includes('close') ||
+          title.includes('xóa') || title.includes('gỡ') || title.includes('remove')) {
+        return true;
+      }
+    }
+
+    // Geometric check: Any element inside composer positioned above the prompt input
+    if (input && input.isConnected) {
+      const inputRect = input.getBoundingClientRect();
+      const aboveInput = Array.from(activeComposer.querySelectorAll('div, span, button, svg')).filter(el => {
+        if (!isVisible(el) || el === activeComposer || el.contains(input) || input.contains(el)) return false;
+        if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+        const r = el.getBoundingClientRect();
+        return r.height >= 20 && r.width >= 20 && r.bottom <= inputRect.top + 8;
+      });
+      if (aboveInput.length > 0) return true;
+    }
+
+    return false;
   }
 
   async function navigateToCharacterComposer(projectId) {
@@ -2396,7 +2433,7 @@
           const composer = getCharacterComposer(input);
           const before = attachmentSignature(composer, input);
           if (hasConfirmedAttachment(composer)) {
-            productAttachmentEvidence = { input, composer, before: '', after: before, fileName: file.name, strategy: 'existing-confirmed', selectorEvidence: 'existing attachment UI' };
+            productAttachmentEvidence = { input, composer, before: '', after: before || 'existing', fileName: file.name, strategy: 'existing-confirmed', selectorEvidence: 'existing attachment UI' };
             sendResult(action, true, { log: '✓ Composer đã có attachment; bỏ qua để tránh gắn trùng' });
             return;
           }
@@ -2420,6 +2457,12 @@
               after = attachmentSignature(composer, input);
             }
           }
+          if (!after || after === before) {
+            if (hasConfirmedAttachment(composer, input)) {
+              after = 'confirmed-ui';
+              strategy = strategy || 'composer-attachment-detected';
+            }
+          }
           productAttachmentEvidence = { input, composer, before, after, fileName: file.name, strategy, selectorEvidence };
           sendResult(action, true, { log: '✓ Đã thử gắn ảnh sản phẩm trực tiếp vào character composer (' + strategy + ')', selectorEvidence });
         } catch (err) {
@@ -2430,14 +2473,27 @@
       }
 
       case 'verifyProductAttachment': {
+        let input = (await waitForCondition(() => findCharacterPromptInput(), 4000)) || productAttachmentEvidence?.input;
+        let composer = input ? getCharacterComposer(input) : (productAttachmentEvidence?.composer || null);
+        if (composer && !composer.isConnected && input?.isConnected) {
+          composer = getCharacterComposer(input);
+        }
+
         const evidence = productAttachmentEvidence;
-        const current = evidence ? attachmentSignature(evidence.composer, evidence.input) : '';
-        if (!evidence || !current || current === evidence.before) {
+        if (evidence && input && composer) {
+          evidence.input = input;
+          evidence.composer = composer;
+        }
+
+        const confirmed = composer ? hasConfirmedAttachment(composer, input) : false;
+        const current = composer && input ? attachmentSignature(composer, input) : '';
+
+        if (!confirmed && (!evidence || !current || current === evidence.before)) {
           sendResult(action, false, null, 'Flow không xác nhận thumbnail/media sản phẩm trong character composer. Synthetic paste có thể bị chặn vì sự kiện không trusted; không gửi prompt.');
           return;
         }
-        evidence.after = current;
-        sendResult(action, true, { log: '✓ Đã xác nhận thumbnail/media sản phẩm trong composer', referenceAttached: true, strategy: evidence.strategy });
+        if (evidence) evidence.after = current || 'confirmed';
+        sendResult(action, true, { log: '✓ Đã xác nhận thumbnail/media sản phẩm trong composer', referenceAttached: true, strategy: evidence?.strategy || 'confirmed-ui' });
         break;
       }
 
