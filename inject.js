@@ -2,7 +2,7 @@
 // Runs in PAGE CONTEXT for full DOM + React access
 // Communicates with content.js via window.postMessage
 //
-// Flow: hover card → click ⋮ → "Thêm vào câu lệnh" → nhập vào "Bạn muốn tạo gì?" → Enter
+// Product Flow: open /character → paste product File into composer → verify attachment → type prompt → submit
 
 (function () {
   'use strict';
@@ -69,6 +69,7 @@
   }
 
   let preexistingImages = new Set();
+  let productAttachmentEvidence = null;
 
   function capturePreexistingImages() {
     preexistingImages.clear();
@@ -1332,16 +1333,28 @@
     });
 
     for (const tEl of textPlaceholders) {
-      const container = tEl.closest('form, [class*="prompt"], [class*="composer"], [class*="input"], div') || tEl.parentElement;
-      if (container) {
-        const editable = container.querySelector('textarea, [contenteditable], [role="textbox"], input[type="text"], input:not([type])');
-        if (editable && isVisible(editable)) {
-          log('✓ findCharacterPromptInput: found editable inside placeholder container at y=' + Math.round(editable.getBoundingClientRect().top));
-          return editable;
+      let curr = tEl.parentElement;
+      let foundEditable = null;
+      while (curr && curr !== document.body && curr !== document.documentElement) {
+        const editable = curr.querySelector('textarea, [contenteditable="true"], [contenteditable=""], [contenteditable], [role="textbox"], input[type="text"], input:not([type])');
+        if (editable && editable !== tEl && isVisible(editable)) {
+          foundEditable = editable;
+          break;
         }
+        curr = curr.parentElement;
       }
-      log('✓ findCharacterPromptInput: returning placeholder overlay element at y=' + Math.round(tEl.getBoundingClientRect().top));
-      return tEl;
+      if (foundEditable) {
+        log('✓ findCharacterPromptInput: found editable inside placeholder ancestor at y=' + Math.round(foundEditable.getBoundingClientRect().top));
+        return foundEditable;
+      }
+      try {
+        simulateClick(tEl);
+        if (document.activeElement && document.activeElement !== document.body && 
+            (document.activeElement.isContentEditable || document.activeElement.matches('textarea, input, [role="textbox"]'))) {
+          log('✓ findCharacterPromptInput: clicking placeholder activated activeElement at y=' + Math.round(document.activeElement.getBoundingClientRect().top));
+          return document.activeElement;
+        }
+      } catch (e) {}
     }
 
     // 3. Proximity to bottom prompt bar controls: Find container containing "Định dạng" or "Banana" or "+"
@@ -1350,13 +1363,14 @@
       return isVisible(b) && (t.includes('định dạng') || t.includes('format') || t.includes('banana'));
     });
     if (formatBtn) {
-      const barContainer = formatBtn.closest('form, [class*="prompt"], [class*="composer"], div') || formatBtn.parentElement?.parentElement;
-      if (barContainer) {
-        const editable = barContainer.querySelector('textarea, [contenteditable], [role="textbox"], input');
+      let curr = formatBtn.parentElement;
+      while (curr && curr !== document.body && curr !== document.documentElement) {
+        const editable = curr.querySelector('textarea, [contenteditable="true"], [contenteditable=""], [contenteditable], [role="textbox"], input[type="text"], input:not([type])');
         if (editable && isVisible(editable)) {
           log('✓ findCharacterPromptInput: found editable in prompt bar near "Định dạng"/"Banana" at y=' + Math.round(editable.getBoundingClientRect().top));
           return editable;
         }
+        curr = curr.parentElement;
       }
     }
 
@@ -1632,6 +1646,158 @@
       log('base64ToFile error: ' + e.message);
       return null;
     }
+  }
+
+  function getCharacterComposer(input) {
+    if (!input) return null;
+    let curr = input.parentElement;
+    let composerCandidate = null;
+    while (curr && curr !== document.body && curr !== document.documentElement) {
+      const hasAttachment = curr.querySelector('[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [class*="attachment"], [class*="chip"]');
+      const hasControls = Array.from(curr.querySelectorAll('button, [role="button"]')).some(b => {
+        const t = (b.textContent || '').toLowerCase();
+        const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || t === '+' || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit');
+      });
+      if (hasAttachment || hasControls) {
+        composerCandidate = curr;
+      }
+      if (curr.matches('form, [class*="composer"], [class*="prompt"]')) {
+        return curr;
+      }
+      curr = curr.parentElement;
+    }
+    if (composerCandidate) return composerCandidate;
+    return input.closest('form, [class*="composer"], [class*="prompt"]') ||
+           input.parentElement?.parentElement?.parentElement ||
+           input.parentElement?.parentElement ||
+           input.parentElement || null;
+  }
+
+  function describeAttachmentElement(el) {
+    const rect = el.getBoundingClientRect();
+    return [el.tagName, el.currentSrc || el.getAttribute('src') || '', el.getAttribute('data-type') || '', el.getAttribute('data-testid') || '', el.getAttribute('aria-label') || '', Math.round(rect.left), Math.round(rect.top), Math.round(rect.width), Math.round(rect.height)].join('|');
+  }
+
+  function attachmentSignature(composer, input) {
+    if (!composer) return '';
+    const inputRect = input.getBoundingClientRect();
+    const selector = 'img, video, [class*="chip"], [class*="pill"], [data-type*="media"], [data-testid*="attachment"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i]';
+    const candidates = new Set(composer.querySelectorAll(selector));
+    const portalSelector = ['[role="dialog"]', '[role="menu"]', '[data-radix-portal]']
+      .flatMap(scope => selector.split(', ').map(part => scope + ' ' + part))
+      .join(', ');
+    for (const el of document.querySelectorAll(portalSelector)) {
+      const rect = el.getBoundingClientRect();
+      const attachmentControl = el.matches('[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [class*="chip"], [class*="pill"]');
+      const nearInput = rect.width > 0 && rect.height > 0 && rect.width <= 240 && rect.height <= 180 && Math.abs(rect.top - inputRect.top) <= 320;
+      if (attachmentControl || nearInput) candidates.add(el);
+    }
+    return Array.from(candidates)
+      .filter(el => el !== input && isVisible(el) && !el.closest('#flowauto-floating-widget') && !el.closest('#flowauto-toast'))
+      .map(describeAttachmentElement)
+      .sort()
+      .join('\n');
+  }
+
+  function hasConfirmedAttachment(composer) {
+    if (!composer) return false;
+    const explicit = '[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [class*="attachment"], [class*="chip"]';
+    if (Array.from(composer.querySelectorAll(explicit)).some(isVisible)) return true;
+    const imgs = Array.from(composer.querySelectorAll('img')).filter(img => {
+      if (!isVisible(img)) return false;
+      const r = img.getBoundingClientRect();
+      return r.width >= 24 && r.height >= 24 && r.width <= 240 && r.height <= 240;
+    });
+    return imgs.length > 0;
+  }
+
+  async function navigateToCharacterComposer(projectId) {
+    if (window.location.href.includes('/character')) return true;
+    if (!projectId) return false;
+    const targetUrl = 'https://flow.google.com/project/' + projectId + '/character';
+    const link = document.querySelector('a[href*="/character"]');
+    if (link) {
+      simulateClick(link);
+      const arrived = await waitForCondition(() => window.location.href.includes('/character'), 3500);
+      if (arrived) return true;
+    }
+    window.location.href = targetUrl;
+    return false;
+  }
+
+  function isImageFileInput(el) {
+    if (!(el instanceof HTMLInputElement) || el.type !== 'file') return false;
+    const accept = (el.accept || '').toLowerCase();
+    return !accept || accept.includes('image') || accept.includes('*/*');
+  }
+
+  function composerLocalFileInputs(composer, input) {
+    const inputRect = input.getBoundingClientRect();
+    return Array.from(document.querySelectorAll('input[type="file"]')).filter(el => {
+      if (!isImageFileInput(el)) return false;
+      if (composer.contains(el)) return true;
+      const owner = el.closest('form, [role="dialog"], [role="menu"], [class*="popover"]');
+      if (!owner || owner === document.body) return false;
+      const rect = owner.getBoundingClientRect();
+      return isVisible(owner) && Math.abs(rect.top - inputRect.top) <= 400;
+    });
+  }
+
+  function findComposerImageButton(composer, input) {
+    const inputRect = input.getBoundingClientRect();
+    return Array.from(composer.querySelectorAll('button, [role="button"], label')).find(el => {
+      if (!isVisible(el) || el.contains(input)) return false;
+      const text = ((el.getAttribute('aria-label') || '') + ' ' + (el.getAttribute('title') || '') + ' ' + (el.textContent || '')).trim().toLowerCase();
+      if (text.includes('tải lên') || text.includes('upload') || text.includes('thêm từ dự án') || text.includes('from project')) return false;
+      const rect = el.getBoundingClientRect();
+      const close = Math.abs(rect.top - inputRect.top) <= Math.max(100, inputRect.height + 60);
+      const imageIntent = /image|ảnh|media|photo|add|thêm/.test(text) || !!el.querySelector('svg, img');
+      return close && imageIntent;
+    }) || null;
+  }
+
+  async function attachProductViaComposerFileInput(input, file, beforeSignature) {
+    const composer = getCharacterComposer(input);
+    const initialInputs = composerLocalFileInputs(composer, input);
+    let fileInput = initialInputs[0] || null;
+    if (!fileInput) {
+      const button = findComposerImageButton(composer, input);
+      if (!button) return null;
+      log('📎 File-input strategy: click composer-local image control ' + describeAttachmentElement(button));
+      simulateClick(button);
+      fileInput = await waitForCondition(() => {
+        const current = composerLocalFileInputs(composer, input);
+        return current.find(el => !initialInputs.includes(el)) || current[0] || null;
+      }, 3000);
+    }
+    if (!fileInput) return null;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    fileInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    const after = await waitForCondition(() => {
+      const signature = attachmentSignature(composer, input);
+      return signature && signature !== beforeSignature ? signature : null;
+    }, 5000);
+    if (!after) return null;
+    const selectorEvidence = 'input[type="file"]' + (fileInput.accept ? '[accept="' + fileInput.accept.replace(/"/g, '\\"') + '"]' : '');
+    log('✓ File-input strategy confirmed attachment via ' + selectorEvidence);
+    return { after, strategy: 'composer-file-input', selectorEvidence };
+  }
+
+  function dispatchProductPaste(input, file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.focus();
+    input.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, composed: true, clipboardData: dt }));
+    return dt;
+  }
+
+  function dispatchProductDrop(input, dt) {
+    const rect = input.getBoundingClientRect();
+    return dispatchDragDropToFlow({ element: input, x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) }, dt);
   }
 
   function showFlowToast(message, duration = 4000) {
@@ -2206,7 +2372,193 @@
         break;
       }
 
-      // Product upload alone is not a generation reference. Explicitly add its
+      case 'pasteProductReference': {
+        try {
+          if (!params.file?.base64) {
+            sendResult(action, false, null, 'Thiếu bytes ảnh sản phẩm để dán vào composer');
+            return;
+          }
+          if (!(await navigateToCharacterComposer(params.projectId))) return;
+          const input = await waitForCondition(() => findCharacterPromptInput(), 10000);
+          if (!input) {
+            sendResult(action, false, null, 'Không tìm thấy character composer để dán ảnh sản phẩm');
+            return;
+          }
+          const file = base64ToFile(params.file.base64, params.file.name || 'product-reference.png', params.file.type);
+          if (!file) {
+            sendResult(action, false, null, 'Không chuyển được ảnh sản phẩm thành File');
+            return;
+          }
+          const composer = getCharacterComposer(input);
+          const before = attachmentSignature(composer, input);
+          if (hasConfirmedAttachment(composer)) {
+            productAttachmentEvidence = { input, composer, before: '', after: before, fileName: file.name, strategy: 'existing-confirmed', selectorEvidence: 'existing attachment UI' };
+            sendResult(action, true, { log: '✓ Composer đã có attachment; bỏ qua để tránh gắn trùng' });
+            return;
+          }
+          simulateClick(input);
+          input.focus();
+          const result = await attachProductViaComposerFileInput(input, file, before);
+          let after = result?.after || '';
+          let strategy = result?.strategy || '';
+          const selectorEvidence = result?.selectorEvidence || '';
+          if (!after) {
+            log('⚠️ Composer file-input strategy unavailable/unconfirmed; trying synthetic paste fallback');
+            const dt = dispatchProductPaste(input, file);
+            await new Promise(r => setTimeout(r, 1200));
+            after = attachmentSignature(composer, input);
+            strategy = 'paste-fallback';
+            if (!after || after === before) {
+              log('⚠️ Synthetic paste unconfirmed; trying composer drop fallback');
+              strategy = 'composer-drop-fallback';
+              dispatchProductDrop(input, dt);
+              await new Promise(r => setTimeout(r, 1200));
+              after = attachmentSignature(composer, input);
+            }
+          }
+          productAttachmentEvidence = { input, composer, before, after, fileName: file.name, strategy, selectorEvidence };
+          sendResult(action, true, { log: '✓ Đã thử gắn ảnh sản phẩm trực tiếp vào character composer (' + strategy + ')', selectorEvidence });
+        } catch (err) {
+          productAttachmentEvidence = null;
+          sendResult(action, false, null, 'pasteProductReference exception: ' + err.message);
+        }
+        break;
+      }
+
+      case 'verifyProductAttachment': {
+        const evidence = productAttachmentEvidence;
+        const current = evidence ? attachmentSignature(evidence.composer, evidence.input) : '';
+        if (!evidence || !current || current === evidence.before) {
+          sendResult(action, false, null, 'Flow không xác nhận thumbnail/media sản phẩm trong character composer. Synthetic paste có thể bị chặn vì sự kiện không trusted; không gửi prompt.');
+          return;
+        }
+        evidence.after = current;
+        sendResult(action, true, { log: '✓ Đã xác nhận thumbnail/media sản phẩm trong composer', referenceAttached: true, strategy: evidence.strategy });
+        break;
+      }
+
+      case 'injectUnifiedPrompt': {
+        try {
+          const evidence = productAttachmentEvidence;
+          if (!evidence) {
+            sendResult(action, false, null, 'Không còn attachment sản phẩm; từ chối nhập/gửi prompt');
+            return;
+          }
+          // Flow re-renders the character composer after attaching a file, so
+          // the input captured during the attachment step may already be stale.
+          let input = await waitForCondition(() => findCharacterPromptInput(), 10000);
+          if (!input || !input.isConnected) {
+            sendResult(action, false, null, 'Không tìm thấy ô prompt hiện hành sau khi gắn ảnh sản phẩm');
+            return;
+          }
+
+          // If input is an overlay or container, resolve the inner or active editable element
+          if (!input.isContentEditable && !input.matches('textarea, input[type="text"], input:not([type]), [role="textbox"]')) {
+            const inner = input.querySelector('textarea, [contenteditable="true"], [contenteditable=""], [contenteditable], [role="textbox"], input');
+            if (inner && isVisible(inner)) {
+              input = inner;
+            } else {
+              simulateClick(input);
+              input.focus();
+              await new Promise(r => setTimeout(r, 200));
+              if (document.activeElement && document.activeElement !== document.body && 
+                  (document.activeElement.isContentEditable || document.activeElement.matches('textarea, input, [role="textbox"]'))) {
+                input = document.activeElement;
+              }
+            }
+          }
+
+          const composer = getCharacterComposer(input);
+          if (!hasConfirmedAttachment(composer)) {
+            sendResult(action, false, null, 'Không còn attachment sản phẩm trong composer hiện hành; từ chối nhập/gửi prompt');
+            return;
+          }
+          evidence.input = input;
+          evidence.composer = composer;
+          const promptText = (params.prompt || '').trim();
+          if (!promptText) {
+            sendResult(action, false, null, 'Prompt ảnh chung không được để trống');
+            return;
+          }
+          const instruction = ' Create exactly ONE image with ALL described characters and the exact ATTACHED product fully visible together in the SAME single camera frame. Preserve the attached product identity, packaging, label, colors, and proportions exactly. No collage, split screen, separate asset, product-only result, or extra image.';
+          const textToInject = promptText + instruction;
+          const readInputText = () => (input.value || input.innerText || input.textContent || composer?.innerText || '').trim();
+          if (readInputText().includes(promptText.slice(0, 40))) {
+            sendResult(action, true, { log: '✓ Unified prompt đã có trong composer; bỏ qua để tránh nhập trùng', injectionStrategy: 'existing-text' });
+            return;
+          }
+
+          simulateClick(input);
+          input.focus();
+          let injectionStrategy = 'debugger-type';
+          const typed = await typeWithDebuggerOrFallback(input, textToInject);
+          let text = readInputText();
+          if (!typed || !text.includes(promptText.slice(0, 20))) {
+            injectionStrategy = 'react-input';
+            injectTextToReactInput(input, textToInject);
+            text = readInputText();
+          }
+          if (!text.includes(promptText.slice(0, 20))) {
+            await waitForCondition(() => readInputText().includes(promptText.slice(0, 20)), 3000);
+            text = readInputText();
+          }
+
+          if (!text.includes(promptText.slice(0, 20))) {
+            sendResult(action, false, null, 'Không nhập được prompt ảnh chung vào composer hiện hành');
+            return;
+          }
+          if (!hasConfirmedAttachment(composer)) {
+            sendResult(action, false, null, 'Attachment sản phẩm biến mất sau khi nhập prompt; không gửi');
+            return;
+          }
+          sendResult(action, true, { log: '✓ Đã nhập unified prompt vào composer hiện hành và giữ nguyên attachment', injectionStrategy });
+        } catch (err) {
+          sendResult(action, false, null, 'injectUnifiedPrompt exception: ' + err.message);
+        }
+        break;
+      }
+
+      case 'submitUnifiedCharacter': {
+        try {
+          const evidence = productAttachmentEvidence;
+          const signature = evidence ? attachmentSignature(evidence.composer, evidence.input) : '';
+          if (!evidence || !signature || signature === evidence.before) {
+            sendResult(action, false, null, 'Attachment sản phẩm chưa được xác nhận; không submit');
+            return;
+          }
+          capturePreexistingImages();
+          const button = findCharacterSubmitArrowButton(evidence.input);
+          if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') {
+            sendResult(action, false, null, 'Không tìm thấy nút submit character đang khả dụng');
+            return;
+          }
+          simulateClick(button);
+          let fresh = [];
+          const started = Date.now();
+          while (Date.now() - started < 45000) {
+            await new Promise(r => setTimeout(r, 1500));
+            fresh = Array.from(document.querySelectorAll('img')).filter(image => {
+              const src = image.currentSrc || image.src;
+              const rect = image.getBoundingClientRect();
+              return src && !preexistingImages.has(src) && isVisible(image) && rect.width >= 80 && rect.height >= 80;
+            });
+            if (fresh.length) break;
+          }
+          if (fresh.length !== 1) {
+            sendResult(action, false, null, fresh.length ? 'Flow tạo nhiều hơn một ảnh mới; yêu cầu đúng một ảnh' : 'Không phát hiện ảnh mới sau submit');
+            return;
+          }
+          const imageUrl = fresh[0].currentSrc || fresh[0].src;
+          productAttachmentEvidence = null;
+          sendResult(action, true, { log: '✓ Đã tạo đúng một ảnh gồm nhân vật và sản phẩm', imageUrl, imageSrc: imageUrl, projectId: getProjectId(), referenceAttached: true });
+        } catch (err) {
+          sendResult(action, false, null, 'submitUnifiedCharacter exception: ' + err.message);
+        }
+        break;
+      }
+
+      // Legacy actions retained only for old non-product/manual callers. Product
+      // create-project jobs never route through this canvas/menu path.
       // media card to Flow's canvas composer and prove the composer changed.
       case 'attachProductReference': {
         try {

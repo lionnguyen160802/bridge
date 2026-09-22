@@ -36,6 +36,19 @@ test('bridge restart reconciles without creating another project', () => {
   assert.ok(restarted.sent.some(m => m.type === 'reconcile_job' && m.jobId === 'job-a'));
 });
 
+test('unified prompt reacquires the composer after attachment rerender', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'inject.js'), 'utf8');
+  const start = source.indexOf("case 'injectUnifiedPrompt':");
+  const end = source.indexOf("case 'submitUnifiedCharacter':", start);
+  const action = source.slice(start, end);
+
+  assert.match(action, /findCharacterPromptInput\(\)/);
+  assert.match(action, /input\.isConnected/);
+  assert.match(action, /injectTextToReactInput\(input, textToInject\)/);
+  assert.match(action, /hasConfirmedAttachment\(composer\)/);
+  assert.match(action, /bỏ qua để tránh nhập trùng/);
+});
+
 test('reconciliation replays terminal results only', () => {
   const b = background();
   b.run("ws=socket; state.completedJobs=[{id:'a',result:{projectId:'flow-a'}}]; state.failedJobs=[{id:'b',error:'timeout'}]");
@@ -75,18 +88,44 @@ test('public status strips product base64 but preserves metadata', () => {
   assert.equal(job.images[0].base64, undefined);
 });
 
-test('unified composition orders upload, association and one generation', () => {
+test('product create-project uses composer file input before paste, then verifies before submit', () => {
   const source = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
   const dom = fs.readFileSync(path.join(__dirname, 'inject.js'), 'utf8');
-  assert.ok(source.indexOf('case FLOW_STATES.UPLOAD_IMAGE:') < source.indexOf('case FLOW_STATES.ATTACH_PRODUCT_REFERENCE:'));
-  assert.ok(source.indexOf('case FLOW_STATES.ATTACH_PRODUCT_REFERENCE:') < source.indexOf('case FLOW_STATES.GENERATE_UNIFIED_IMAGE:'));
+  const paste = source.indexOf('case FLOW_STATES.PASTE_PRODUCT_REFERENCE:');
+  const verify = source.indexOf('case FLOW_STATES.VERIFY_PRODUCT_ATTACHMENT:');
+  const inject = source.indexOf('case FLOW_STATES.INJECT_UNIFIED_PROMPT:');
+  const submit = source.indexOf('case FLOW_STATES.SUBMIT:');
+  assert.ok(paste >= 0 && verify > paste && inject > verify && submit > inject);
   assert.match(source, /productReferenceAttached = true/);
-  assert.match(dom, /case 'attachProductReference'/);
-  assert.match(dom, /Thêm vào câu lệnh/);
-  assert.match(dom, /composer không hiển thị reference sản phẩm/);
-  assert.match(dom, /case 'generateUnifiedImage'/);
-  assert.match(dom, /fresh\.length === 1/);
-  assert.match(dom, /fresh\.length > 1/);
+  assert.match(dom, /case 'pasteProductReference'/);
+  const productAction = dom.slice(dom.indexOf("case 'pasteProductReference':"), dom.indexOf("case 'verifyProductAttachment':"));
+  assert.match(productAction, /attachProductViaComposerFileInput\(input, file/);
+  assert.ok(productAction.indexOf('attachProductViaComposerFileInput(input, file') < productAction.indexOf('dispatchProductPaste(input, file)'));
+  assert.match(dom, /new ClipboardEvent\('paste'/);
+  assert.match(dom, /dispatchProductDrop\(input, dt\)/);
+  const fileInputStrategy = dom.slice(dom.indexOf('async function attachProductViaComposerFileInput'), dom.indexOf('function dispatchProductPaste'));
+  assert.match(fileInputStrategy, /input\[type="file"\]/);
+  assert.match(fileInputStrategy, /new DataTransfer\(\)/);
+  assert.match(fileInputStrategy, /fileInput\.files = dt\.files/);
+  assert.doesNotMatch(fileInputStrategy, /Tải lên|Thêm từ dự án|uploadFilesToFlow|getFlowDropTarget/);
+  assert.match(dom, /hasConfirmedAttachment\(composer\)/);
+  assert.match(dom, /case 'verifyProductAttachment'/);
+  assert.match(dom, /không submit/);
+  assert.match(dom, /fresh\.length !== 1/);
+  const productRoute = source.slice(source.indexOf('case FLOW_STATES.CREATE_PROJECT:'), source.indexOf('case FLOW_STATES.GENERATE_CHARACTER:'));
+  assert.doesNotMatch(productRoute, /attachProductReference|clickMoreMenu/);
+});
+
+test('generic upload_only path remains upload then done', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  assert.match(source, /currentJob\?\.action === 'upload_only'[\s\S]*state === FLOW_STATES\.UPLOAD_IMAGE[\s\S]*return FLOW_STATES\.DONE/);
+  assert.match(source, /case FLOW_STATES\.UPLOAD_IMAGE:[\s\S]*sendAction\('uploadImage'/);
+});
+
+test('product recovery maps obsolete canvas product states to direct paste', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  assert.match(source, /legacyProductStates = \['UPLOAD_IMAGE', 'ATTACH_PRODUCT_REFERENCE', 'GENERATE_UNIFIED_IMAGE'\]/);
+  assert.match(source, /FLOW_STATES\.PASTE_PRODUCT_REFERENCE/);
 });/* Historical duplicate content below is ignored.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

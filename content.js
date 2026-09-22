@@ -34,9 +34,10 @@ let currentCharacterIndex = 0;
 
 const STATE_SEQUENCE = [
   FLOW_STATES.CREATE_PROJECT,
-  FLOW_STATES.UPLOAD_IMAGE,
-  FLOW_STATES.ATTACH_PRODUCT_REFERENCE,
-  FLOW_STATES.GENERATE_UNIFIED_IMAGE,
+  FLOW_STATES.PASTE_PRODUCT_REFERENCE,
+  FLOW_STATES.VERIFY_PRODUCT_ATTACHMENT,
+  FLOW_STATES.INJECT_UNIFIED_PROMPT,
+  FLOW_STATES.SUBMIT,
   FLOW_STATES.GENERATE_CHARACTER,
   FLOW_STATES.FIND_CHARACTER,
   FLOW_STATES.HOVER_CHARACTER,
@@ -56,25 +57,22 @@ const STATE_SEQUENCE = [
 function nextState(state) {
   // If action is create_project or create_character, handle project creation branching
   if ((currentJob?.action === 'create_project' || currentJob?.action === 'create_character') && state === FLOW_STATES.CREATE_PROJECT) {
-    // Product references must reach Flow before prompt generation. They are media,
-    // never characters, so no characterName is supplied to the upload action.
     if (currentJob.images && currentJob.images.length > 0) {
-      return FLOW_STATES.UPLOAD_IMAGE;
+      return FLOW_STATES.PASTE_PRODUCT_REFERENCE;
     }
     if (currentJob.prompt && currentJob.prompt.trim()) return FLOW_STATES.GENERATE_CHARACTER;
     return FLOW_STATES.DONE;
   }
 
   // If action is upload_only, stop right after upload completes
-  if ((currentJob?.action === 'upload_only' || currentJob?.action === 'create_project') && state === FLOW_STATES.UPLOAD_IMAGE) {
-    if (currentJob.prompt && currentJob.prompt.trim()) {
-      return FLOW_STATES.ATTACH_PRODUCT_REFERENCE;
-    }
+  if (currentJob?.action === 'upload_only' && state === FLOW_STATES.UPLOAD_IMAGE) {
     return FLOW_STATES.DONE;
   }
 
-  if (state === FLOW_STATES.ATTACH_PRODUCT_REFERENCE) return FLOW_STATES.GENERATE_UNIFIED_IMAGE;
-  if (state === FLOW_STATES.GENERATE_UNIFIED_IMAGE) return FLOW_STATES.DONE;
+  if (state === FLOW_STATES.PASTE_PRODUCT_REFERENCE) return FLOW_STATES.VERIFY_PRODUCT_ATTACHMENT;
+  if (state === FLOW_STATES.VERIFY_PRODUCT_ATTACHMENT) return FLOW_STATES.INJECT_UNIFIED_PROMPT;
+  if (state === FLOW_STATES.INJECT_UNIFIED_PROMPT) return FLOW_STATES.SUBMIT;
+  if (state === FLOW_STATES.SUBMIT) return FLOW_STATES.DONE;
 
   // After generating character, we are done!
   if (state === FLOW_STATES.GENERATE_CHARACTER) {
@@ -190,19 +188,26 @@ function executeState(state) {
       sendAction('uploadImage', { files: currentJob.images, characterName: '', assetRole: 'product', productName: currentJob.productName || '' });
       break;
 
-    case FLOW_STATES.ATTACH_PRODUCT_REFERENCE:
-      sendAction('attachProductReference', {
-        referenceHint: currentJob.productReferenceHint || currentJob.images?.[0]?.name || currentJob.productName || '',
+    case FLOW_STATES.PASTE_PRODUCT_REFERENCE:
+      sendAction('pasteProductReference', {
+        file: currentJob.images?.[0] || null,
+        projectId: currentJob.projectId || null
+      });
+      break;
+
+    case FLOW_STATES.VERIFY_PRODUCT_ATTACHMENT:
+      sendAction('verifyProductAttachment', {});
+      break;
+
+    case FLOW_STATES.INJECT_UNIFIED_PROMPT:
+      sendAction('injectUnifiedPrompt', {
+        prompt: currentJob.prompt,
         productName: currentJob.productName || ''
       });
       break;
 
-    case FLOW_STATES.GENERATE_UNIFIED_IMAGE:
-      sendAction('generateUnifiedImage', {
-        prompt: currentJob.prompt,
-        productName: currentJob.productName || '',
-        expectedReference: currentJob.productReferenceHint || currentJob.images?.[0]?.name || ''
-      });
+    case FLOW_STATES.SUBMIT:
+      sendAction('submitUnifiedCharacter', {});
       break;
 
     case FLOW_STATES.GENERATE_CHARACTER:
@@ -343,7 +348,7 @@ window.addEventListener('message', (event) => {
         currentJob.productReferenceHint = data.referenceHint;
       }
 
-      if (currentState === FLOW_STATES.GENERATE_UNIFIED_IMAGE && data) {
+      if (currentState === FLOW_STATES.SUBMIT && data) {
         if (!currentJob.result) currentJob.result = {};
         const imgUrl = data.imageUrl || data.imageSrc;
         if (imgUrl) {
@@ -599,8 +604,10 @@ chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
       FLOW_STATES.CREATE_PROJECT,
       FLOW_STATES.GENERATE_CHARACTER,
       FLOW_STATES.UPLOAD_IMAGE,
-      FLOW_STATES.ATTACH_PRODUCT_REFERENCE,
-      FLOW_STATES.GENERATE_UNIFIED_IMAGE,
+      FLOW_STATES.PASTE_PRODUCT_REFERENCE,
+      FLOW_STATES.VERIFY_PRODUCT_ATTACHMENT,
+      FLOW_STATES.INJECT_UNIFIED_PROMPT,
+      FLOW_STATES.SUBMIT,
       FLOW_STATES.FIND_CHARACTER,
       FLOW_STATES.WAIT_TEXTAREA,
       FLOW_STATES.FILL_PROMPT,
@@ -610,7 +617,10 @@ chrome.runtime.sendMessage({ type: 'GET_ACTIVE_JOB' }, (response) => {
     ];
 
     let targetState = response.state;
-    if (window.location.href.includes('/character')) {
+    if (window.location.href.includes('/character') && response.job.images?.length) {
+      const legacyProductStates = ['UPLOAD_IMAGE', 'ATTACH_PRODUCT_REFERENCE', 'GENERATE_UNIFIED_IMAGE'];
+      targetState = legacyProductStates.includes(targetState) ? FLOW_STATES.PASTE_PRODUCT_REFERENCE : targetState;
+    } else if (window.location.href.includes('/character')) {
       targetState = FLOW_STATES.GENERATE_CHARACTER;
     } else if (!validStates.includes(targetState)) {
       if (response.job.action === 'create_character') {
