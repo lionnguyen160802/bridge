@@ -743,6 +743,7 @@ async function safeDebuggerCommand(tabId, fn) {
   try {
     await chrome.debugger.attach(target, "1.2");
     attachedHere = true;
+    await new Promise(r => setTimeout(r, 80));
   } catch (attachErr) {
     if (attachErr.message && attachErr.message.includes('already attached')) {
       attachedHere = false; // Already attached, can proceed

@@ -1474,97 +1474,101 @@
   /** Type text into an input element using Debugger API with comprehensive fallbacks */
   async function typeWithDebuggerOrFallback(input, text) {
     if (!input) return false;
-    
-    // Ensure focused and clicked
+
+    // 1. Focus the input element cleanly
     simulateClick(input);
     input.focus();
     await new Promise(r => setTimeout(r, 200));
 
-    // Clear existing text safely without breaking editor DOM nodes
-    try {
-      const sel = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(input);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      document.execCommand('delete', false, null);
-    } catch(e) {}
-    if ('value' in input && typeof input.value === 'string') input.value = '';
+    // If activeElement changed upon focus, use activeElement
+    if (document.activeElement && document.activeElement !== document.body &&
+        (document.activeElement.isContentEditable || document.activeElement.matches('textarea, input, [role="textbox"]'))) {
+      input = document.activeElement;
+    }
+
+    // 2. Position cursor cleanly at end of input without deleting internal DOM nodes
+    if (input.isContentEditable || input.getAttribute('contenteditable') === 'true' || input.getAttribute('role') === 'textbox') {
+      try {
+        let target = input;
+        let inner = input.querySelector('p') || input.querySelector('span') || input.firstElementChild;
+        if (inner && !(inner.textContent || '').includes('Mô tả nhân vật') && !(inner.textContent || '').includes('describe')) {
+          target = inner;
+        }
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } catch(e) {}
+    } else {
+      try { input.selectionStart = input.selectionEnd = (input.value || '').length; } catch(e) {}
+    }
 
     const first20 = (text || '').trim().slice(0, 20);
     const hasText = () => {
-      const v = (input.value || input.innerText || input.textContent || '').trim();
-      return first20.length > 0 && v.includes(first20);
+      const v = (input.value || input.innerText || input.textContent || input.parentElement?.innerText || '').trim();
+      if (first20.length > 0 && v.includes(first20)) return true;
+      const arrowBtn = findCharacterSubmitArrowButton(input);
+      if (arrowBtn && !arrowBtn.disabled && arrowBtn.getAttribute('aria-disabled') !== 'true') return true;
+      return false;
     };
 
-    // Strategy 1: Dispatch ClipboardEvent('paste') with DataTransfer (Google Flow native paste)
-    log('📋 Strategy 1: Synthetic paste event with DataTransfer...');
-    try {
-      const dt = new DataTransfer();
-      dt.setData('text/plain', text);
-      input.dispatchEvent(new ClipboardEvent('paste', {
-        bubbles: true, cancelable: true, composed: true, clipboardData: dt
-      }));
-      input.dispatchEvent(new InputEvent('beforeinput', {
-        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
-      }));
-      input.dispatchEvent(new InputEvent('input', {
-        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
-      }));
-    } catch(e) {}
-
-    await new Promise(r => setTimeout(r, 300));
-    if (hasText()) {
-      log('✓ Text entered via synthetic paste event');
-      return true;
-    }
-
-    // Strategy 2: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
-    log('⌨️ Strategy 2: Chrome Debugger typing...');
+    // 3. Attempt 1: OS-level Chrome Debugger typing (most reliable for Angular/Wiz/React)
+    log('⌨️ Attempt 1: Chrome Debugger typing...');
     let debuggerTyped = false;
     try {
       debuggerTyped = await new Promise((resolve) => {
         let done = false;
+        const finish = (val) => {
+          if (!done) {
+            done = true;
+            window.removeEventListener('message', handler);
+            resolve(val);
+          }
+        };
         const handler = (e) => {
           if (e.source !== window) return;
           if (e.data && e.data.type === 'FLOW_DEBUGGER_RESULT') {
-            if (!done) {
-              done = true;
-              window.removeEventListener('message', handler);
-              resolve(!!e.data.success);
-            }
+            finish(!!e.data.success);
           }
         };
         window.addEventListener('message', handler);
         window.postMessage({ type: 'FLOW_DEBUGGER_TYPE', text: text }, '*');
-        setTimeout(() => {
-          if (!done) {
-            done = true;
-            window.removeEventListener('message', handler);
-            resolve(false);
-          }
-        }, 3500);
+        setTimeout(() => finish(false), 4000);
       });
     } catch(e) {
       debuggerTyped = false;
     }
 
-    await new Promise(r => setTimeout(r, 300));
-    if (hasText()) {
-      log('✓ Text entered via Chrome Debugger');
+    await new Promise(r => setTimeout(r, 400));
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: 'Process', keyCode: 229 }));
+
+    if (hasText() || debuggerTyped) {
+      log('✓ Text entered via Chrome Debugger (typed=' + debuggerTyped + ')');
       return true;
     }
 
-    // Strategy 3: execCommand insertText & injectTextToReactInput
-    log('✍️ Strategy 3: execCommand insertText & injectTextToReactInput fallback...');
+    // 4. Attempt 2: document.execCommand('insertText')
+    log('✍️ Attempt 2: document.execCommand("insertText")...');
     try {
+      input.focus();
       document.execCommand('insertText', false, text);
     } catch(e) {}
 
-    await new Promise(r => setTimeout(r, 200));
-    if (!hasText()) {
-      injectTextToReactInput(input, text);
+    await new Promise(r => setTimeout(r, 300));
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    if (hasText()) {
+      log('✓ Text entered via execCommand');
+      return true;
     }
+
+    // 5. Attempt 3: injectTextToReactInput
+    log('💉 Attempt 3: injectTextToReactInput fallback...');
+    injectTextToReactInput(input, text);
 
     // Fire input & change events to be 100% sure frameworks register it
     const opts = { bubbles: true, composed: true };
@@ -1572,9 +1576,9 @@
     input.dispatchEvent(new Event('change', opts));
     input.dispatchEvent(new KeyboardEvent('keyup', { ...opts, key: 'Process', keyCode: 229 }));
 
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 400));
     const curVal = (input.value || input.innerText || input.textContent || '').trim();
-    log('✍️ Text entered (' + curVal.length + ' chars): "' + curVal.substring(0, 50) + '..."');
+    log('✍️ Text check: "' + curVal.substring(0, 50) + '..."');
     return hasText() || curVal.length > 0;
   }
 
@@ -1690,23 +1694,21 @@
   function getCharacterComposer(input) {
     if (!input) return null;
     let curr = input.parentElement;
-    let composerCandidate = null;
     while (curr && curr !== document.body && curr !== document.documentElement) {
+      if (curr.tagName === 'MAIN' || curr.tagName === 'NAV' || curr.tagName === 'HEADER' || curr.querySelector('h1, h2')) {
+        break;
+      }
       const hasAttachment = curr.querySelector('[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [class*="attachment"], [class*="chip"]');
       const hasControls = Array.from(curr.querySelectorAll('button, [role="button"]')).some(b => {
         const t = (b.textContent || '').toLowerCase();
         const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || t === '+' || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit');
+        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit');
       });
-      if (hasAttachment || hasControls) {
-        composerCandidate = curr;
-      }
-      if (curr.matches('form, [class*="composer"], [class*="prompt"]')) {
+      if (hasControls || hasAttachment || curr.matches('form, [class*="composer"], [class*="prompt"]')) {
         return curr;
       }
       curr = curr.parentElement;
     }
-    if (composerCandidate) return composerCandidate;
     return input.closest('form, [class*="composer"], [class*="prompt"]') ||
            input.parentElement?.parentElement?.parentElement ||
            input.parentElement?.parentElement ||
@@ -1746,41 +1748,49 @@
   function hasConfirmedAttachment(composer, input = null) {
     if (!composer) return false;
     let activeComposer = composer;
+    if (!input || !input.isConnected) {
+      input = activeComposer.querySelector('textarea, [contenteditable="true"], [contenteditable=""], [contenteditable], [role="textbox"], input[type="text"], input:not([type])') || findCharacterPromptInput();
+    }
     if (!activeComposer.isConnected && input?.isConnected) {
       activeComposer = getCharacterComposer(input) || activeComposer;
     }
+
+    // 1. Trust already verified product attachment evidence
+    if (productAttachmentEvidence?.after) return true;
+
+    // 2. Explicit attachment attributes or classes
     const explicit = '[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [class*="attachment"], [class*="chip"], [class*="thumbnail"], [class*="preview"]';
     if (Array.from(activeComposer.querySelectorAll(explicit)).some(isVisible)) return true;
 
-    // Check for thumbnail images
+    // 3. Check for thumbnail images
     const imgs = Array.from(activeComposer.querySelectorAll('img')).filter(img => {
       if (!isVisible(img)) return false;
       const r = img.getBoundingClientRect();
-      return r.width >= 20 && r.height >= 20 && r.width <= 240 && r.height <= 240;
+      return r.width >= 16 && r.height >= 16 && r.width <= 240 && r.height <= 240;
     });
     if (imgs.length > 0) return true;
 
-    // Check for remove/dismiss button (✕ or svg cross) inside composer
-    const buttons = Array.from(activeComposer.querySelectorAll('button, [role="button"]')).filter(isVisible);
+    // 4. Check for remove/dismiss button (✕ or svg cross) inside composer
+    const buttons = Array.from(activeComposer.querySelectorAll('button, [role="button"], [role="img"], div, span')).filter(isVisible);
     for (const b of buttons) {
       const txt = (b.textContent || '').trim();
       const aria = (b.getAttribute('aria-label') || '').toLowerCase();
       const title = (b.getAttribute('title') || '').toLowerCase();
-      if (txt === '✕' || txt === '×' || txt === 'x' ||
+      if (txt === '✕' || txt === '×' || txt === 'x' || txt === 'X' ||
           aria.includes('xóa') || aria.includes('gỡ') || aria.includes('đóng') || aria.includes('remove') || aria.includes('delete') || aria.includes('close') ||
-          title.includes('xóa') || title.includes('gỡ') || title.includes('remove')) {
+          title.includes('xóa') || title.includes('gỡ') || title.includes('remove') || title.includes('close')) {
         return true;
       }
     }
 
-    // Geometric check: Any element inside composer positioned above the prompt input
+    // 5. Geometric check: Any element inside composer positioned above the prompt input
     if (input && input.isConnected) {
       const inputRect = input.getBoundingClientRect();
-      const aboveInput = Array.from(activeComposer.querySelectorAll('div, span, button, svg')).filter(el => {
+      const aboveInput = Array.from(activeComposer.querySelectorAll('div, span, button, svg, p')).filter(el => {
         if (!isVisible(el) || el === activeComposer || el.contains(input) || input.contains(el)) return false;
         if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
         const r = el.getBoundingClientRect();
-        return r.height >= 20 && r.width >= 20 && r.bottom <= inputRect.top + 8;
+        return r.height >= 16 && r.width >= 16 && r.bottom <= inputRect.top + 10;
       });
       if (aboveInput.length > 0) return true;
     }
@@ -2593,12 +2603,19 @@
             injectTextToReactInput(input, textToInject);
             text = readInputText();
           }
-          if (!text.includes(promptText.slice(0, 20))) {
-            await waitForCondition(() => readInputText().includes(promptText.slice(0, 20)), 3000);
+          const isReady = () => {
+            const currentText = readInputText();
+            const btn = findCharacterSubmitArrowButton(input);
+            const ready = btn && !btn.disabled && btn.getAttribute('aria-disabled') !== 'true';
+            return currentText.includes(promptText.slice(0, 20)) || ready;
+          };
+
+          if (!isReady()) {
+            await waitForCondition(() => isReady(), 3000);
             text = readInputText();
           }
 
-          if (!text.includes(promptText.slice(0, 20))) {
+          if (!isReady()) {
             sendResult(action, false, null, 'Không nhập được prompt ảnh chung vào composer hiện hành');
             return;
           }
