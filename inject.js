@@ -487,16 +487,18 @@
       return r.left < 280 && r.top < window.innerHeight * 0.75 && r.width > 15;
     });
 
-    // 2. Tìm phần tử có văn bản khớp chính xác hoặc bắt đầu bằng "Nhân vật" / "Characters"
+    // 2. Tìm phần tử có văn bản khớp chính xác hoặc bắt đầu bằng "Nhân vật" / "Characters" / link /character
     let targetMenu = null;
     for (const el of sidebarItems) {
-      const text = (el.textContent || '').trim();
+      const text = (el.textContent || '').trim().toLowerCase();
       const aria = (el.getAttribute('aria-label') || '').trim().toLowerCase();
+      const href = (el.getAttribute('href') || el.href || '').toLowerCase();
       
-      if (text === 'Nhân vật' || text === 'Characters' || text === 'Character' ||
+      if (text === 'nhân vật' || text === 'characters' || text === 'character' ||
           aria === 'nhân vật' || aria === 'characters' || aria === 'character' ||
-          (text.startsWith('Nhân vật') && text.length <= 15) ||
-          (text.startsWith('Characters') && text.length <= 15)) {
+          text.startsWith('nhân vật') || text.startsWith('character') ||
+          aria.startsWith('nhân vật') || aria.startsWith('character') ||
+          href.endsWith('/character') || href.includes('/character/')) {
         // Ưu tiên thẻ có thể click (button, a, role="tab", role="button", hoặc thẻ cha)
         const clickable = el.closest('button, a, [role="tab"], [role="button"], li') || el;
         targetMenu = clickable;
@@ -504,11 +506,11 @@
       }
     }
 
-    // 3. Dự phòng: Quét phần tử có chữ "Nhân vật" ở thanh bên trái
+    // 3. Dự phòng: Quét phần tử có chữ "Nhân vật" / "Characters" ở thanh bên trái
     if (!targetMenu) {
       const matchSpan = sidebarItems.find(el => {
-        const t = (el.textContent || '').trim();
-        return (t.includes('Nhân vật') || t.toLowerCase().includes('characters')) && t.length < 25;
+        const t = (el.textContent || '').trim().toLowerCase();
+        return (t.includes('nhân vật') || t.includes('character') || t.includes('characters')) && t.length < 30;
       });
       if (matchSpan) {
         targetMenu = matchSpan.closest('button, a, [role="tab"], [role="button"], li') || matchSpan;
@@ -530,16 +532,45 @@
     }
   }
 
-  /** Find character card by name */
+  /** Normalizes character names to support both English ("Unnamed character") and Vietnamese ("Nhân vật chưa có tên") */
+  function getEquivalentNames(name) {
+    if (!name) return [];
+    const n = name.trim().toLowerCase();
+    const unnamedVariants = [
+      'nhân vật chưa có tên',
+      'nhan vat chua co ten',
+      'unnamed character',
+      'untitled character',
+      'unnamed',
+      'untitled'
+    ];
+    if (unnamedVariants.some(v => n.includes(v))) {
+      return unnamedVariants;
+    }
+    return [n];
+  }
+
+  function isDefaultCharacterName(name) {
+    if (!name) return true;
+    const n = name.trim().toLowerCase();
+    return n === 'nhân vật chưa có tên' ||
+           n === 'nhan vat chua co ten' ||
+           n === 'unnamed character' ||
+           n === 'untitled character' ||
+           n === 'unnamed' ||
+           n === 'untitled';
+  }
+
+  /** Find character card by name (supports bilingual matching) */
   function findCharacterCard(name) {
     if (!name) return null;
-    const nameLower = name.toLowerCase();
+    const names = getEquivalentNames(name);
 
     // Strategy 1: img alt text
     for (const img of document.querySelectorAll('img')) {
       if (img.closest('#flowauto-floating-widget') || img.closest('#flowauto-toast')) continue;
       const alt = (img.alt || '').toLowerCase();
-      if (alt && alt.includes(nameLower)) {
+      if (alt && names.some(n => alt.includes(n))) {
         const card = climbToCard(img);
         if (card && isVisible(card)) return { card, img, method: 'alt' };
       }
@@ -547,16 +578,17 @@
     // Strategy 2: aria-label
     for (const el of document.querySelectorAll('[aria-label]')) {
       if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
-      if (el.getAttribute('aria-label').toLowerCase().includes(nameLower) && isVisible(el)) {
+      const aria = el.getAttribute('aria-label').toLowerCase();
+      if (names.some(n => aria.includes(n)) && isVisible(el)) {
         return { card: climbToCard(el), img: el.querySelector('img'), method: 'aria-label' };
       }
     }
     // Strategy 3: broad text content search across common tags
     for (const el of document.querySelectorAll('div, span, p, [role="button"], [role="listitem"], [tabindex]')) {
       if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
-      // Only match if this element's direct or trimmed text includes the character name
+      // Only match if this element's direct or trimmed text includes any equivalent name
       const text = (el.textContent?.trim().toLowerCase() || '');
-      if (text.includes(nameLower) && isVisible(el)) {
+      if (names.some(n => text.includes(n)) && isVisible(el)) {
         const card = climbToCard(el);
         if (card && isVisible(card) && card !== document.body) {
           const img = card.querySelector('img');
@@ -1189,14 +1221,16 @@
     return true;
   }
 
-  /** Find button by text content */
+  /** Find button by text content (case-insensitive) */
   function findButtonByText(searchText) {
-    for (const el of document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"]')) {
-      if ((el.textContent?.trim() || '').includes(searchText) && isVisible(el)) return el;
+    if (!searchText) return null;
+    const searchLower = searchText.trim().toLowerCase();
+    for (const el of document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"], li, a')) {
+      if ((el.textContent?.trim().toLowerCase() || '').includes(searchLower) && isVisible(el)) return el;
     }
-    for (const el of document.querySelectorAll('span, div, a')) {
-      const own = Array.from(el.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join('');
-      if (own.includes(searchText) && isVisible(el)) return climbToCard(el);
+    for (const el of document.querySelectorAll('span, div, a, p')) {
+      const own = Array.from(el.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent.trim().toLowerCase()).join('');
+      if (own.includes(searchLower) && isVisible(el)) return el.closest('button, [role="button"], [role="menuitem"], [role="option"], li, a') || climbToCard(el);
     }
     return null;
   }
@@ -1204,12 +1238,18 @@
   /** Find prompt input "Bạn muốn tạo những gì?" at the bottom prompt bar */
   function findPromptInput() {
     const placeholders = [
-      'Bạn muốn tạo những gì',
-      'Bạn muốn tạo gì',
-      'What do you want to create',
-      'Start creating or drop media',
-      'Bắt đầu tạo hoặc thả nội dung nghe nhìn',
-      'Nhập câu lệnh'
+      'bạn muốn tạo những gì',
+      'bạn muốn tạo gì',
+      'what do you want to create',
+      'what would you like to create',
+      'start creating or drop media',
+      'start creating',
+      'drop media',
+      'bắt đầu tạo hoặc thả nội dung nghe nhìn',
+      'thả nội dung nghe nhìn',
+      'nhập câu lệnh',
+      'enter a prompt',
+      'type a prompt'
     ];
     const viewH = window.innerHeight;
 
@@ -1232,8 +1272,8 @@
     // Strategy 1: EXACT placeholder match — highest priority
     const allInputs = document.querySelectorAll('textarea, input[type="text"], input:not([type]), [contenteditable="true"]');
     for (const el of allInputs) {
-      const ph = el.getAttribute('placeholder') || el.getAttribute('aria-placeholder') ||
-                 el.getAttribute('data-placeholder') || '';
+      const ph = (el.getAttribute('placeholder') || el.getAttribute('aria-placeholder') ||
+                 el.getAttribute('data-placeholder') || '').toLowerCase();
       for (const p of placeholders) {
         if (ph.includes(p) && isVisible(el)) {
           log('✓ findPromptInput: matched by placeholder "' + ph + '" at y=' + Math.round(el.getBoundingClientRect().top));
@@ -1242,13 +1282,13 @@
       }
     }
 
-    // Strategy 2: Look for contenteditable with "Bạn muốn tạo gì?" nearby text
+    // Strategy 2: Look for contenteditable with placeholder nearby text
     for (const el of document.querySelectorAll('[contenteditable="true"]')) {
       if (!isPromptBarInput(el)) continue;
       // Check if parent/sibling has the placeholder text
       const parent = el.parentElement;
       if (parent) {
-        const parentText = parent.textContent || '';
+        const parentText = (parent.textContent || '').toLowerCase();
         for (const p of placeholders) {
           if (parentText.includes(p)) {
             log('✓ findPromptInput: contenteditable near placeholder text at y=' + Math.round(el.getBoundingClientRect().top));
@@ -1259,7 +1299,7 @@
     }
 
     // Strategy 3: Find input near "+ Tác nhân" / "+ Characters" button (they're in the same prompt bar)
-    const tacNhanBtn = findButtonByText('Tác nhân') || findButtonByText('Characters');
+    const tacNhanBtn = findButtonByText('Tác nhân') || findButtonByText('Characters') || findButtonByText('Character') || findButtonByText('Actors') || findButtonByText('Actor');
     if (tacNhanBtn) {
       const btnRect = tacNhanBtn.getBoundingClientRect();
       for (const el of allInputs) {
@@ -1310,6 +1350,8 @@
       'nhân vật của bạn',
       'describe your character',
       'describe a character',
+      'describe the character',
+      'character description',
       'describe',
       'character'
     ];
@@ -1328,13 +1370,13 @@
       }
     }
 
-    // 2. Look for any visible element on page containing the text "Mô tả nhân vật của bạn" (the placeholder element)
+    // 2. Look for any visible element on page containing the text "Mô tả nhân vật của bạn" / "Describe your character" (the placeholder element)
     const textPlaceholders = Array.from(document.querySelectorAll('p, span, div, label')).filter(el => {
       if (!isVisible(el)) return false;
       if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
       if (el.children.length > 2) return false;
       const t = (el.textContent || '').trim().toLowerCase();
-      return t.includes('mô tả nhân vật') || t.includes('describe your character');
+      return t.includes('mô tả nhân vật') || t.includes('describe your character') || t.includes('describe a character') || t.includes('describe the character') || t.includes('character description');
     });
 
     for (const tEl of textPlaceholders) {
@@ -1421,7 +1463,7 @@
             aria.includes('create') || aria.includes('send') || aria.includes('generate') ||
             aria.includes('mũi tên') || aria.includes('arrow') || aria.includes('forward') ||
             title.includes('tạo') || title.includes('gửi') || title.includes('submit') ||
-            title.includes('create') || title.includes('send') || title.includes('arrow')) {
+            title.includes('create') || title.includes('send') || title.includes('arrow') || title.includes('generate')) {
           log('✓ findCharacterSubmitArrowButton: matched aria/title: "' + (aria || title) + '"');
           return btn;
         }
@@ -1449,7 +1491,7 @@
         if (!isVisible(btn)) return false;
         const text = (btn.textContent || '').trim().toLowerCase();
         // Exclude "+" button, format button, model dropdown, etc.
-        if (text === '+' || text.includes('định dạng') || text.includes('format') || text.includes('banana') || text.includes('tải lên') || text.includes('dự án')) return false;
+        if (text === '+' || text.includes('định dạng') || text.includes('format') || text.includes('banana') || text.includes('tải lên') || text.includes('upload') || text.includes('dự án') || text.includes('project')) return false;
         
         const br = btn.getBoundingClientRect();
         // Must be in vertical range of prompt box
@@ -1744,7 +1786,7 @@
       const hasControls = Array.from(curr.querySelectorAll('button, [role="button"]')).some(b => {
         const t = (b.textContent || '').toLowerCase();
         const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit');
+        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send') || aria.includes('generate');
       });
       if (hasControls || hasAttachment || curr.matches('form, [class*="composer"], [class*="prompt"]')) {
         return curr;
@@ -1769,7 +1811,7 @@
       activeComposer = getCharacterComposer(input) || activeComposer;
     }
     const inputRect = input?.getBoundingClientRect() || { top: 0, bottom: 0, left: 0, right: 0 };
-    const selector = 'img, video, svg, button, [class*="chip"], [class*="pill"], [class*="attachment"], [class*="thumbnail"], [class*="preview"], [data-type*="media"], [data-testid*="attachment"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i]';
+    const selector = 'img, video, svg, button, [class*="chip"], [class*="pill"], [class*="attachment"], [class*="thumbnail"], [class*="preview"], [data-type*="media"], [data-testid*="attachment"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [aria-label*="clear" i], [aria-label*="dismiss" i]';
     const candidates = new Set(activeComposer.querySelectorAll(selector));
     const portalSelector = ['[role="dialog"]', '[role="menu"]', '[data-radix-portal]']
       .flatMap(scope => selector.split(', ').map(part => scope + ' ' + part))
@@ -1801,7 +1843,7 @@
     if (productAttachmentEvidence?.after) return true;
 
     // 2. Explicit attachment attributes or classes
-    const explicit = '[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [class*="attachment"], [class*="chip"], [class*="thumbnail"], [class*="preview"]';
+    const explicit = '[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [aria-label*="hủy" i], [aria-label*="close" i], [aria-label*="đóng" i], [aria-label*="clear" i], [aria-label*="dismiss" i], [class*="attachment"], [class*="chip"], [class*="thumbnail"], [class*="preview"]';
     if (Array.from(activeComposer.querySelectorAll(explicit)).some(isVisible)) return true;
 
     // 3. Check for thumbnail images
@@ -1819,8 +1861,8 @@
       const aria = (b.getAttribute('aria-label') || '').toLowerCase();
       const title = (b.getAttribute('title') || '').toLowerCase();
       if (txt === '✕' || txt === '×' || txt === 'x' || txt === 'X' ||
-          aria.includes('xóa') || aria.includes('gỡ') || aria.includes('đóng') || aria.includes('remove') || aria.includes('delete') || aria.includes('close') ||
-          title.includes('xóa') || title.includes('gỡ') || title.includes('remove') || title.includes('close')) {
+          aria.includes('xóa') || aria.includes('gỡ') || aria.includes('đóng') || aria.includes('remove') || aria.includes('delete') || aria.includes('close') || aria.includes('clear') || aria.includes('dismiss') || aria.includes('cancel') ||
+          title.includes('xóa') || title.includes('gỡ') || title.includes('remove') || title.includes('close') || title.includes('clear') || title.includes('dismiss') || title.includes('delete')) {
         return true;
       }
     }
@@ -3138,25 +3180,22 @@
 
         let r = null;
 
-        // 1. Thử tìm theo tên chỉ định nếu có (và khác default)
-        if (charName && charName !== 'Nhân vật chưa có tên') {
+        // 1. Thử tìm theo tên chỉ định nếu có (và không phải tên mặc định)
+        if (charName && !isDefaultCharacterName(charName)) {
           r = findCharacterCard(charName);
         }
 
-        // 2. Tìm đến thẻ "Nhân vật chưa có tên" (hoặc biến thể tiếng Anh)
+        // 2. Tìm đến thẻ "Nhân vật chưa có tên" / "Unnamed character" (tự động khớp cả 2 ngôn ngữ qua getEquivalentNames)
         if (!r) {
-          log('🔍 Tìm thẻ mang tên "Nhân vật chưa có tên"...');
-          r = findCharacterCard('Nhân vật chưa có tên') ||
-              findCharacterCard('nhân vật chưa có tên') ||
-              findCharacterCard('Unnamed character') ||
-              findCharacterCard('Untitled character');
+          log('🔍 Tìm thẻ mang tên "Nhân vật chưa có tên" / "Unnamed character"...');
+          r = findCharacterCard('Nhân vật chưa có tên');
         }
 
         // 3. Nếu chưa thấy trên màn hình, thử gõ search bar để tìm kiếm
         if (!r) {
           const searchInput = findSearchBar();
           if (searchInput) {
-            const queryName = (charName && charName !== 'Nhân vật chưa có tên') ? charName : 'Nhân vật chưa có tên';
+            const queryName = (charName && !isDefaultCharacterName(charName)) ? charName : 'Nhân vật chưa có tên';
             log('🔍 Thử lọc bằng Search Bar: "' + queryName + '"...');
             clearSearchInput(searchInput);
             await new Promise(res => setTimeout(res, 500));
@@ -3169,6 +3208,18 @@
 
             await new Promise(res => setTimeout(res, 2000));
             r = (charName ? findCharacterCard(charName) : null) || findCharacterCard('Nhân vật chưa có tên');
+
+            // Nếu trên giao diện tiếng Anh không thấy, thử tìm với "Unnamed character"
+            if (!r && isDefaultCharacterName(queryName)) {
+              clearSearchInput(searchInput);
+              await new Promise(res => setTimeout(res, 400));
+              injectTextToReactInput(searchInput, 'Unnamed character');
+              searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+              searchInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+              searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+              await new Promise(res => setTimeout(res, 2000));
+              r = findCharacterCard('Unnamed character');
+            }
 
             // Xóa search bar sau khi tìm để phục hồi lưới thẻ
             clearSearchInput(searchInput);
