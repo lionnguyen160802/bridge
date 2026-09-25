@@ -532,8 +532,8 @@
       scrollIntoViewIfNeeded(targetMenu);
       await triggerRealClick(targetMenu);
       
-      // Chờ 1.5 giây để Google Flow cập nhật lưới thẻ nhân vật
-      await new Promise(r => setTimeout(r, 1500));
+      // Chờ 2.0 giây để Google Flow cập nhật lưới thẻ nhân vật
+      await new Promise(r => setTimeout(r, 2000));
       return true;
     } else {
       log('ℹ️ Không thấy nút menu "Nhân vật / Characters" riêng biệt (có thể đã ở sẵn trong tab hoặc màn hình thu gọn)');
@@ -1873,11 +1873,19 @@
     return !!(submitBtn && isSubmitButtonEnabled(submitBtn));
   }
 
-  /** Trigger click through DOM layers to ensure React/Wiz event handlers fire */
-  function triggerRealClick(el) {
+  /** Trigger click through CDP hardware mouse click + full DOM layers to ensure React/Wiz event handlers fire */
+  async function triggerRealClick(el) {
     if (!el) return false;
     scrollIntoViewIfNeeded(el);
     const { x, y } = getCenter(el);
+
+    // 1. Hardware mouse click via Chrome Debugger Protocol (CDP)
+    if (x > 0 && y > 0) {
+      await performDebuggerClick(x, y);
+      await new Promise(r => setTimeout(r, 120));
+    }
+
+    // 2. Multi-layer synthetic DOM events as complementary trigger
     const target = (x > 0 && y > 0) ? (document.elementFromPoint(x, y) || el) : el;
     const opts = {
       bubbles: true, cancelable: true, composed: true, view: window,
@@ -1886,7 +1894,6 @@
       button: 0, buttons: 1, detail: 1, pointerId: 1, pointerType: 'mouse'
     };
 
-    // 1. Dispatch pointerdown / mousedown on both target and el
     target.dispatchEvent(new PointerEvent('pointerdown', opts));
     target.dispatchEvent(new MouseEvent('mousedown', opts));
     if (target !== el) {
@@ -1895,20 +1902,17 @@
     }
     try { el.focus(); } catch (e) {}
 
-    // 2. Dispatch pointerup / mouseup / click
     const upOpts = { ...opts, buttons: 0 };
     target.dispatchEvent(new PointerEvent('pointerup', upOpts));
     target.dispatchEvent(new MouseEvent('mouseup', upOpts));
     target.dispatchEvent(new MouseEvent('click', upOpts));
 
-    // 3. Also dispatch click on the button element if target was a child
     if (target !== el) {
       try { el.dispatchEvent(new PointerEvent('pointerup', upOpts)); } catch(e) {}
       try { el.dispatchEvent(new MouseEvent('mouseup', upOpts)); } catch(e) {}
       try { el.dispatchEvent(new MouseEvent('click', upOpts)); } catch(e) {}
     }
 
-    // 4. Native DOM click & prototype call
     try { el.click(); } catch(e) {}
     try { HTMLButtonElement.prototype.click.call(el); } catch(e) {}
 
@@ -3732,7 +3736,8 @@
         if (r) {
           lastFoundCharacterCard = r;
           scrollIntoViewIfNeeded(r.card);
-          await new Promise(res => setTimeout(res, 300));
+          // Pacing: Chờ 600ms trước khi kích hoạt hover
+          await new Promise(res => setTimeout(res, 600));
 
           // Trigger real hardware hover via CDP to reveal CSS :hover buttons
           await triggerRealHover(r.card);
@@ -3741,7 +3746,8 @@
           window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x: Math.round(cr.right - 25), y: Math.round(cr.top + 25) }, '*');
 
           log('✓ Hover triggered on character card: ' + (params.name || 'Untitled character'));
-          await new Promise(res => setTimeout(res, 800));
+          // Pacing: Chờ 1000ms để hiệu ứng hover và các nút ⋮ xuất hiện hoàn toàn
+          await new Promise(res => setTimeout(res, 1000));
           sendResult(action, true, { log: '✓ Hover triggered: ' + (params.name || 'Untitled character') });
         } else {
           sendResult(action, false, null, 'Cannot hover: ' + (params.name || 'Untitled character'));
@@ -3761,7 +3767,7 @@
           await triggerRealHover(cardResult.card);
           const cr = cardResult.card.getBoundingClientRect();
           window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x: Math.round(cr.right - 25), y: Math.round(cr.top + 25) }, '*');
-          await new Promise(res => setTimeout(res, 500));
+          await new Promise(res => setTimeout(res, 600));
         }
 
         // Tìm nút ⋮ trên thẻ
@@ -3777,16 +3783,44 @@
             const cr = cardResult.card.getBoundingClientRect();
             window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x: Math.round(cr.right - 25), y: Math.round(cr.top + 25) }, '*');
           }
-          await new Promise(res => setTimeout(res, 400));
+          await new Promise(res => setTimeout(res, 500));
         }
 
         if (btn) {
           scrollIntoViewIfNeeded(btn);
-          log('🖱️ Clicking ⋮ button with real click...');
-          await triggerRealClick(btn);
-          // Chờ 800ms để context menu hiển thị
+          
+          // Thử click nút ⋮ và xác nhận menu "Add to prompt" mở ra (thử tối đa 3 lần với pacing cẩn thận)
+          let menuOpened = false;
+          for (let clickAttempt = 1; clickAttempt <= 3; clickAttempt++) {
+            scrollIntoViewIfNeeded(btn);
+            // Pacing: Di chuột vào nút ⋮ trước khi click
+            await triggerRealHover(btn);
+            await new Promise(res => setTimeout(res, 400));
+
+            log(`🖱️ [Lần ${clickAttempt}/3] Clicking ⋮ button with real click...`);
+            await triggerRealClick(btn);
+            
+            // Chờ menu mở ra
+            const menuCheckStart = Date.now();
+            while (Date.now() - menuCheckStart < 1200) {
+              if (findAddToPromptButton()) {
+                menuOpened = true;
+                break;
+              }
+              await new Promise(res => setTimeout(res, 200));
+            }
+
+            if (menuOpened) {
+              log('✓ Menu "Add to prompt" đã mở thành công sau click!');
+              break;
+            }
+            log(`⚠️ Menu chưa mở sau lần click ${clickAttempt}, chờ 600ms trước khi thử lại...`);
+            await new Promise(res => setTimeout(res, 600));
+          }
+
+          // Pacing ổn định 800ms
           await new Promise(res => setTimeout(res, 800));
-          sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + (params.name || 'Untitled character') });
+          sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + (params.name || 'Untitled character'), menuOpened });
         } else {
           sendResult(action, false, null, '⋮ button not found on character card');
         }
@@ -3795,9 +3829,29 @@
 
       // ── Step 4: Wait for dropdown menu ──
       case 'waitMenu': {
-        const btn = await waitForCondition(() => findAddToPromptButton(), 6000);
+        let btn = findAddToPromptButton();
+        if (!btn) {
+          // Chờ tối đa 8 giây, nếu sau 2.5s vẫn chưa thấy thì thử tìm và re-click ⋮ 1 lần nữa
+          const waitStart = Date.now();
+          while (Date.now() - waitStart < 8000) {
+            btn = findAddToPromptButton();
+            if (btn) break;
+            
+            // Nếu sau 2.5s chưa có menu, thử re-click ⋮
+            if (Date.now() - waitStart > 2500 && Date.now() - waitStart < 3000) {
+              const moreBtn = (lastFoundCharacterCard ? findMoreButton(lastFoundCharacterCard.card) : null) ||
+                              findMoreButton(params.name) ||
+                              findMoreButton('Untitled character');
+              if (moreBtn) {
+                log('🔄 waitMenu: Thử click lại ⋮ để kích hoạt dropdown...');
+                await triggerRealClick(moreBtn);
+              }
+            }
+            await new Promise(res => setTimeout(res, 400));
+          }
+        }
         if (btn) {
-          await new Promise(res => setTimeout(res, 300));
+          await new Promise(res => setTimeout(res, 500));
           sendResult(action, true, { log: '✓ Menu detected: "' + btn.textContent.trim().substring(0, 30) + '"' });
         } else {
           sendResult(action, false, null, 'Menu "Add to prompt" did not appear');
@@ -3811,11 +3865,17 @@
         if (btn) {
           scrollIntoViewIfNeeded(btn);
           const label = btn.textContent.trim().substring(0, 30);
+          
+          // Pacing: Di chuột vào nút "Add to prompt" trước khi click
+          await triggerRealHover(btn);
+          await new Promise(res => setTimeout(res, 400));
+          
           log('🖱️ Clicking "' + label + '" with real click...');
           await triggerRealClick(btn);
-          // Pacing: Chờ 1.5s để Flow đóng menu và gắn chip nhân vật vào prompt bar
-          log('⏳ Chờ Flow gắn chip nhân vật vào prompt bar (1.5s)...');
-          await new Promise(res => setTimeout(res, 1500));
+          
+          // Pacing: Chờ 2.5s để Flow đóng menu và gắn chip nhân vật vào prompt bar
+          log('⏳ Chờ Flow gắn chip nhân vật vào prompt bar (2.5s)...');
+          await new Promise(res => setTimeout(res, 2500));
           sendResult(action, true, { log: '✓ Clicked "' + label + '"' });
         } else {
           sendResult(action, false, null, '"Thêm vào câu lệnh" / "Add to prompt" not found');
@@ -3825,10 +3885,10 @@
 
       // ── Step 6: Wait for prompt input "What do you want to create?" ──
       case 'waitTextarea': {
-        const input = await waitForCondition(() => findPromptInput(), 7000);
+        const input = await waitForCondition(() => findPromptInput(), 12000);
         if (input) {
           scrollIntoViewIfNeeded(input);
-          await new Promise(res => setTimeout(res, 400));
+          await new Promise(res => setTimeout(res, 800));
           log('✓ Prompt input ready');
           sendResult(action, true, { log: '✓ Prompt input ready' });
         } else {
@@ -3846,12 +3906,12 @@
           break;
         }
 
-        // Pacing: Chờ 600ms để đảm bảo các chip nhân vật đã ổn định trong input
-        await new Promise(r => setTimeout(r, 600));
+        // Pacing: Chờ 800ms để đảm bảo các chip nhân vật đã hoàn toàn ổn định trong input
+        await new Promise(r => setTimeout(r, 800));
 
         // Đảm bảo chế độ tạo đang ở Video
         await switchCreationMode('video');
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 800));
 
         // Re-acquire input in case mode switch re-rendered the prompt bar
         input = findPromptInput() || input;
@@ -3859,7 +3919,7 @@
         // Click and focus into the prompt input
         log('🖱️ Focus & Click vào ô nhập prompt video...');
         input = await focusAndClickInput(input) || input;
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 600));
 
         const promptText = (params.prompt || '').trim();
         if (!promptText) {
@@ -3872,6 +3932,7 @@
         if (readInputText().includes(promptText.slice(0, 30))) {
           log('✓ Prompt đã có sẵn trong input; kích hoạt nút submit');
           await ensureSubmitButtonActivated(input);
+          await new Promise(r => setTimeout(r, 600));
           sendResult(action, true, { log: '✓ Prompt already present in input' });
           break;
         }
@@ -3884,19 +3945,19 @@
 
         // Try typeWithDebuggerOrFallback
         const typed = await typeWithDebuggerOrFallback(input, textToInject);
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 600));
 
         let currentText = readInputText();
         if (!typed || !currentText.includes(promptText.slice(0, 15))) {
           log('💉 Fallback: Dùng injectTextToReactInput...');
           injectTextToReactInput(input, textToInject);
-          await new Promise(r => setTimeout(r, 400));
+          await new Promise(r => setTimeout(r, 600));
         }
 
         // Pacing & activation: Đảm bảo nút submit được kích hoạt (enabled)
         log('⚡ Đang xác nhận kích hoạt nút submit...');
         await ensureSubmitButtonActivated(input);
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 800));
 
         sendResult(action, true, { log: '✓ Typed prompt and activated submit: "' + promptText.substring(0, 40) + '..."' });
         break;
@@ -3952,18 +4013,18 @@
         // 🛑 Capture existing videos BEFORE we submit the new prompt!
         capturePreexistingVideos();
 
-        // 1. Chờ nút submit chuyển sang trạng thái kích hoạt (enabled) - kiểm tra đến 5s
+        // 1. Chờ nút submit chuyển sang trạng thái kích hoạt (enabled) - kiểm tra đến 6s
         log('🔍 Tìm kiếm nút submit (mũi tên gửi) và chờ trạng thái sẵn sàng...');
         let submitBtn = null;
         const findStart = Date.now();
-        while (Date.now() - findStart < 5000) {
+        while (Date.now() - findStart < 6000) {
           submitBtn = findSubmitArrowButton(input);
           if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
             log('✓ Đã tìm thấy nút submit ở trạng thái sẵn sàng (enabled)!');
             break;
           }
           await ensureSubmitButtonActivated(input);
-          await new Promise(r => setTimeout(r, 300));
+          await new Promise(r => setTimeout(r, 400));
         }
 
         // 2. Click nút submit mũi tên và trigger submit
@@ -3975,14 +4036,14 @@
         } else {
           // Fallback: direct keyboard submit via Debugger and DOM
           window.postMessage({ type: 'FLOW_DEBUGGER_ENTER', ctrlKey: true }, '*');
-          await new Promise(r => setTimeout(r, 200));
+          await new Promise(r => setTimeout(r, 300));
           window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
         }
 
         // Pacing & Verification: Kiểm tra xem lệnh đã được Flow nhận chưa
-        // Nếu sau 1.5s nút submit vẫn còn hiển thị enabled và composer vẫn còn text, thử bấm và gửi bổ sung
+        // Nếu sau 2s nút submit vẫn còn hiển thị enabled và composer vẫn còn text, thử bấm và gửi bổ sung
         for (let attempt = 1; attempt <= 3; attempt++) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, 2000));
           const recheckBtn = findSubmitArrowButton(input);
           const currentVal = (input.value || input.textContent || '').trim();
 
@@ -4013,7 +4074,7 @@
         log('⏳ Đang theo dõi tiến trình tạo video (tối đa 120s)...');
         sendResult(action, true, { log: '⏳ Đang chờ Flow render video...', status: 'monitoring' });
 
-        // Polling chủ động mỗi 3 giây phát hiện thẻ video mới hoàn thành
+        // Polling chủ động mỗi 3.5 giây phát hiện thẻ video mới hoàn thành
         const pollStart = Date.now();
         const pollInterval = setInterval(() => {
           const videos = detectVideoComplete();
@@ -4026,7 +4087,7 @@
             log('⏰ Đã hết 120s. Bắt đầu kiểm tra và tải video.');
             window.postMessage({ type: 'FLOW_VIDEO_DETECTED' }, '*');
           }
-        }, 3000);
+        }, 3500);
         break;
       }
 
