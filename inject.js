@@ -1483,26 +1483,45 @@
   /** Find the submit arrow button (->) on character page or main prompt bar */
   function findCharacterSubmitArrowButton(inputEl) {
     if (!inputEl) inputEl = findPromptInput() || findCharacterPromptInput();
+    if (!inputEl) return null;
+
+    const inputRect = inputEl.getBoundingClientRect();
 
     // 1. Identify composer container
     const composer = (typeof getCharacterComposer === 'function' ? getCharacterComposer(inputEl) : null) ||
-                     inputEl?.closest('form, [class*="composer"], [class*="prompt"]') ||
+                     inputEl?.closest('form, [class*="composer"], [class*="prompt"], [role="dialog"], div[class*="card"]') ||
                      inputEl?.parentElement?.parentElement?.parentElement?.parentElement ||
                      inputEl?.parentElement?.parentElement?.parentElement ||
                      inputEl?.parentElement?.parentElement ||
                      inputEl?.parentElement;
 
-    const composerRect = composer ? composer.getBoundingClientRect() : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
+    const composerRect = composer ? composer.getBoundingClientRect() : inputRect;
 
     const roots = [composer, document].filter(Boolean);
 
     for (const root of roots) {
-      const allButtons = Array.from(root.querySelectorAll('button, [role="button"], div[tabindex="0"], a[role="button"]'));
+      const allButtons = Array.from(root.querySelectorAll('button, [role="button"], a[role="button"], div[tabindex="0"]'));
 
       // Filter to potential submit candidates by strictly excluding controls that are NOT submit
       const validButtons = allButtons.filter(btn => {
         if (!isVisible(btn)) return false;
         if (btn.closest('#flowauto-floating-widget') || btn.closest('#flowauto-toast')) return false;
+
+        // GEOMETRIC BOUNDARY CONSTRAINT:
+        // A submit button is small (not a canvas card) and located within/near the composer
+        const br = btn.getBoundingClientRect();
+        if (br.width < 16 || br.height < 16) return false;
+        if (br.width > 120 || br.height > 80) return false; // Canvas cards are >= 160x120px!
+
+        // Must NOT be far above the prompt input (canvas cards and header are above)
+        if (br.bottom < inputRect.top + 10) return false;
+        // Must NOT be far below the composer
+        if (br.top > inputRect.bottom + 250) return false;
+        // Must NOT be far off to the left of the input
+        if (br.right < inputRect.left - 10) return false;
+
+        // Never a card containing headings or paragraphs
+        if (btn.querySelector('h1, h2, h3, h4, h5, p')) return false;
 
         const text = (btn.textContent || '').trim().toLowerCase();
         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
@@ -1528,26 +1547,24 @@
             text.includes('project') || text.includes('dự án') ||
             text.includes('favorite') || text.includes('thích')) return false;
 
+        // STRICT CANVAS / AVATAR / CHARACTER EXCLUSIONS:
+        // NEVER match avatar creation cards, new character buttons, or template cards
+        if (aria.includes('avatar') || text.includes('avatar') || title.includes('avatar') ||
+            aria.includes('đại diện') || text.includes('đại diện') || title.includes('đại diện') ||
+            aria.includes('new character') || text.includes('new character') || title.includes('new character') ||
+            aria.includes('nhân vật mới') || text.includes('nhân vật mới') || title.includes('nhân vật mới') ||
+            aria.includes('create your avatar') || text.includes('create your avatar') ||
+            aria.includes('tạo hình đại diện') || text.includes('tạo hình đại diện') ||
+            aria.includes('template') || text.includes('template') || title.includes('template') ||
+            aria.includes('mẫu') || text.includes('mẫu') || title.includes('mẫu') ||
+            aria.includes('explore') || text.includes('explore') || title.includes('explore') ||
+            aria.includes('khám phá') || text.includes('khám phá') || title.includes('khám phá') ||
+            aria.includes('history') || text.includes('history') || title.includes('history')) return false;
+
         return true;
       });
 
-      // Priority 1: By explicit submit/create/send/generate/run label (en & vi)
-      for (const btn of validButtons) {
-        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-        const title = (btn.getAttribute('title') || '').toLowerCase();
-        const text = (btn.textContent || '').trim().toLowerCase();
-        const matched = [aria, title, text].some(s =>
-          s === 'tạo' || s === 'gửi' || s === 'submit' || s === 'create' || s === 'send' || s === 'generate' || s === 'run' || s === 'chạy' ||
-          s.includes('submit') || s.includes('send') || s.includes('generate') || s.includes('forward') ||
-          s.includes('create') || s.includes('tạo') || s.includes('gửi') || s.includes('chạy') || s.includes('arrow')
-        );
-        if (matched) {
-          log('✓ findCharacterSubmitArrowButton: matched aria/title/text: "' + (aria || title || text) + '"');
-          return btn;
-        }
-      }
-
-      // Priority 2: By SVG arrow forward icon inside the button
+      // Priority 1: Dedicated SVG arrow forward/send icon (the most specific marker of submit arrow button)
       for (const btn of validButtons) {
         const svg = btn.querySelector('svg');
         if (svg) {
@@ -1567,17 +1584,43 @@
         }
       }
 
-      // Priority 3: The rightmost button in the composer toolbar
+      // Priority 2: By explicit submit/send/generate/run/tạo video label (en & vi)
+      for (const btn of validButtons) {
+        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const title = (btn.getAttribute('title') || '').toLowerCase();
+        const text = (btn.textContent || '').trim().toLowerCase();
+        const matched = [aria, title, text].some(s =>
+          s === 'tạo' || s === 'gửi' || s === 'submit' || s === 'create' || s === 'send' || s === 'generate' || s === 'run' || s === 'chạy' ||
+          s === 'tạo video' || s === 'create video' || s === 'generate video' || s === 'tạo ảnh' || s === 'create image' ||
+          s.includes('submit') || s.includes('send') || s.includes('generate') || s.includes('forward') ||
+          s.includes('tạo video') || s.includes('create video') || s.includes('generate video') ||
+          s.includes('chạy') || s.includes('arrow')
+        );
+        if (matched) {
+          log('✓ findCharacterSubmitArrowButton: matched aria/title/text: "' + (aria || title || text) + '"');
+          return btn;
+        }
+      }
+
+      // Priority 3: Any button containing an SVG at the bottom-right of the composer toolbar
+      const svgButtons = validButtons.filter(b => b.querySelector('svg'));
+      if (svgButtons.length > 0) {
+        const sorted = [...svgButtons].sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+        const rightmost = sorted[0];
+        const br = rightmost.getBoundingClientRect();
+        if (br.right > inputRect.left + 50) {
+          log('✓ findCharacterSubmitArrowButton: picked rightmost SVG button at x=' + Math.round(br.right) + ', y=' + Math.round(br.top));
+          return rightmost;
+        }
+      }
+
+      // Priority 4: The rightmost small button in the composer toolbar
       if (validButtons.length > 0) {
-        // Sort descending by right coordinate
         const sorted = [...validButtons].sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
         for (const candidate of sorted) {
           const br = candidate.getBoundingClientRect();
-          // Must NOT be in the top navbar (y < 80)
           if (br.top < 80) continue;
-          // When searching document, candidate must be within reasonable vertical range of the composer
-          if (root === document && (br.bottom < composerRect.top - 20 || br.top > composerRect.bottom + 150)) continue;
-          if (br.right > composerRect.left + 50) {
+          if (br.right > inputRect.left + 50) {
             log('✓ findCharacterSubmitArrowButton: picked rightmost candidate at x=' + Math.round(br.right) + ', y=' + Math.round(br.top));
             return candidate;
           }
@@ -2000,19 +2043,22 @@
       const hasControls = Array.from(curr.querySelectorAll('button, [role="button"]')).some(b => {
         const t = (b.textContent || '').toLowerCase();
         const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+        if (t.includes('avatar') || aria.includes('avatar') || t.includes('đại diện') || aria.includes('đại diện') ||
+            t.includes('new character') || aria.includes('new character')) return false;
         return t.includes('định dạng') || t.includes('format') || t.includes('banana') || t.includes('nano') ||
                t.includes('agent') || t.includes('tác nhân') || t.includes('video') || t.includes('720p') || t.includes('1080p') ||
                aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send') || aria.includes('generate');
       });
-      if (hasControls || hasAttachment || curr.matches('form, [class*="composer"], [class*="prompt"]')) {
+      if (hasControls || hasAttachment || curr.matches('form, [class*="composer"], [class*="prompt"], [role="dialog"], [class*="card"]')) {
         return curr;
       }
-      if (curr.tagName === 'MAIN' || curr.tagName === 'NAV' || curr.tagName === 'HEADER' || (curr.querySelector('h1, h2') && !curr.querySelector('textarea, [contenteditable]'))) {
+      if (curr.tagName === 'MAIN' || curr.tagName === 'NAV' || curr.tagName === 'HEADER' || curr.getAttribute('role') === 'main' ||
+          curr.classList.contains('canvas') || (curr.querySelector('h1, h2') && !curr.querySelector('textarea, [contenteditable]'))) {
         break;
       }
       curr = curr.parentElement;
     }
-    return input.closest('form, [class*="composer"], [class*="prompt"]') ||
+    return input.closest('form, [class*="composer"], [class*="prompt"], [role="dialog"]') ||
            input.parentElement?.parentElement?.parentElement ||
            input.parentElement?.parentElement ||
            input.parentElement || null;

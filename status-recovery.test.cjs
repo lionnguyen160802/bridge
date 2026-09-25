@@ -126,6 +126,15 @@ test('product recovery maps obsolete canvas product states to direct paste', () 
   const source = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
   assert.match(source, /legacyProductStates = \['UPLOAD_IMAGE', 'ATTACH_PRODUCT_REFERENCE', 'GENERATE_UNIFIED_IMAGE'\]/);
   assert.match(source, /FLOW_STATES\.PASTE_PRODUCT_REFERENCE/);
+});
+
+test('submit button finder strictly excludes avatar creation cards and bounds search to composer', () => {
+  const dom = fs.readFileSync(path.join(__dirname, 'inject.js'), 'utf8');
+  assert.match(dom, /aria\.includes\('avatar'\) \|\| text\.includes\('avatar'\)/);
+  assert.match(dom, /create your avatar/);
+  assert.match(dom, /br\.width > 120 \|\| br\.height > 80/);
+  assert.match(dom, /br\.bottom < inputRect\.top \+ 10/);
+  assert.match(dom, /btn\.querySelector\('h1, h2, h3, h4, h5, p'\)/);
 });/* Historical duplicate content below is ignored.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
