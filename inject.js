@@ -1456,18 +1456,41 @@
     return findPromptInput();
   }
 
+  /** Awaitable OS-level hardware mouse click via Chrome Debugger CDP */
+  async function performDebuggerClick(x, y) {
+    if (x <= 0 || y <= 0) return false;
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (val) => {
+        if (!done) {
+          done = true;
+          window.removeEventListener('message', handler);
+          resolve(val);
+        }
+      };
+      const handler = (e) => {
+        if (e.source !== window) return;
+        if (e.data && e.data.type === 'FLOW_DEBUGGER_CLICK_RESULT') {
+          finish(!!e.data.success);
+        }
+      };
+      window.addEventListener('message', handler);
+      window.postMessage({ type: 'FLOW_DEBUGGER_CLICK', x: x, y: y }, '*');
+      setTimeout(() => finish(false), 4000);
+    });
+  }
+
   /** Find the submit arrow button (->) on character page or main prompt bar */
   function findCharacterSubmitArrowButton(inputEl) {
     if (!inputEl) inputEl = findPromptInput() || findCharacterPromptInput();
-    if (!inputEl) return null;
 
     // 1. Identify composer container
     const composer = (typeof getCharacterComposer === 'function' ? getCharacterComposer(inputEl) : null) ||
-                     inputEl.closest('form, [class*="composer"], [class*="prompt"]') ||
-                     inputEl.parentElement?.parentElement?.parentElement?.parentElement ||
-                     inputEl.parentElement?.parentElement?.parentElement ||
-                     inputEl.parentElement?.parentElement ||
-                     inputEl.parentElement;
+                     inputEl?.closest('form, [class*="composer"], [class*="prompt"]') ||
+                     inputEl?.parentElement?.parentElement?.parentElement?.parentElement ||
+                     inputEl?.parentElement?.parentElement?.parentElement ||
+                     inputEl?.parentElement?.parentElement ||
+                     inputEl?.parentElement;
 
     const composerRect = composer ? composer.getBoundingClientRect() : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
 
@@ -1499,7 +1522,7 @@
             text.includes('format') || text.includes('định dạng') ||
             text.includes('banana') || text.includes('nano') ||
             text.includes('agent') || text.includes('tác nhân') ||
-            text.includes('video') || text.includes('image') || text.includes('hình ảnh') ||
+            text === 'video' || text === 'image' || text === 'hình ảnh' || text === 'ảnh' || text === 'phim' ||
             text.includes('720p') || text.includes('1080p') ||
             text.includes('upload') || text.includes('tải lên') ||
             text.includes('project') || text.includes('dự án') ||
@@ -1508,14 +1531,18 @@
         return true;
       });
 
-      // Priority 1: By explicit submit/create/send/generate label (that is not back or down)
+      // Priority 1: By explicit submit/create/send/generate/run label (en & vi)
       for (const btn of validButtons) {
         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
         const title = (btn.getAttribute('title') || '').toLowerCase();
-        if (aria === 'tạo' || aria === 'gửi' || aria === 'submit' || aria === 'create' || aria === 'send' || aria === 'generate' ||
-            aria.includes('submit') || aria.includes('send') || aria.includes('generate') || aria.includes('forward') ||
-            title.includes('tạo') || title.includes('gửi') || title.includes('submit') || title.includes('send') || title.includes('generate')) {
-          log('✓ findCharacterSubmitArrowButton: matched aria/title: "' + (aria || title) + '"');
+        const text = (btn.textContent || '').trim().toLowerCase();
+        const matched = [aria, title, text].some(s =>
+          s === 'tạo' || s === 'gửi' || s === 'submit' || s === 'create' || s === 'send' || s === 'generate' || s === 'run' || s === 'chạy' ||
+          s.includes('submit') || s.includes('send') || s.includes('generate') || s.includes('forward') ||
+          s.includes('create') || s.includes('tạo') || s.includes('gửi') || s.includes('chạy') || s.includes('arrow')
+        );
+        if (matched) {
+          log('✓ findCharacterSubmitArrowButton: matched aria/title/text: "' + (aria || title || text) + '"');
           return btn;
         }
       }
@@ -1524,11 +1551,16 @@
       for (const btn of validButtons) {
         const svg = btn.querySelector('svg');
         if (svg) {
-          const pathDs = Array.from(svg.querySelectorAll('path, polygon, polyline')).map(p => (p.getAttribute('d') || '') + ' ' + (p.getAttribute('points') || '')).join(' ');
+          const pathDs = Array.from(svg.querySelectorAll('path, polygon, polyline, line')).map(p =>
+            (p.getAttribute('d') || '') + ' ' + (p.getAttribute('points') || '') + ' ' + (p.getAttribute('x1') || '')
+          ).join(' ');
           if (pathDs.includes('M5 12') || pathDs.includes('M12 4') || pathDs.includes('l8-8') ||
               pathDs.includes('16.17') || pathDs.includes('M10 6') || pathDs.includes('2.01') ||
               pathDs.includes('M4 12') || pathDs.includes('M5 13') || pathDs.includes('21.14') ||
-              pathDs.includes('forward') || pathDs.includes('send') || pathDs.includes('M12 2L2 22') || pathDs.includes('M2.01 21L23 12')) {
+              pathDs.includes('forward') || pathDs.includes('send') || pathDs.includes('M12 2L2 22') ||
+              pathDs.includes('M2.01 21L23 12') || pathDs.includes('arrow') || pathDs.includes('M16') ||
+              pathDs.includes('M20') || pathDs.includes('M13') || pathDs.includes('M14') ||
+              pathDs.includes('19') || pathDs.includes('12')) {
             log('✓ findCharacterSubmitArrowButton: matched arrow path in SVG');
             return btn;
           }
@@ -1564,7 +1596,7 @@
     return true;
   }
 
-  /** Trigger click through all DOM layers to ensure React/Wiz event handlers fire */
+  /** Trigger click through DOM layers to ensure React/Wiz event handlers fire */
   function triggerRealClick(el) {
     if (!el) return false;
     scrollIntoViewIfNeeded(el);
@@ -1577,72 +1609,53 @@
       button: 0, buttons: 1, detail: 1, pointerId: 1, pointerType: 'mouse'
     };
 
-    // 1. Dispatch on innermost element under coordinates
+    // 1. Dispatch pointerdown / mousedown
     target.dispatchEvent(new PointerEvent('pointerdown', opts));
     target.dispatchEvent(new MouseEvent('mousedown', opts));
     try { target.focus(); } catch (e) {}
+
+    // 2. Dispatch pointerup / mouseup / click
     const upOpts = { ...opts, buttons: 0 };
     target.dispatchEvent(new PointerEvent('pointerup', upOpts));
     target.dispatchEvent(new MouseEvent('mouseup', upOpts));
     target.dispatchEvent(new MouseEvent('click', upOpts));
 
-    // 2. Also dispatch directly on the button element if target is inner
+    // 3. Also dispatch click on the button element if target was a child
     if (target !== el) {
-      el.dispatchEvent(new PointerEvent('pointerdown', opts));
-      el.dispatchEvent(new MouseEvent('mousedown', opts));
-      try { el.focus(); } catch (e) {}
-      el.dispatchEvent(new PointerEvent('pointerup', upOpts));
-      el.dispatchEvent(new MouseEvent('mouseup', upOpts));
-      el.dispatchEvent(new MouseEvent('click', upOpts));
+      try { el.dispatchEvent(new MouseEvent('click', upOpts)); } catch(e) {}
     }
 
-    // 3. Native DOM click
-    try { target.click(); } catch(e) {}
+    // 4. Native DOM click
     try { el.click(); } catch(e) {}
-
-    // 4. If button contains svg or path, click them too
-    const svg = el.querySelector('svg');
-    if (svg && svg !== target) {
-      try { svg.dispatchEvent(new MouseEvent('click', upOpts)); } catch(e) {}
-    }
 
     return true;
   }
 
-  /** Bulletproof submit button clicker: DOM layers + OS-level hardware click via CDP + Enter fallback */
+  /** Bulletproof submit button clicker: DOM layers + OS-level hardware click via CDP */
   async function clickSubmitArrowButton(btn, inputEl) {
     if (!btn) return false;
     scrollIntoViewIfNeeded(btn);
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 150));
 
     const { x, y } = getCenter(btn);
     log('🖱️ Clicking submit button at coordinates (' + Math.round(x) + ', ' + Math.round(y) + ')...');
 
     // 1. Hover
     simulateHover(btn);
-    await new Promise(r => setTimeout(r, 250));
+    await new Promise(r => setTimeout(r, 150));
 
     // 2. Multi-layer DOM click
     triggerRealClick(btn);
 
-    // 3. OS-level hardware mouse click via Chrome Debugger CDP
+    // 3. OS-level hardware mouse click via Chrome Debugger CDP (awaited)
     if (x > 0 && y > 0) {
       log('🐞 Triggering OS-level Debugger Mouse Click at (' + Math.round(x) + ', ' + Math.round(y) + ')...');
-      window.postMessage({
-        type: 'FLOW_DEBUGGER_CLICK',
-        x: x,
-        y: y
-      }, '*');
+      const cdpSuccess = await performDebuggerClick(x, y);
+      log(cdpSuccess ? '✓ CDP Debugger Click succeeded' : 'ℹ️ CDP Debugger Click finished/timeout');
     }
 
-    // 4. Parallel Enter key dispatch
-    if (inputEl) {
-      window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
-      const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
-      inputEl.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-      inputEl.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
-      inputEl.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-    }
+    // 4. Native click fallback
+    try { btn.click(); } catch(e) {}
 
     return true;
   }
@@ -1708,10 +1721,7 @@
     const first15 = (text || '').trim().slice(0, 15);
     const hasText = () => {
       const v = (input.value || input.innerText || input.textContent || '').trim();
-      if (first15.length > 0 && v.includes(first15)) return true;
-      const arrowBtn = findCharacterSubmitArrowButton(input);
-      if (arrowBtn && !arrowBtn.disabled && arrowBtn.getAttribute('aria-disabled') !== 'true') return true;
-      return false;
+      return first15.length > 0 && v.includes(first15);
     };
 
     if (hasText()) return true;
@@ -1772,7 +1782,7 @@
         };
         window.addEventListener('message', handler);
         window.postMessage({ type: 'FLOW_DEBUGGER_TYPE', text: text }, '*');
-        setTimeout(() => finish(false), 3500);
+        setTimeout(() => finish(false), 6000);
       });
     } catch(e) {}
 
@@ -1913,17 +1923,17 @@
     if (!input) return null;
     let curr = input.parentElement;
     while (curr && curr !== document.body && curr !== document.documentElement) {
-      if (curr.tagName === 'MAIN' || curr.tagName === 'NAV' || curr.tagName === 'HEADER' || curr.querySelector('h1, h2')) {
-        break;
-      }
       const hasAttachment = curr.querySelector('[data-testid*="attachment"], [data-type*="media"], [aria-label*="remove" i], [aria-label*="delete" i], [aria-label*="xóa" i], [aria-label*="gỡ" i], [class*="attachment"], [class*="chip"]');
       const hasControls = Array.from(curr.querySelectorAll('button, [role="button"]')).some(b => {
         const t = (b.textContent || '').toLowerCase();
         const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send') || aria.includes('generate');
+        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || t.includes('nano') || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send') || aria.includes('generate');
       });
       if (hasControls || hasAttachment || curr.matches('form, [class*="composer"], [class*="prompt"]')) {
         return curr;
+      }
+      if (curr.tagName === 'MAIN' || curr.tagName === 'NAV' || curr.tagName === 'HEADER' || (curr.querySelector('h1, h2') && !curr.querySelector('textarea, [contenteditable]'))) {
+        break;
       }
       curr = curr.parentElement;
     }
@@ -2853,12 +2863,13 @@
             return;
           }
           capturePreexistingImages();
-          const button = findCharacterSubmitArrowButton(evidence.input);
+          let currentInput = (evidence?.input && evidence.input.isConnected) ? evidence.input : (findCharacterPromptInput() || findPromptInput());
+          const button = findCharacterSubmitArrowButton(currentInput);
           if (!button || !isSubmitButtonEnabled(button)) {
             sendResult(action, false, null, 'Không tìm thấy nút submit character đang khả dụng');
             return;
           }
-          await clickSubmitArrowButton(button, evidence.input);
+          await clickSubmitArrowButton(button, currentInput);
           let fresh = [];
           const started = Date.now();
           while (Date.now() - started < 45000) {

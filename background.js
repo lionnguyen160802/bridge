@@ -736,29 +736,37 @@ async function findOrOpenFlowTab(projectId, action) {
   });
 }
 
-// Helper for safe Chrome Debugger API execution
-async function safeDebuggerCommand(tabId, fn) {
-  const target = { tabId };
-  let attachedHere = false;
-  try {
-    await chrome.debugger.attach(target, "1.2");
-    attachedHere = true;
-    await new Promise(r => setTimeout(r, 80));
-  } catch (attachErr) {
-    if (attachErr.message && attachErr.message.includes('already attached')) {
-      attachedHere = false; // Already attached, can proceed
-    } else {
-      throw attachErr;
-    }
-  }
+// Helper for safe Chrome Debugger API execution with sequential mutex queue
+let debuggerCommandQueue = Promise.resolve();
 
-  try {
-    return await fn(target);
-  } finally {
-    if (attachedHere) {
-      try { await chrome.debugger.detach(target); } catch(e) {}
+async function safeDebuggerCommand(tabId, fn) {
+  const execute = async () => {
+    const target = { tabId };
+    let attachedHere = false;
+    try {
+      await chrome.debugger.attach(target, "1.2");
+      attachedHere = true;
+      await new Promise(r => setTimeout(r, 60));
+    } catch (attachErr) {
+      if (attachErr.message && attachErr.message.includes('already attached')) {
+        attachedHere = false; // Already attached, can proceed
+      } else {
+        throw attachErr;
+      }
     }
-  }
+
+    try {
+      return await fn(target);
+    } finally {
+      if (attachedHere) {
+        try { await chrome.debugger.detach(target); } catch(e) {}
+      }
+    }
+  };
+
+  const next = debuggerCommandQueue.then(execute, execute);
+  debuggerCommandQueue = next.catch(() => {});
+  return next;
 }
 
 // ==========================================
@@ -844,6 +852,13 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       (async () => {
         try {
           await safeDebuggerCommand(tabId, async (target) => {
+            // First move mouse to target to trigger hover and set hit-test target in Chromium
+            await chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", {
+              type: "mouseMoved",
+              x: x,
+              y: y
+            });
+            await new Promise(r => setTimeout(r, 40));
             await chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", {
               type: "mousePressed",
               x: x,
@@ -851,7 +866,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
               button: "left",
               clickCount: 1
             });
-            await new Promise(r => setTimeout(r, 60));
+            await new Promise(r => setTimeout(r, 80));
             await chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", {
               type: "mouseReleased",
               x: x,
