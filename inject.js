@@ -690,12 +690,22 @@
     ]));
     for (const btn of btns) {
       if (btn === card) continue;
+      const br = btn.getBoundingClientRect();
+      // Must NEVER pick buttons in top navbar or header (y < 80)
+      if (br.top < 80) continue;
+      if (btn.closest('header, nav, [role="banner"], [class*="navbar"], [class*="header"]')) continue;
+
       const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
       const title = (btn.getAttribute('title') || '').toLowerCase();
       const text = (btn.textContent || '').trim();
+      const href = (btn.getAttribute('href') || '').toLowerCase();
 
-      // Exclude favorite/heart button
-      if (aria.includes('thích') || aria.includes('like') || aria.includes('favorite') || title.includes('thích') || title.includes('favorite') || title.includes('like')) continue;
+      // Exclude user profile, account, avatar, favorite/heart
+      if (aria.includes('account') || aria.includes('tài khoản') || aria.includes('profile') ||
+          aria.includes('user') || aria.includes('google') || title.includes('account') ||
+          title.includes('profile') || href.includes('accounts.google.com') ||
+          aria.includes('thích') || aria.includes('like') || aria.includes('favorite') ||
+          title.includes('thích') || title.includes('favorite') || title.includes('like')) continue;
 
       const has3DotsSvg = btn.querySelector('svg path[d*="m12 8"], svg path[d*="M12 8"], svg [d*="12 2"]') ||
                           btn.querySelectorAll('circle').length >= 3;
@@ -714,14 +724,21 @@
     for (const btn of btns) {
       if (btn === card) continue;
       const br = btn.getBoundingClientRect();
+      if (br.top < 80) continue;
+      if (btn.closest('header, nav, [role="banner"], [class*="navbar"], [class*="header"]')) continue;
+
       const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
       const title = (btn.getAttribute('title') || '').toLowerCase();
-      if (!aria.includes('thích') && !aria.includes('like') && !aria.includes('favorite') &&
-          !title.includes('thích') && !title.includes('like') && !title.includes('favorite')) {
-        if (Math.abs(br.right - cr.right) < 70 && Math.abs(br.top - cr.top) < 70 && br.width > 0 && br.width < 60) {
-          log('✓ ⋮ via top-right geometry (' + Math.round(br.left) + ',' + Math.round(br.top) + ')');
-          return btn;
-        }
+      const href = (btn.getAttribute('href') || '').toLowerCase();
+      if (aria.includes('account') || aria.includes('tài khoản') || aria.includes('profile') ||
+          aria.includes('user') || aria.includes('google') || title.includes('account') ||
+          title.includes('profile') || href.includes('accounts.google.com') ||
+          aria.includes('thích') || aria.includes('like') || aria.includes('favorite') ||
+          title.includes('thích') || title.includes('like') || title.includes('favorite')) continue;
+
+      if (Math.abs(br.right - cr.right) < 70 && Math.abs(br.top - cr.top) < 70 && br.width > 0 && br.width < 60) {
+        log('✓ ⋮ via top-right geometry (' + Math.round(br.left) + ',' + Math.round(br.top) + ')');
+        return btn;
       }
     }
 
@@ -732,17 +749,21 @@
       { x: cr.right - 34, y: cr.top + 20 }
     ];
     for (const p of probes) {
-      if (p.x < 0 || p.y < 0) continue;
+      if (p.x < 0 || p.y < 80) continue; // NEVER in navbar
       let el = document.elementFromPoint(p.x, p.y);
       for (let d = 0; d < 5 && el && el !== card && el !== document.body; d++) {
         if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
+          const br = el.getBoundingClientRect();
+          if (br.top < 80) break;
           const ca = (el.getAttribute('aria-label') || '').toLowerCase();
           const ct = (el.getAttribute('title') || '').toLowerCase();
-          if (!ca.includes('thích') && !ca.includes('like') && !ca.includes('favorite') &&
-              !ct.includes('thích') && !ct.includes('like') && !ct.includes('favorite')) {
-            log('✓ ⋮ via elementFromPoint (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
-            return el;
-          }
+          const ch = (el.getAttribute('href') || '').toLowerCase();
+          if (ca.includes('account') || ca.includes('tài khoản') || ca.includes('profile') ||
+              ca.includes('user') || ca.includes('google') || ct.includes('account') ||
+              ch.includes('accounts.google.com') || ca.includes('thích') || ca.includes('like') ||
+              ca.includes('favorite') || ct.includes('thích') || ct.includes('like') || ct.includes('favorite')) break;
+          log('✓ ⋮ via elementFromPoint (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
+          return el;
         }
         el = el.parentElement;
       }
@@ -1287,6 +1308,7 @@
     // Strategy 1: EXACT placeholder match — highest priority
     const allInputs = document.querySelectorAll('textarea, input[type="text"], input:not([type]), [contenteditable="true"]');
     for (const el of allInputs) {
+      if (!isPromptBarInput(el)) continue;
       const ph = (el.getAttribute('placeholder') || el.getAttribute('aria-placeholder') ||
                  el.getAttribute('data-placeholder') || '').toLowerCase();
       for (const p of placeholders) {
@@ -1513,6 +1535,10 @@
         if (br.width < 16 || br.height < 16) return false;
         if (br.width > 120 || br.height > 80) return false; // Canvas cards are >= 160x120px!
 
+        // Must NEVER be in the top navbar / header (y < 80)
+        if (br.top < 80) return false;
+        if (btn.closest('header, nav, [role="banner"], [class*="navbar"], [class*="header"]')) return false;
+
         // Must NOT be far above the prompt input (canvas cards and header are above)
         if (br.bottom < inputRect.top + 10) return false;
         // Must NOT be far below the composer
@@ -1526,6 +1552,13 @@
         const text = (btn.textContent || '').trim().toLowerCase();
         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
         const title = (btn.getAttribute('title') || '').toLowerCase();
+        const href = (btn.getAttribute('href') || '').toLowerCase();
+
+        // STRICT EXCLUSIONS:
+        // Exclude Google Account, user profile, avatar, ultra badge
+        if (aria.includes('account') || aria.includes('tài khoản') || aria.includes('profile') ||
+            aria.includes('user') || aria.includes('google') || title.includes('account') ||
+            title.includes('profile') || text.includes('ultra') || text === 'võ' || href.includes('accounts.google.com')) return false;
 
         // STRICT EXCLUSIONS:
         // Exclude back button, dropdowns, clear button, attachments, formats, models, etc.
