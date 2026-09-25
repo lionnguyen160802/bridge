@@ -488,43 +488,39 @@
 
   let lastFoundCharacterCard = null;
 
-  /** Click vào menu "Nhân vật" ở thanh bên trái (sidebar) */
+  /** Click vào menu "Nhân vật / Characters" ở thanh bên trái (sidebar) */
   async function clickCharactersSidebarMenu() {
-    log('🧭 Đang tìm và bấm vào menu "Nhân vật" ở thanh bên trái...');
-    showFlowToast('🧭 Đang chuyển sang mục "Nhân vật"...', 2000);
+    log('🧭 BƯỚC 1: Tìm và click menu "Nhân vật / Characters" ở thanh sidebar...');
+    showFlowToast('🧭 Đang chuyển sang mục "Nhân vật / Characters"...', 2000);
 
     // 1. Quét các phần tử bên thanh sidebar (bên trái màn hình, left < 280px)
     const sidebarItems = Array.from(document.querySelectorAll('nav, aside, [role="navigation"], ul, li, div, a, button, [role="tab"], [role="button"], [role="listitem"], span')).filter(el => {
       if (!isVisible(el)) return false;
       if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
       const r = el.getBoundingClientRect();
-      return r.left < 280 && r.top < window.innerHeight * 0.75 && r.width > 15;
+      return r.left < 280 && r.top < window.innerHeight * 0.85 && r.width > 15;
     });
 
-    // 2. Tìm phần tử có văn bản khớp chính xác hoặc bắt đầu bằng "Nhân vật" / "Characters" / link /character
+    // 2. Tìm phần tử có văn bản khớp "Nhân vật" / "Characters"
     let targetMenu = null;
     for (const el of sidebarItems) {
       const text = (el.textContent || '').trim().toLowerCase();
       const aria = (el.getAttribute('aria-label') || '').trim().toLowerCase();
-      const href = (el.getAttribute('href') || el.href || '').toLowerCase();
       
       if (text === 'nhân vật' || text === 'characters' || text === 'character' ||
           aria === 'nhân vật' || aria === 'characters' || aria === 'character' ||
-          text.startsWith('nhân vật') || text.startsWith('character') ||
-          aria.startsWith('nhân vật') || aria.startsWith('character') ||
-          href.endsWith('/character') || href.includes('/character/')) {
-        // Ưu tiên thẻ có thể click (button, a, role="tab", role="button", hoặc thẻ cha)
+          text.startsWith('nhân vật') || text.startsWith('characters') ||
+          aria.startsWith('nhân vật') || aria.startsWith('characters')) {
         const clickable = el.closest('button, a, [role="tab"], [role="button"], li') || el;
         targetMenu = clickable;
         break;
       }
     }
 
-    // 3. Dự phòng: Quét phần tử có chữ "Nhân vật" / "Characters" ở thanh bên trái
     if (!targetMenu) {
       const matchSpan = sidebarItems.find(el => {
         const t = (el.textContent || '').trim().toLowerCase();
-        return (t.includes('nhân vật') || t.includes('character') || t.includes('characters')) && t.length < 30;
+        return (t.includes('nhân vật') || t.includes('characters')) && t.length < 30;
       });
       if (matchSpan) {
         targetMenu = matchSpan.closest('button, a, [role="tab"], [role="button"], li') || matchSpan;
@@ -532,16 +528,15 @@
     }
 
     if (targetMenu) {
-      log('✓ Tìm thấy nút menu "Nhân vật": <' + targetMenu.tagName + '> "' + targetMenu.textContent.trim().substring(0, 20) + '"');
+      log('✓ Tìm thấy nút menu "Nhân vật / Characters": <' + targetMenu.tagName + '> "' + targetMenu.textContent.trim().substring(0, 20) + '"');
       scrollIntoViewIfNeeded(targetMenu);
-      simulateClick(targetMenu);
-      try { targetMenu.click(); } catch(e) {}
+      await triggerRealClick(targetMenu);
       
-      // Chờ 1.8 giây để Google Flow cập nhật lưới thẻ nhân vật
-      await new Promise(r => setTimeout(r, 1800));
+      // Chờ 1.5 giây để Google Flow cập nhật lưới thẻ nhân vật
+      await new Promise(r => setTimeout(r, 1500));
       return true;
     } else {
-      log('ℹ️ Không thấy nút menu "Nhân vật" riêng biệt (có thể đã ở sẵn trong tab hoặc màn hình thu gọn)');
+      log('ℹ️ Không thấy nút menu "Nhân vật / Characters" riêng biệt (có thể đã ở sẵn trong tab hoặc màn hình thu gọn)');
       return false;
     }
   }
@@ -585,6 +580,15 @@
     return true;
   }
 
+  /** Exclude action buttons in characters tab like "+ New character" or "Create my avatar" */
+  function isActionCard(el) {
+    if (!el) return false;
+    const text = (el.textContent || '').toLowerCase();
+    return text.includes('new character') || text.includes('tạo nhân vật') ||
+           text.includes('create my avatar') || text.includes('tạo hình đại diện') ||
+           text.includes('create character');
+  }
+
   function climbToCard(el) {
     if (!el) return null;
     let current = el;
@@ -614,7 +618,7 @@
       const alt = (img.alt || '').toLowerCase();
       if (alt && names.some(n => alt.includes(n))) {
         const card = climbToCard(img);
-        if (card && isVisible(card) && isCardElement(card)) return { card, img, method: 'alt' };
+        if (card && isVisible(card) && isCardElement(card) && !isActionCard(card)) return { card, img, method: 'alt' };
       }
     }
 
@@ -624,7 +628,7 @@
       const aria = el.getAttribute('aria-label').toLowerCase();
       if (names.some(n => aria.includes(n)) && isVisible(el)) {
         const card = climbToCard(el);
-        if (card && isVisible(card) && isCardElement(card)) {
+        if (card && isVisible(card) && isCardElement(card) && !isActionCard(card)) {
           return { card, img: card.querySelector('img'), method: 'aria-label' };
         }
       }
@@ -639,14 +643,15 @@
       // Only match elements with reasonably short text to avoid matching outer container divs
       if (text.length > 0 && text.length <= 80 && names.some(n => text.includes(n))) {
         const card = climbToCard(el);
-        if (card && isVisible(card) && isCardElement(card)) {
-          textCandidates.push({ card, img: card.querySelector('img'), textLen: text.length, method: 'text' });
+        if (card && isVisible(card) && isCardElement(card) && !isActionCard(card)) {
+          const img = card.querySelector('img');
+          textCandidates.push({ card, img, textLen: text.length, hasImg: !!img, method: 'text' });
         }
       }
     }
     if (textCandidates.length > 0) {
-      // Pick candidate with shortest text match (innermost leaf element)
-      textCandidates.sort((a, b) => a.textLen - b.textLen);
+      // Pick candidate with image first, then shortest text match
+      textCandidates.sort((a, b) => (Number(b.hasImg) - Number(a.hasImg)) || (a.textLen - b.textLen));
       return textCandidates[0];
     }
 
@@ -655,7 +660,7 @@
 
   /**
    * Find character card by character badge (person/accessibility icon)
-   * Strictly distinguishes character cards from video cards (play icon)
+   * Strictly distinguishes character cards from video cards (play icon) and action cards (New character)
    */
   function findCharacterCardByBadge() {
     const allCards = [];
@@ -663,7 +668,7 @@
       if (!isVisible(img)) continue;
       if (img.closest('#flowauto-floating-widget') || img.closest('#flowauto-toast')) continue;
       const card = climbToCard(img);
-      if (card && isCardElement(card) && !allCards.includes(card)) {
+      if (card && isCardElement(card) && !isActionCard(card) && !allCards.includes(card)) {
         allCards.push(card);
       }
     }
@@ -671,6 +676,8 @@
     for (const card of allCards) {
       // Exclude video cards: has <video> or play icon
       if (card.querySelector('video')) continue;
+      if (isActionCard(card)) continue;
+
       const cardText = (card.textContent || '').toLowerCase();
       const hasPlayIcon = card.querySelector('svg path[d*="m8 5v14l11-7z"], svg path[d*="M8 5v14l11-7z"], svg [d*="8 5"]') ||
                           Array.from(card.querySelectorAll('[aria-label]')).some(a => {
@@ -681,8 +688,8 @@
 
       // Check for character indicator:
       // a) Text matching character / untitled / unnamed / person
-      if (cardText.includes('untitled character') || cardText.includes('nhân vật') ||
-          cardText.includes('character') || cardText.includes('unnamed character')) {
+      if (cardText.includes('untitled character') || cardText.includes('nhân vật chưa có tên') ||
+          cardText.includes('unnamed character') || cardText.includes('nhan vat chua co ten')) {
         return { card, img: card.querySelector('img'), method: 'card-text-character' };
       }
 
@@ -3614,41 +3621,40 @@
       // ── Step 1: Find character card ──
       case 'findCharacter': {
         const charName = (params.name || '').trim();
-        log('🔍 Bắt đầu tìm thẻ nhân vật (tên yêu cầu: "' + (charName || 'Nhân vật chưa có tên') + '")...');
+        log('🧭 BƯỚC 1: Bắt buộc bấm chuyển sang menu "Nhân vật / Characters" ở thanh bên trái trước...');
+        showFlowToast('🧭 Đang chuyển sang mục "Nhân vật / Characters"...', 2000);
+
+        // BẮT BUỘC BƯỚC 1: Click menu "Nhân vật / Characters" ở sidebar
+        await clickCharactersSidebarMenu();
+
+        // Xóa bộ lọc tìm kiếm cũ nếu còn sót
+        const preSearchBar = findSearchBar();
+        if (preSearchBar && preSearchBar.value && preSearchBar.value.trim().length > 0) {
+          log('🧹 Clearing leftover search filter...');
+          clearSearchInput(preSearchBar);
+          await new Promise(res => setTimeout(res, 800));
+        }
+
+        log('🔍 Bắt đầu tìm thẻ nhân vật trong mục Nhân vật (tên yêu cầu: "' + (charName || 'Untitled character') + '")...');
 
         let r = null;
 
-        // 0. CHECK FIRST: Thẻ nhân vật đã hiển thị sẵn trên màn hình/canvas hay chưa?
-        // Nếu đã có sẵn trên màn hình, KHÔNG bấm menu bên trái và KHÔNG clear search bar để tránh làm xáo trộn giao diện!
+        // 1. Thử tìm theo tên chỉ định nếu có (và không phải tên mặc định)
         if (charName && !isDefaultCharacterName(charName)) {
           r = findCharacterCard(charName);
         }
+
+        // 2. Tìm thẻ mang tên mặc định "Untitled character" (English) hoặc "Nhân vật chưa có tên" (Vietnamese)
         if (!r) {
-          r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCard('Untitled character');
+          r = findCharacterCard('Untitled character') || findCharacterCard('Nhân vật chưa có tên');
         }
+
+        // 3. Tìm thẻ nhân vật qua huy hiệu nhân vật (loại trừ các nút New character / Create avatar)
         if (!r) {
           r = findCharacterCardByBadge();
         }
 
-        // 1. Nếu chưa thấy ngay trên màn hình, thử click menu "Nhân vật" / "Characters" ở sidebar dự phòng
-        if (!r) {
-          log('🧭 Thẻ chưa có trên màn hình, thử mở mục "Nhân vật" từ thanh sidebar...');
-          await clickCharactersSidebarMenu();
-          await new Promise(res => setTimeout(res, 800));
-
-          // Thử tìm lại theo tên
-          if (charName && !isDefaultCharacterName(charName)) {
-            r = findCharacterCard(charName);
-          }
-          if (!r) {
-            r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCard('Untitled character');
-          }
-          if (!r) {
-            r = findCharacterCardByBadge();
-          }
-        }
-
-        // 2. Nếu vẫn chưa thấy, cuộn nhẹ 350px để Flow nạp thêm thẻ từ DOM
+        // 4. Nếu chưa thấy trên màn hình, cuộn nhẹ 350px để nạp thêm thẻ từ DOM
         if (!r) {
           window.scrollBy({ top: 350, behavior: 'smooth' });
           await new Promise(res => setTimeout(res, 800));
@@ -3656,14 +3662,11 @@
             r = findCharacterCard(charName);
           }
           if (!r) {
-            r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCard('Untitled character');
-          }
-          if (!r) {
-            r = findCharacterCardByBadge();
+            r = findCharacterCard('Untitled character') || findCharacterCard('Nhân vật chưa có tên') || findCharacterCardByBadge();
           }
         }
 
-        // 3. Nếu vẫn chưa thấy, dùng Search Bar để tìm kiếm
+        // 5. Nếu vẫn chưa thấy, dùng Search Bar để tìm kiếm
         if (!r) {
           const searchInput = findSearchBar();
           if (searchInput) {
@@ -3678,7 +3681,7 @@
             searchInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
             searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
 
-            await new Promise(res => setTimeout(res, 2000));
+            await new Promise(res => setTimeout(res, 1800));
             r = (charName ? findCharacterCard(charName) : null) ||
                 findCharacterCard('Untitled character') ||
                 findCharacterCard('Nhân vật chưa có tên') ||
@@ -3692,18 +3695,18 @@
               searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
               searchInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
               searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-              await new Promise(res => setTimeout(res, 2000));
+              await new Promise(res => setTimeout(res, 1800));
               r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCardByBadge();
             }
 
             clearSearchInput(searchInput);
-            await new Promise(res => setTimeout(res, 1000));
+            await new Promise(res => setTimeout(res, 800));
           }
         }
 
-        // 4. Fallback cuối cùng: Lấy thẻ trên canvas không phải là video
+        // 6. Fallback cuối cùng: Tìm thẻ nhân vật có ảnh trên canvas (loại trừ các nút New character / Create avatar)
         if (!r) {
-          log('🔍 Fallback: Tìm thẻ nhân vật bằng huy hiệu / non-video media card trên canvas...');
+          log('🔍 Fallback: Tìm thẻ nhân vật có ảnh trên canvas...');
           r = findCharacterCardByBadge() || findMediaCardOnCanvas(null);
         }
 
@@ -3712,10 +3715,10 @@
           scrollIntoViewIfNeeded(r.card);
           await new Promise(res => setTimeout(res, 500));
           log('✓ Đã tìm thấy thẻ nhân vật via ' + r.method);
-          sendResult(action, true, { log: '✓ Tìm thấy: ' + (charName || 'Nhân vật chưa có tên') + ' (' + r.method + ')' });
+          sendResult(action, true, { log: '✓ Tìm thấy: ' + (charName || 'Untitled character') + ' (' + r.method + ')' });
         } else {
           lastFoundCharacterCard = null;
-          sendResult(action, false, null, 'Không tìm thấy thẻ "' + (charName || 'Nhân vật chưa có tên') + '"');
+          sendResult(action, false, null, 'Không tìm thấy thẻ "' + (charName || 'Untitled character') + '" trong mục Nhân vật');
         }
         break;
       }
