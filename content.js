@@ -469,6 +469,21 @@ window.addEventListener('message', (event) => {
       }, '*');
     });
   }
+
+  if (event.data.type === 'FLOW_DEBUGGER_HOVER') {
+    chrome.runtime.sendMessage({
+      type: 'DEBUGGER_HOVER',
+      x: event.data.x,
+      y: event.data.y
+    }, (response) => {
+      const err = chrome.runtime.lastError;
+      window.postMessage({
+        type: 'FLOW_DEBUGGER_HOVER_RESULT',
+        success: !err && !!response?.success,
+        error: err ? err.message : response?.error
+      }, '*');
+    });
+  }
 });
 
 // ==========================================

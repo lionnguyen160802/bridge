@@ -192,6 +192,19 @@
     return true;
   }
 
+  async function triggerRealHover(el, offsetX, offsetY) {
+    if (!el) return false;
+    scrollIntoViewIfNeeded(el);
+    simulateHover(el);
+    const rect = el.getBoundingClientRect();
+    const x = Math.round(offsetX !== undefined ? rect.left + offsetX : rect.left + rect.width / 2);
+    const y = Math.round(offsetY !== undefined ? rect.top + offsetY : rect.top + rect.height / 2);
+    if (x > 0 && y > 0) {
+      window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x, y }, '*');
+    }
+    return true;
+  }
+
   function simulateClick(el) {
     if (!el) return false;
     scrollIntoViewIfNeeded(el);
@@ -562,6 +575,34 @@
            n === 'untitled';
   }
 
+  function isCardElement(el) {
+    if (!el || el === document.body || el === document.documentElement) return false;
+    if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) return false;
+    const r = el.getBoundingClientRect();
+    if (r.top < 60) return false; // In header / navbar
+    if (r.width < 100 || r.width > 700) return false; // Card width bounds
+    if (r.height < 120 || r.height > 850) return false; // Card height bounds
+    return true;
+  }
+
+  function climbToCard(el) {
+    if (!el) return null;
+    let current = el;
+    let bestCandidate = null;
+    for (let d = 0; d < 12 && current && current !== document.body; d++) {
+      if (isCardElement(current)) {
+        bestCandidate = current;
+        const role = current.getAttribute('role');
+        const ti = current.getAttribute('tabindex');
+        if (role === 'button' || role === 'listitem' || role === 'option' || ti === '0' || ti === '-1') {
+          return current;
+        }
+      }
+      current = current.parentElement;
+    }
+    return bestCandidate || el.closest('[role="button"], [role="listitem"]') || el.parentElement?.parentElement || el;
+  }
+
   /** Find character card by name (supports bilingual matching) */
   function findCharacterCard(name) {
     if (!name) return null;
@@ -573,51 +614,97 @@
       const alt = (img.alt || '').toLowerCase();
       if (alt && names.some(n => alt.includes(n))) {
         const card = climbToCard(img);
-        if (card && isVisible(card)) return { card, img, method: 'alt' };
+        if (card && isVisible(card) && isCardElement(card)) return { card, img, method: 'alt' };
       }
     }
+
     // Strategy 2: aria-label
     for (const el of document.querySelectorAll('[aria-label]')) {
       if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
       const aria = el.getAttribute('aria-label').toLowerCase();
       if (names.some(n => aria.includes(n)) && isVisible(el)) {
-        return { card: climbToCard(el), img: el.querySelector('img'), method: 'aria-label' };
-      }
-    }
-    // Strategy 3: broad text content search across common tags
-    for (const el of document.querySelectorAll('div, span, p, [role="button"], [role="listitem"], [tabindex]')) {
-      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
-      // Only match if this element's direct or trimmed text includes any equivalent name
-      const text = (el.textContent?.trim().toLowerCase() || '');
-      if (names.some(n => text.includes(n)) && isVisible(el)) {
         const card = climbToCard(el);
-        if (card && isVisible(card) && card !== document.body) {
-          const img = card.querySelector('img');
-          return { card, img, method: 'text' };
+        if (card && isVisible(card) && isCardElement(card)) {
+          return { card, img: card.querySelector('img'), method: 'aria-label' };
         }
       }
     }
+
+    // Strategy 3: text content search on LEAF/near-leaf elements (to avoid matching container divs)
+    const textCandidates = [];
+    for (const el of document.querySelectorAll('div, span, p, h1, h2, h3, h4, h5, h6, [role="button"], [role="listitem"]')) {
+      if (el.closest('#flowauto-floating-widget') || el.closest('#flowauto-toast')) continue;
+      if (!isVisible(el)) continue;
+      const text = (el.textContent?.trim().toLowerCase() || '');
+      // Only match elements with reasonably short text to avoid matching outer container divs
+      if (text.length > 0 && text.length <= 80 && names.some(n => text.includes(n))) {
+        const card = climbToCard(el);
+        if (card && isVisible(card) && isCardElement(card)) {
+          textCandidates.push({ card, img: card.querySelector('img'), textLen: text.length, method: 'text' });
+        }
+      }
+    }
+    if (textCandidates.length > 0) {
+      // Pick candidate with shortest text match (innermost leaf element)
+      textCandidates.sort((a, b) => a.textLen - b.textLen);
+      return textCandidates[0];
+    }
+
     return null;
   }
 
-  function climbToCard(el) {
-    let current = el;
-    for (let d = 0; d < 12 && current && current !== document.body; d++) {
-      const role = current.getAttribute('role');
-      const ti = current.getAttribute('tabindex');
-      if (role === 'button' || role === 'listitem' || role === 'option' ||
-        current.tagName === 'BUTTON' || current.tagName === 'A' ||
-        ti === '0' || ti === '-1') {
-        return current;
+  /**
+   * Find character card by character badge (person/accessibility icon)
+   * Strictly distinguishes character cards from video cards (play icon)
+   */
+  function findCharacterCardByBadge() {
+    const allCards = [];
+    for (const img of document.querySelectorAll('img')) {
+      if (!isVisible(img)) continue;
+      if (img.closest('#flowauto-floating-widget') || img.closest('#flowauto-toast')) continue;
+      const card = climbToCard(img);
+      if (card && isCardElement(card) && !allCards.includes(card)) {
+        allCards.push(card);
       }
-      current = current.parentElement;
     }
-    return el.parentElement?.parentElement || el.parentElement;
+
+    for (const card of allCards) {
+      // Exclude video cards: has <video> or play icon
+      if (card.querySelector('video')) continue;
+      const cardText = (card.textContent || '').toLowerCase();
+      const hasPlayIcon = card.querySelector('svg path[d*="m8 5v14l11-7z"], svg path[d*="M8 5v14l11-7z"], svg [d*="8 5"]') ||
+                          Array.from(card.querySelectorAll('[aria-label]')).some(a => {
+                            const aria = (a.getAttribute('aria-label') || '').toLowerCase();
+                            return aria.includes('play') || aria.includes('phát');
+                          });
+      if (hasPlayIcon) continue;
+
+      // Check for character indicator:
+      // a) Text matching character / untitled / unnamed / person
+      if (cardText.includes('untitled character') || cardText.includes('nhân vật') ||
+          cardText.includes('character') || cardText.includes('unnamed character')) {
+        return { card, img: card.querySelector('img'), method: 'card-text-character' };
+      }
+
+      // b) Check for standing figure / person / accessibility SVG badge in top-left area
+      const svgs = card.querySelectorAll('svg');
+      for (const svg of svgs) {
+        const sr = svg.getBoundingClientRect();
+        const cr = card.getBoundingClientRect();
+        if (sr.left < cr.left + 80 && sr.top < cr.top + 80) {
+          const svgHtml = svg.outerHTML.toLowerCase();
+          if (!svgHtml.includes('play') && !svgHtml.includes('pause')) {
+            return { card, img: card.querySelector('img'), method: 'badge-icon' };
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   /** Find a media card on Flow's canvas by hint (filename / part of name) or newest */
   function findMediaCardOnCanvas(hint) {
-    // 1. If hint (like filename or part of filename or previous name) is provided:
     if (hint && typeof hint === 'string' && hint.trim()) {
       const clean = hint.replace(/\.[^/.]+$/, '').trim().toLowerCase();
       const prefix = clean.substring(0, 12);
@@ -627,7 +714,7 @@
         const text = (el.textContent || '').trim().toLowerCase();
         if (text && (text.includes(clean) || (prefix.length >= 4 && text.includes(prefix)))) {
           const card = climbToCard(el);
-          if (card && isVisible(card) && card !== document.body) {
+          if (card && isVisible(card) && isCardElement(card)) {
             const img = card.querySelector('img');
             log('✓ Found media card matching hint "' + hint + '"');
             return { card, img };
@@ -636,26 +723,28 @@
       }
     }
 
-    // 2. Look for media card images in the main workspace (excluding header avatar / sidebar)
+    // Canvas fallback: collect media cards in workspace (excluding header avatar / sidebar)
     const candidates = [];
     for (const img of document.querySelectorAll('img')) {
       if (!isVisible(img)) continue;
       if (img.closest('#flowauto-floating-widget') || img.closest('#flowauto-toast')) continue;
 
       const r = img.getBoundingClientRect();
-      // Must be a media card image: width >= 80, height >= 80, y > 50 (below header), x > 160 (right of sidebar)
-      if (r.width >= 80 && r.height >= 80 && r.top >= 50 && r.left >= 160) {
+      if (r.width >= 80 && r.height >= 80 && r.top >= 60 && r.left >= 160) {
         const card = climbToCard(img);
-        if (card && card !== document.body) {
-          candidates.push({ card, img, top: r.top, left: r.left });
+        if (card && isCardElement(card)) {
+          // If looking for character / canvas fallback, detect if it's a video card
+          const isVideo = card.querySelector('video') ||
+                          card.querySelector('svg path[d*="m8 5v14l11-7z"], svg path[d*="M8 5v14l11-7z"]');
+          candidates.push({ card, img, top: r.top, left: r.left, isVideo: !!isVideo });
         }
       }
     }
 
     if (candidates.length > 0) {
-      // Flow grid puts cards in rows. Top-left card is candidates[0]
-      candidates.sort((a, b) => (a.top - b.top) || (a.left - b.left));
-      log('✓ Found ' + candidates.length + ' media card(s) on canvas, using first card');
+      // Prioritize non-video cards first
+      candidates.sort((a, b) => (Number(a.isVideo) - Number(b.isVideo)) || (a.top - b.top) || (a.left - b.left));
+      log('✓ Found ' + candidates.length + ' media card(s) on canvas (prefer non-video card)');
       return candidates[0];
     }
 
@@ -668,7 +757,9 @@
     let img = null;
 
     if (typeof characterNameOrCard === 'string') {
-      const cardResult = findCharacterCard(characterNameOrCard) || findMediaCardOnCanvas(characterNameOrCard);
+      const cardResult = findCharacterCard(characterNameOrCard) ||
+                         findCharacterCardByBadge() ||
+                         findMediaCardOnCanvas(characterNameOrCard);
       if (cardResult) {
         card = cardResult.card;
         img = cardResult.img;
@@ -680,95 +771,121 @@
 
     if (!card) return null;
 
-    log('🔍 Searching ⋮ on card (tag=' + card.tagName + ')');
+    const cr = card.getBoundingClientRect();
+    log('🔍 Searching ⋮ on card: rect=(' + Math.round(cr.left) + ',' + Math.round(cr.top) + ',' + Math.round(cr.width) + 'x' + Math.round(cr.height) + ')');
 
-    // Strategy 1: Buttons inside or around the card
-    const area = card.parentElement?.parentElement || card.parentElement || card;
-    const btns = Array.from(new Set([
-      ...card.querySelectorAll('button, [role="button"]'),
-      ...area.querySelectorAll('button, [role="button"]')
-    ]));
-    for (const btn of btns) {
+    // ONLY search buttons that belong to THIS CARD!
+    const allButtons = Array.from(card.querySelectorAll('button, [role="button"], div[tabindex="0"]'));
+
+    // Also check immediate sibling/overlay buttons if geometrically located in top-right of this card
+    const parent = card.parentElement;
+    if (parent && parent !== document.body) {
+      for (const b of parent.querySelectorAll('button, [role="button"]')) {
+        if (!allButtons.includes(b)) {
+          const br = b.getBoundingClientRect();
+          if (br.left >= cr.left && br.right <= cr.right + 25 &&
+              br.top >= cr.top - 10 && br.top <= cr.top + 80) {
+            allButtons.push(b);
+          }
+        }
+      }
+    }
+
+    for (const btn of allButtons) {
       if (btn === card) continue;
       const br = btn.getBoundingClientRect();
       // Must NEVER pick buttons in top navbar or header (y < 80)
       if (br.top < 80) continue;
       if (btn.closest('header, nav, [role="banner"], [class*="navbar"], [class*="header"]')) continue;
 
+      // Must be geometrically near or inside the card
+      if (br.right > cr.right + 30 || br.left < cr.left - 10 || br.top < cr.top - 15 || br.bottom > cr.bottom + 15) continue;
+
       const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
       const title = (btn.getAttribute('title') || '').toLowerCase();
       const text = (btn.textContent || '').trim();
       const href = (btn.getAttribute('href') || '').toLowerCase();
 
-      // Exclude user profile, account, avatar, favorite/heart
+      // Exclude accounts, profiles, hearts/favorites, downloads, delete
       if (aria.includes('account') || aria.includes('tài khoản') || aria.includes('profile') ||
           aria.includes('user') || aria.includes('google') || title.includes('account') ||
           title.includes('profile') || href.includes('accounts.google.com') ||
           aria.includes('thích') || aria.includes('like') || aria.includes('favorite') ||
           title.includes('thích') || title.includes('favorite') || title.includes('like')) continue;
 
-      const has3DotsSvg = btn.querySelector('svg path[d*="m12 8"], svg path[d*="M12 8"], svg [d*="12 2"]') ||
+      const has3DotsSvg = btn.querySelector('svg path[d*="m12 8"], svg path[d*="M12 8"], svg [d*="12 2"], svg [d*="M12,"]') ||
                           btn.querySelectorAll('circle').length >= 3;
 
       if (text === '⋮' || text === '︙' || text === '…' ||
           aria.includes('khác') || aria.includes('more') || aria.includes('menu') || aria.includes('options') ||
           title.includes('khác') || title.includes('more') || title.includes('options') ||
           has3DotsSvg) {
-        if (isVisible(btn)) { log('✓ ⋮ via button text/aria/svg'); return btn; }
-      }
-    }
-
-    // Strategy 2: Check buttons in top-right corner of the card
-    const target = img || card;
-    const cr = target.getBoundingClientRect();
-    for (const btn of btns) {
-      if (btn === card) continue;
-      const br = btn.getBoundingClientRect();
-      if (br.top < 80) continue;
-      if (btn.closest('header, nav, [role="banner"], [class*="navbar"], [class*="header"]')) continue;
-
-      const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-      const title = (btn.getAttribute('title') || '').toLowerCase();
-      const href = (btn.getAttribute('href') || '').toLowerCase();
-      if (aria.includes('account') || aria.includes('tài khoản') || aria.includes('profile') ||
-          aria.includes('user') || aria.includes('google') || title.includes('account') ||
-          title.includes('profile') || href.includes('accounts.google.com') ||
-          aria.includes('thích') || aria.includes('like') || aria.includes('favorite') ||
-          title.includes('thích') || title.includes('like') || title.includes('favorite')) continue;
-
-      if (Math.abs(br.right - cr.right) < 70 && Math.abs(br.top - cr.top) < 70 && br.width > 0 && br.width < 60) {
-        log('✓ ⋮ via top-right geometry (' + Math.round(br.left) + ',' + Math.round(br.top) + ')');
+        log('✓ Found card ⋮ via button text/aria/svg');
         return btn;
       }
     }
 
-    // Strategy 3: elementFromPoint probes at top-right corner
+    // Top-right corner probe inside the card
+    for (const btn of allButtons) {
+      if (btn === card) continue;
+      const br = btn.getBoundingClientRect();
+      if (br.top < 80) continue;
+      if (Math.abs(br.right - cr.right) < 70 && Math.abs(br.top - cr.top) < 70 && br.width > 0 && br.width < 60) {
+        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+        if (!aria.includes('favorite') && !aria.includes('like') && !aria.includes('thích')) {
+          log('✓ Found card ⋮ via top-right geometry');
+          return btn;
+        }
+      }
+    }
+
+    // Probe via elementFromPoint at top-right
     const probes = [
       { x: cr.right - 18, y: cr.top + 18 }, { x: cr.right - 12, y: cr.top + 24 },
       { x: cr.right - 26, y: cr.top + 14 }, { x: cr.right - 10, y: cr.top + 10 },
       { x: cr.right - 34, y: cr.top + 20 }
     ];
     for (const p of probes) {
-      if (p.x < 0 || p.y < 80) continue; // NEVER in navbar
+      if (p.x < 0 || p.y < 80) continue;
       let el = document.elementFromPoint(p.x, p.y);
       for (let d = 0; d < 5 && el && el !== card && el !== document.body; d++) {
         if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
           const br = el.getBoundingClientRect();
           if (br.top < 80) break;
           const ca = (el.getAttribute('aria-label') || '').toLowerCase();
-          const ct = (el.getAttribute('title') || '').toLowerCase();
-          const ch = (el.getAttribute('href') || '').toLowerCase();
-          if (ca.includes('account') || ca.includes('tài khoản') || ca.includes('profile') ||
-              ca.includes('user') || ca.includes('google') || ct.includes('account') ||
-              ch.includes('accounts.google.com') || ca.includes('thích') || ca.includes('like') ||
-              ca.includes('favorite') || ct.includes('thích') || ct.includes('like') || ct.includes('favorite')) break;
-          log('✓ ⋮ via elementFromPoint (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
+          if (ca.includes('account') || ca.includes('profile') || ca.includes('thích') || ca.includes('favorite')) break;
+          log('✓ Found card ⋮ via elementFromPoint (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
           return el;
         }
         el = el.parentElement;
       }
     }
 
+    return null;
+  }
+
+  /** Find "Add to prompt" / "Thêm vào câu lệnh" in dropdown menu or context popup */
+  function findAddToPromptButton() {
+    const candidates = [
+      'thêm vào câu lệnh',
+      'add to prompt',
+      'add to prompt bar',
+      'thêm vào thanh câu lệnh',
+      'thêm vào lời nhắc',
+      'add to prompt...'
+    ];
+    for (const c of candidates) {
+      const btn = findButtonByText(c);
+      if (btn && isVisible(btn)) return btn;
+    }
+    for (const el of document.querySelectorAll('[role="menuitem"], [role="option"], li, button, [role="button"]')) {
+      if (!isVisible(el)) continue;
+      const text = (el.textContent || '').trim().toLowerCase();
+      const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      if (candidates.some(c => text.includes(c) || aria.includes(c))) {
+        return el;
+      }
+    }
     return null;
   }
 
@@ -3496,44 +3613,61 @@
 
       // ── Step 1: Find character card ──
       case 'findCharacter': {
-        // Bước 1: Click vào menu "Nhân vật" / "Characters" ở thanh bên trái
-        await clickCharactersSidebarMenu();
-
-        // Xóa bộ lọc tìm kiếm cũ nếu còn sót
-        const preSearchBar = findSearchBar();
-        if (preSearchBar && preSearchBar.value && preSearchBar.value.trim().length > 0) {
-          log('🧹 Clearing leftover search filter...');
-          clearSearchInput(preSearchBar);
-          await new Promise(res => setTimeout(res, 1200));
-        }
-
         const charName = (params.name || '').trim();
         log('🔍 Bắt đầu tìm thẻ nhân vật (tên yêu cầu: "' + (charName || 'Nhân vật chưa có tên') + '")...');
 
         let r = null;
 
-        // 1. Thử tìm theo tên chỉ định nếu có (và không phải tên mặc định)
+        // 0. CHECK FIRST: Thẻ nhân vật đã hiển thị sẵn trên màn hình/canvas hay chưa?
+        // Nếu đã có sẵn trên màn hình, KHÔNG bấm menu bên trái và KHÔNG clear search bar để tránh làm xáo trộn giao diện!
         if (charName && !isDefaultCharacterName(charName)) {
           r = findCharacterCard(charName);
-          // Nếu chưa thấy ngay, cuộn nhẹ xuống 350px để Flow nạp thêm thẻ rồi tìm lại
-          if (!r) {
-            window.scrollBy({ top: 350, behavior: 'smooth' });
-            await new Promise(res => setTimeout(res, 800));
+        }
+        if (!r) {
+          r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCard('Untitled character');
+        }
+        if (!r) {
+          r = findCharacterCardByBadge();
+        }
+
+        // 1. Nếu chưa thấy ngay trên màn hình, thử click menu "Nhân vật" / "Characters" ở sidebar dự phòng
+        if (!r) {
+          log('🧭 Thẻ chưa có trên màn hình, thử mở mục "Nhân vật" từ thanh sidebar...');
+          await clickCharactersSidebarMenu();
+          await new Promise(res => setTimeout(res, 800));
+
+          // Thử tìm lại theo tên
+          if (charName && !isDefaultCharacterName(charName)) {
             r = findCharacterCard(charName);
+          }
+          if (!r) {
+            r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCard('Untitled character');
+          }
+          if (!r) {
+            r = findCharacterCardByBadge();
           }
         }
 
-        // 2. Tìm đến thẻ "Nhân vật chưa có tên" / "Unnamed character" (tự động khớp cả 2 ngôn ngữ qua getEquivalentNames)
+        // 2. Nếu vẫn chưa thấy, cuộn nhẹ 350px để Flow nạp thêm thẻ từ DOM
         if (!r) {
-          log('🔍 Tìm thẻ mang tên "Nhân vật chưa có tên" / "Unnamed character"...');
-          r = findCharacterCard('Nhân vật chưa có tên');
+          window.scrollBy({ top: 350, behavior: 'smooth' });
+          await new Promise(res => setTimeout(res, 800));
+          if (charName && !isDefaultCharacterName(charName)) {
+            r = findCharacterCard(charName);
+          }
+          if (!r) {
+            r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCard('Untitled character');
+          }
+          if (!r) {
+            r = findCharacterCardByBadge();
+          }
         }
 
-        // 3. Nếu chưa thấy trên màn hình, thử gõ search bar để tìm kiếm
+        // 3. Nếu vẫn chưa thấy, dùng Search Bar để tìm kiếm
         if (!r) {
           const searchInput = findSearchBar();
           if (searchInput) {
-            const queryName = (charName && !isDefaultCharacterName(charName)) ? charName : 'Nhân vật chưa có tên';
+            const queryName = (charName && !isDefaultCharacterName(charName)) ? charName : 'Untitled character';
             log('🔍 Thử lọc bằng Search Bar: "' + queryName + '"...');
             clearSearchInput(searchInput);
             await new Promise(res => setTimeout(res, 500));
@@ -3545,41 +3679,43 @@
             searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
 
             await new Promise(res => setTimeout(res, 2000));
-            r = (charName ? findCharacterCard(charName) : null) || findCharacterCard('Nhân vật chưa có tên');
+            r = (charName ? findCharacterCard(charName) : null) ||
+                findCharacterCard('Untitled character') ||
+                findCharacterCard('Nhân vật chưa có tên') ||
+                findCharacterCardByBadge();
 
-            // Nếu trên giao diện tiếng Anh không thấy, thử tìm với "Unnamed character"
+            // Nếu trên giao diện tiếng Việt chưa thấy, thử tìm với "Nhân vật chưa có tên"
             if (!r && isDefaultCharacterName(queryName)) {
               clearSearchInput(searchInput);
               await new Promise(res => setTimeout(res, 400));
-              injectTextToReactInput(searchInput, 'Unnamed character');
+              injectTextToReactInput(searchInput, 'Nhân vật chưa có tên');
               searchInput.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
               searchInput.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
               searchInput.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
               await new Promise(res => setTimeout(res, 2000));
-              r = findCharacterCard('Unnamed character');
+              r = findCharacterCard('Nhân vật chưa có tên') || findCharacterCardByBadge();
             }
 
-            // Xóa search bar sau khi tìm để phục hồi lưới thẻ
             clearSearchInput(searchInput);
-            await new Promise(res => setTimeout(res, 1200));
+            await new Promise(res => setTimeout(res, 1000));
           }
         }
 
-        // 4. Fallback đặc biệt: Đã ở trong mục "Nhân vật", lấy thẻ nhân vật đầu tiên trong lưới
+        // 4. Fallback cuối cùng: Lấy thẻ trên canvas không phải là video
         if (!r) {
-          log('🔍 Fallback: Lấy thẻ nhân vật đầu tiên trong mục "Nhân vật"...');
-          r = findMediaCardOnCanvas(null);
+          log('🔍 Fallback: Tìm thẻ nhân vật bằng huy hiệu / non-video media card trên canvas...');
+          r = findCharacterCardByBadge() || findMediaCardOnCanvas(null);
         }
 
         if (r) {
           lastFoundCharacterCard = r;
           scrollIntoViewIfNeeded(r.card);
-          await new Promise(res => setTimeout(res, 600));
+          await new Promise(res => setTimeout(res, 500));
           log('✓ Đã tìm thấy thẻ nhân vật via ' + r.method);
           sendResult(action, true, { log: '✓ Tìm thấy: ' + (charName || 'Nhân vật chưa có tên') + ' (' + r.method + ')' });
         } else {
           lastFoundCharacterCard = null;
-          sendResult(action, false, null, 'Không tìm thấy thẻ "' + (charName || 'Nhân vật chưa có tên') + '" trong mục Nhân vật');
+          sendResult(action, false, null, 'Không tìm thấy thẻ "' + (charName || 'Nhân vật chưa có tên') + '"');
         }
         break;
       }
@@ -3588,19 +3724,24 @@
       case 'hoverCharacter': {
         const r = (lastFoundCharacterCard && isVisible(lastFoundCharacterCard.card))
           ? lastFoundCharacterCard
-          : (findCharacterCard(params.name) || findCharacterCard('Nhân vật chưa có tên') || findMediaCardOnCanvas(null));
+          : (findCharacterCard(params.name) || findCharacterCard('Untitled character') || findCharacterCard('Nhân vật chưa có tên') || findCharacterCardByBadge() || findMediaCardOnCanvas(null));
 
         if (r) {
           lastFoundCharacterCard = r;
           scrollIntoViewIfNeeded(r.card);
-          await new Promise(res => setTimeout(res, 400));
-          simulateHover(r.card);
-          log('✓ Hover triggered: ' + (params.name || 'Nhân vật chưa có tên'));
-          // Pacing: Chờ 1.2s để Flow kịp hiển thị nút ⋮ và trái tim ở góc thẻ
-          await new Promise(res => setTimeout(res, 1200));
-          sendResult(action, true, { log: '✓ Hover triggered: ' + (params.name || 'Nhân vật chưa có tên') });
+          await new Promise(res => setTimeout(res, 300));
+
+          // Trigger real hardware hover via CDP to reveal CSS :hover buttons
+          await triggerRealHover(r.card);
+          const cr = r.card.getBoundingClientRect();
+          // Also hover near top-right corner where ⋮ and heart buttons reside
+          window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x: Math.round(cr.right - 25), y: Math.round(cr.top + 25) }, '*');
+
+          log('✓ Hover triggered on character card: ' + (params.name || 'Untitled character'));
+          await new Promise(res => setTimeout(res, 800));
+          sendResult(action, true, { log: '✓ Hover triggered: ' + (params.name || 'Untitled character') });
         } else {
-          sendResult(action, false, null, 'Cannot hover: ' + (params.name || 'Nhân vật chưa có tên'));
+          sendResult(action, false, null, 'Cannot hover: ' + (params.name || 'Untitled character'));
         }
         break;
       }
@@ -3609,51 +3750,49 @@
       case 'clickMoreMenu': {
         const cardResult = (lastFoundCharacterCard && isVisible(lastFoundCharacterCard.card))
           ? lastFoundCharacterCard
-          : (findCharacterCard(params.name) || findCharacterCard('Nhân vật chưa có tên') || findMediaCardOnCanvas(null));
+          : (findCharacterCard(params.name) || findCharacterCard('Untitled character') || findCharacterCard('Nhân vật chưa có tên') || findCharacterCardByBadge() || findMediaCardOnCanvas(null));
 
         if (cardResult) {
           lastFoundCharacterCard = cardResult;
           scrollIntoViewIfNeeded(cardResult.card);
-          await new Promise(res => setTimeout(res, 300));
-          simulateHover(cardResult.card);
+          await triggerRealHover(cardResult.card);
+          const cr = cardResult.card.getBoundingClientRect();
+          window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x: Math.round(cr.right - 25), y: Math.round(cr.top + 25) }, '*');
           await new Promise(res => setTimeout(res, 500));
         }
 
-        // Thử tìm nút ⋮ lặp lại đến 5 lần nếu chưa hiển thị ngay (mỗi lần cách 400ms)
+        // Tìm nút ⋮ trên thẻ
         let btn = null;
         for (let attempt = 0; attempt < 5; attempt++) {
           btn = (cardResult ? findMoreButton(cardResult.card) : null) ||
                 findMoreButton(params.name) ||
+                findMoreButton('Untitled character') ||
                 findMoreButton('Nhân vật chưa có tên');
-          if (btn && isVisible(btn)) break;
-          if (cardResult) simulateHover(cardResult.card);
+          if (btn) break;
+          if (cardResult) {
+            await triggerRealHover(cardResult.card);
+            const cr = cardResult.card.getBoundingClientRect();
+            window.postMessage({ type: 'FLOW_DEBUGGER_HOVER', x: Math.round(cr.right - 25), y: Math.round(cr.top + 25) }, '*');
+          }
           await new Promise(res => setTimeout(res, 400));
         }
 
         if (btn) {
           scrollIntoViewIfNeeded(btn);
-          simulateHover(btn);
-          await new Promise(res => setTimeout(res, 200));
-          simulateClick(btn);
-          try { btn.click(); } catch(e) {}
-          log('✓ Clicked ⋮ button');
-          // Pacing: Chờ 800ms để menu ngữ cảnh xổ xuống
+          log('🖱️ Clicking ⋮ button with real click...');
+          await triggerRealClick(btn);
+          // Chờ 800ms để context menu hiển thị
           await new Promise(res => setTimeout(res, 800));
-          sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + (params.name || 'Nhân vật chưa có tên') });
+          sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + (params.name || 'Untitled character') });
         } else {
-          sendResult(action, false, null, '⋮ button not found on card: ' + (params.name || 'Nhân vật chưa có tên'));
+          sendResult(action, false, null, '⋮ button not found on character card');
         }
         break;
       }
 
       // ── Step 4: Wait for dropdown menu ──
       case 'waitMenu': {
-        const btn = await waitForCondition(() =>
-          findButtonByText('Thêm vào câu lệnh') ||
-          findButtonByText('Add to prompt') ||
-          findButtonByText('Add to prompt bar'),
-          6000
-        );
+        const btn = await waitForCondition(() => findAddToPromptButton(), 6000);
         if (btn) {
           await new Promise(res => setTimeout(res, 300));
           sendResult(action, true, { log: '✓ Menu detected: "' + btn.textContent.trim().substring(0, 30) + '"' });
@@ -3665,17 +3804,12 @@
 
       // ── Step 5: Click "Thêm vào câu lệnh" / "Add to prompt" ──
       case 'clickAddButton': {
-        const btn = findButtonByText('Thêm vào câu lệnh') ||
-                    findButtonByText('Add to prompt') ||
-                    findButtonByText('Add to prompt bar');
+        const btn = findAddToPromptButton();
         if (btn) {
           scrollIntoViewIfNeeded(btn);
-          simulateHover(btn);
-          await new Promise(res => setTimeout(res, 200));
-          simulateClick(btn);
-          try { btn.click(); } catch(e) {}
           const label = btn.textContent.trim().substring(0, 30);
-          log('✓ Clicked "' + label + '"');
+          log('🖱️ Clicking "' + label + '" with real click...');
+          await triggerRealClick(btn);
           // Pacing: Chờ 1.5s để Flow đóng menu và gắn chip nhân vật vào prompt bar
           log('⏳ Chờ Flow gắn chip nhân vật vào prompt bar (1.5s)...');
           await new Promise(res => setTimeout(res, 1500));
@@ -3688,7 +3822,7 @@
 
       // ── Step 6: Wait for prompt input "What do you want to create?" ──
       case 'waitTextarea': {
-        const input = await waitForCondition(() => findPromptInput(), 6000);
+        const input = await waitForCondition(() => findPromptInput(), 7000);
         if (input) {
           scrollIntoViewIfNeeded(input);
           await new Promise(res => setTimeout(res, 400));
@@ -3709,8 +3843,8 @@
           break;
         }
 
-        // Pacing: Chờ 500ms để đảm bảo các chip nhân vật đã ổn định trong input
-        await new Promise(r => setTimeout(r, 500));
+        // Pacing: Chờ 600ms để đảm bảo các chip nhân vật đã ổn định trong input
+        await new Promise(r => setTimeout(r, 600));
 
         // Đảm bảo chế độ tạo đang ở Video
         await switchCreationMode('video');
@@ -3733,7 +3867,8 @@
         // Check if prompt is already present to prevent duplicate typing
         const readInputText = () => (input.value || input.innerText || input.textContent || '').trim();
         if (readInputText().includes(promptText.slice(0, 30))) {
-          log('✓ Prompt đã có sẵn trong input; bỏ qua để tránh nhập trùng');
+          log('✓ Prompt đã có sẵn trong input; kích hoạt nút submit');
+          await ensureSubmitButtonActivated(input);
           sendResult(action, true, { log: '✓ Prompt already present in input' });
           break;
         }
@@ -3867,18 +4002,28 @@
       // ── Step 10: Wait for render ──
       case 'waitRender': {
         const existing = detectVideoComplete();
-        if (existing) {
+        if (existing && existing.length > 0) {
           sendResult(action, true, { log: '✓ Video already present', status: 'complete' });
           return;
         }
         
-        log('⏳ Waiting exactly 2 minutes (120s) for video to render...');
-        sendResult(action, true, { log: '⏳ Waiting 2 minutes for render...', status: 'monitoring' });
-        
-        setTimeout(() => {
-           log('⏰ 2 minutes elapsed. Assuming video is ready.');
-           window.postMessage({ type: 'FLOW_VIDEO_DETECTED' }, '*');
-        }, 120000); // 2 minutes
+        log('⏳ Đang theo dõi tiến trình tạo video (tối đa 120s)...');
+        sendResult(action, true, { log: '⏳ Đang chờ Flow render video...', status: 'monitoring' });
+
+        // Polling chủ động mỗi 3 giây phát hiện thẻ video mới hoàn thành
+        const pollStart = Date.now();
+        const pollInterval = setInterval(() => {
+          const videos = detectVideoComplete();
+          if (videos && videos.length > 0) {
+            clearInterval(pollInterval);
+            log('🎬 Đã phát hiện video mới tạo thành công sau ' + Math.round((Date.now() - pollStart) / 1000) + 's!');
+            window.postMessage({ type: 'FLOW_VIDEO_DETECTED' }, '*');
+          } else if (Date.now() - pollStart >= 120000) {
+            clearInterval(pollInterval);
+            log('⏰ Đã hết 120s. Bắt đầu kiểm tra và tải video.');
+            window.postMessage({ type: 'FLOW_VIDEO_DETECTED' }, '*');
+          }
+        }, 3000);
         break;
       }
 

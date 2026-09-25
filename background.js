@@ -917,6 +917,30 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       return true;
     }
 
+    case 'DEBUGGER_MOVE':
+    case 'DEBUGGER_HOVER': {
+      if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
+      const tabId = sender.tab.id;
+      const x = Math.round(msg.x || 0);
+      const y = Math.round(msg.y || 0);
+
+      (async () => {
+        try {
+          await safeDebuggerCommand(tabId, async (target) => {
+            await chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", {
+              type: "mouseMoved",
+              x: x,
+              y: y
+            });
+          });
+          respond({ success: true });
+        } catch (err) {
+          respond({ success: false, error: err.message });
+        }
+      })();
+      return true;
+    }
+
     // --- From Popup ---
     case MSG.GET_DASHBOARD:
       respond({

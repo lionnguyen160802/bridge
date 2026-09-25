@@ -135,6 +135,32 @@ test('submit button finder strictly excludes avatar creation cards and bounds se
   assert.match(dom, /br\.width > 120 \|\| br\.height > 80/);
   assert.match(dom, /br\.bottom < inputRect\.top \+ 10/);
   assert.match(dom, /btn\.querySelector\('h1, h2, h3, h4, h5, p'\)/);
+});
+
+test('scene creation supports bilingual card detection, hardware hover, add-to-prompt and render polling', () => {
+  const bg = fs.readFileSync(path.join(__dirname, 'background.js'), 'utf8');
+  const content = fs.readFileSync(path.join(__dirname, 'content.js'), 'utf8');
+  const dom = fs.readFileSync(path.join(__dirname, 'inject.js'), 'utf8');
+
+  // Background and content script hardware hover bridge
+  assert.match(bg, /case 'DEBUGGER_HOVER':/);
+  assert.match(bg, /type: "mouseMoved"/);
+  assert.match(content, /FLOW_DEBUGGER_HOVER/);
+
+  // Inject helpers
+  assert.match(dom, /function triggerRealHover/);
+  assert.match(dom, /function isCardElement/);
+  assert.match(dom, /function findCharacterCardByBadge/);
+  assert.match(dom, /function findAddToPromptButton/);
+
+  // findCharacter priorities and safety checks
+  assert.match(dom, /findCharacterCard\('Untitled character'\)/);
+  assert.match(dom, /findCharacterCardByBadge\(\)/);
+
+  // waitRender polling
+  assert.match(dom, /existing && existing\.length > 0/);
+  assert.match(dom, /setInterval/);
+  assert.match(dom, /FLOW_VIDEO_DETECTED/);
 });/* Historical duplicate content below is ignored.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
