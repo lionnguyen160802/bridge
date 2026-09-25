@@ -205,14 +205,15 @@
     };
     el.dispatchEvent(new PointerEvent('pointerdown', opts));
     el.dispatchEvent(new MouseEvent('mousedown', opts));
-    setTimeout(() => {
-      const up = { ...opts, buttons: 0 };
-      el.dispatchEvent(new PointerEvent('pointerup', up));
-      el.dispatchEvent(new MouseEvent('mouseup', up));
-      el.dispatchEvent(new MouseEvent('click', up));
-    }, 30 + Math.random() * 40);
+    try { el.focus(); } catch (e) {}
+    const up = { ...opts, buttons: 0 };
+    el.dispatchEvent(new PointerEvent('pointerup', up));
+    el.dispatchEvent(new MouseEvent('mouseup', up));
+    el.dispatchEvent(new MouseEvent('click', up));
+    try { el.click(); } catch (e) {}
     return true;
   }
+
 
   // ==========================================
   // TEXT INJECTION (React/Angular/Lit/Wiz compatible)
@@ -523,8 +524,8 @@
       simulateClick(targetMenu);
       try { targetMenu.click(); } catch(e) {}
       
-      // Chờ 1.5 giây để Google Flow cập nhật lưới thẻ nhân vật
-      await new Promise(r => setTimeout(r, 1500));
+      // Chờ 1.8 giây để Google Flow cập nhật lưới thẻ nhân vật
+      await new Promise(r => setTimeout(r, 1800));
       return true;
     } else {
       log('ℹ️ Không thấy nút menu "Nhân vật" riêng biệt (có thể đã ở sẵn trong tab hoặc màn hình thu gọn)');
@@ -683,7 +684,10 @@
 
     // Strategy 1: Buttons inside or around the card
     const area = card.parentElement?.parentElement || card.parentElement || card;
-    const btns = Array.from(area.querySelectorAll('button, [role="button"]'));
+    const btns = Array.from(new Set([
+      ...card.querySelectorAll('button, [role="button"]'),
+      ...area.querySelectorAll('button, [role="button"]')
+    ]));
     for (const btn of btns) {
       if (btn === card) continue;
       const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
@@ -691,12 +695,15 @@
       const text = (btn.textContent || '').trim();
 
       // Exclude favorite/heart button
-      if (aria.includes('thích') || aria.includes('like') || aria.includes('favorite') || title.includes('thích')) continue;
+      if (aria.includes('thích') || aria.includes('like') || aria.includes('favorite') || title.includes('thích') || title.includes('favorite') || title.includes('like')) continue;
+
+      const has3DotsSvg = btn.querySelector('svg path[d*="m12 8"], svg path[d*="M12 8"], svg [d*="12 2"]') ||
+                          btn.querySelectorAll('circle').length >= 3;
 
       if (text === '⋮' || text === '︙' || text === '…' ||
           aria.includes('khác') || aria.includes('more') || aria.includes('menu') || aria.includes('options') ||
-          title.includes('khác') || title.includes('more') ||
-          btn.querySelector('svg path[d*="m12 8"], svg path[d*="M12 8"], svg [d*="12 2"]')) {
+          title.includes('khác') || title.includes('more') || title.includes('options') ||
+          has3DotsSvg) {
         if (isVisible(btn)) { log('✓ ⋮ via button text/aria/svg'); return btn; }
       }
     }
@@ -708,7 +715,9 @@
       if (btn === card) continue;
       const br = btn.getBoundingClientRect();
       const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-      if (!aria.includes('thích') && !aria.includes('like') && !aria.includes('favorite')) {
+      const title = (btn.getAttribute('title') || '').toLowerCase();
+      if (!aria.includes('thích') && !aria.includes('like') && !aria.includes('favorite') &&
+          !title.includes('thích') && !title.includes('like') && !title.includes('favorite')) {
         if (Math.abs(br.right - cr.right) < 70 && Math.abs(br.top - cr.top) < 70 && br.width > 0 && br.width < 60) {
           log('✓ ⋮ via top-right geometry (' + Math.round(br.left) + ',' + Math.round(br.top) + ')');
           return btn;
@@ -728,7 +737,9 @@
       for (let d = 0; d < 5 && el && el !== card && el !== document.body; d++) {
         if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
           const ca = (el.getAttribute('aria-label') || '').toLowerCase();
-          if (!ca.includes('thích') && !ca.includes('like') && !ca.includes('favorite')) {
+          const ct = (el.getAttribute('title') || '').toLowerCase();
+          if (!ca.includes('thích') && !ca.includes('like') && !ca.includes('favorite') &&
+              !ct.includes('thích') && !ct.includes('like') && !ct.includes('favorite')) {
             log('✓ ⋮ via elementFromPoint (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
             return el;
           }
@@ -1249,7 +1260,11 @@
       'thả nội dung nghe nhìn',
       'nhập câu lệnh',
       'enter a prompt',
-      'type a prompt'
+      'type a prompt',
+      'describe your character',
+      'describe a character',
+      'describe the character',
+      'character description'
     ];
     const viewH = window.innerHeight;
 
@@ -1298,8 +1313,8 @@
       }
     }
 
-    // Strategy 3: Find input near "+ Tác nhân" / "+ Characters" button (they're in the same prompt bar)
-    const tacNhanBtn = findButtonByText('Tác nhân') || findButtonByText('Characters') || findButtonByText('Character') || findButtonByText('Actors') || findButtonByText('Actor');
+    // Strategy 3: Find input near "+ Agent" / "+ Tác nhân" / "+ Characters" button (they're in the same prompt bar)
+    const tacNhanBtn = findButtonByText('Agent') || findButtonByText('agent') || findButtonByText('Tác nhân') || findButtonByText('Characters') || findButtonByText('Character') || findButtonByText('Actors') || findButtonByText('Actor');
     if (tacNhanBtn) {
       const btnRect = tacNhanBtn.getBoundingClientRect();
       for (const el of allInputs) {
@@ -1441,8 +1456,9 @@
     return findPromptInput();
   }
 
-  /** Find the submit arrow button (->) on https://flow.google.com/project/{projectId}/character */
+  /** Find the submit arrow button (->) on character page or main prompt bar */
   function findCharacterSubmitArrowButton(inputEl) {
+    if (!inputEl) inputEl = findPromptInput() || findCharacterPromptInput();
     if (!inputEl) return null;
     const container = inputEl.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') ||
                       inputEl.parentElement?.parentElement?.parentElement ||
@@ -1454,7 +1470,7 @@
     for (const root of roots) {
       const allButtons = Array.from(root.querySelectorAll('button, [role="button"], div[tabindex="0"], a[role="button"]'));
 
-      // 1. By aria-label or title matching submit/create/arrow/send
+      // 1. By aria-label or title matching submit/create/arrow/send/generate
       for (const btn of allButtons) {
         if (!isVisible(btn)) continue;
         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
@@ -1472,12 +1488,20 @@
       // 2. By SVG arrow icon inside the button
       for (const btn of allButtons) {
         if (!isVisible(btn)) continue;
+        const text = (btn.textContent || '').trim().toLowerCase();
+        if (text === '+' || text.includes('agent') || text.includes('tác nhân') ||
+            text.includes('video') || text.includes('image') || text.includes('hình ảnh') ||
+            text.includes('720p') || text.includes('1080p') || text.includes('định dạng') ||
+            text.includes('format') || text.includes('banana') || text.includes('upload') ||
+            text.includes('tải lên') || text.includes('project') || text.includes('dự án')) continue;
+
         const svg = btn.querySelector('svg');
         if (svg) {
           const pathDs = Array.from(svg.querySelectorAll('path, polygon, polyline')).map(p => (p.getAttribute('d') || '') + ' ' + (p.getAttribute('points') || '')).join(' ');
           if (pathDs.includes('M5 12') || pathDs.includes('M12 4') || pathDs.includes('l8-8') ||
               pathDs.includes('16.17') || pathDs.includes('M10 6') || pathDs.includes('2.01') ||
-              pathDs.includes('M4 12') || pathDs.includes('arrow') || pathDs.includes('forward') ||
+              pathDs.includes('M4 12') || pathDs.includes('M5 13') || pathDs.includes('21.14') ||
+              pathDs.includes('arrow') || pathDs.includes('forward') ||
               pathDs.includes('send') || pathDs.includes('M12 2L2 22') || pathDs.includes('M2.01 21L23 12')) {
             log('✓ findCharacterSubmitArrowButton: matched arrow path in SVG');
             return btn;
@@ -1490,12 +1514,16 @@
       const candidates = allButtons.filter(btn => {
         if (!isVisible(btn)) return false;
         const text = (btn.textContent || '').trim().toLowerCase();
-        // Exclude "+" button, format button, model dropdown, etc.
-        if (text === '+' || text.includes('định dạng') || text.includes('format') || text.includes('banana') || text.includes('tải lên') || text.includes('upload') || text.includes('dự án') || text.includes('project')) return false;
-        
+        // Exclude "+" button, format button, model dropdown, agent, video, image, upload, etc.
+        if (text === '+' || text.includes('agent') || text.includes('tác nhân') ||
+            text.includes('video') || text.includes('image') || text.includes('hình ảnh') ||
+            text.includes('720p') || text.includes('1080p') || text.includes('định dạng') ||
+            text.includes('format') || text.includes('banana') || text.includes('tải lên') ||
+            text.includes('upload') || text.includes('dự án') || text.includes('project')) return false;
+
         const br = btn.getBoundingClientRect();
         // Must be in vertical range of prompt box
-        if (br.top < inputRect.top - 60 || br.bottom > inputRect.bottom + 150) return false;
+        if (br.top < inputRect.top - 80 || br.bottom > inputRect.bottom + 180) return false;
         // Must be in right half of prompt box
         if (br.left < inputRect.left + 50) return false;
         // Must have an SVG or look like an icon button
@@ -1511,6 +1539,18 @@
     }
 
     return null;
+  }
+
+  const findSubmitArrowButton = findCharacterSubmitArrowButton;
+
+  function isSubmitButtonEnabled(btn) {
+    if (!btn || !isVisible(btn)) return false;
+    if (btn.disabled || btn.hasAttribute('disabled')) return false;
+    if (btn.getAttribute('aria-disabled') === 'true') return false;
+    const style = window.getComputedStyle(btn);
+    if (style.pointerEvents === 'none') return false;
+    if (parseFloat(style.opacity) < 0.4) return false;
+    return true;
   }
 
   /** Reliably focus, click, and position caret inside an input or contenteditable element */
@@ -3164,7 +3204,7 @@
 
       // ── Step 1: Find character card ──
       case 'findCharacter': {
-        // Bước 1: Click vào menu "Nhân vật" ở thanh bên trái
+        // Bước 1: Click vào menu "Nhân vật" / "Characters" ở thanh bên trái
         await clickCharactersSidebarMenu();
 
         // Xóa bộ lọc tìm kiếm cũ nếu còn sót
@@ -3183,6 +3223,12 @@
         // 1. Thử tìm theo tên chỉ định nếu có (và không phải tên mặc định)
         if (charName && !isDefaultCharacterName(charName)) {
           r = findCharacterCard(charName);
+          // Nếu chưa thấy ngay, cuộn nhẹ xuống 350px để Flow nạp thêm thẻ rồi tìm lại
+          if (!r) {
+            window.scrollBy({ top: 350, behavior: 'smooth' });
+            await new Promise(res => setTimeout(res, 800));
+            r = findCharacterCard(charName);
+          }
         }
 
         // 2. Tìm đến thẻ "Nhân vật chưa có tên" / "Unnamed character" (tự động khớp cả 2 ngôn ngữ qua getEquivalentNames)
@@ -3235,11 +3281,13 @@
 
         if (r) {
           lastFoundCharacterCard = r;
+          scrollIntoViewIfNeeded(r.card);
+          await new Promise(res => setTimeout(res, 600));
           log('✓ Đã tìm thấy thẻ nhân vật via ' + r.method);
           sendResult(action, true, { log: '✓ Tìm thấy: ' + (charName || 'Nhân vật chưa có tên') + ' (' + r.method + ')' });
         } else {
           lastFoundCharacterCard = null;
-          sendResult(action, false, null, 'Không tìm thấy thẻ "Nhân vật chưa có tên" trong mục Nhân vật');
+          sendResult(action, false, null, 'Không tìm thấy thẻ "' + (charName || 'Nhân vật chưa có tên') + '" trong mục Nhân vật');
         }
         break;
       }
@@ -3250,9 +3298,14 @@
           ? lastFoundCharacterCard
           : (findCharacterCard(params.name) || findCharacterCard('Nhân vật chưa có tên') || findMediaCardOnCanvas(null));
 
-        if (r && simulateHover(r.card)) {
+        if (r) {
           lastFoundCharacterCard = r;
-          await new Promise(r => setTimeout(r, 1000));
+          scrollIntoViewIfNeeded(r.card);
+          await new Promise(res => setTimeout(res, 400));
+          simulateHover(r.card);
+          log('✓ Hover triggered: ' + (params.name || 'Nhân vật chưa có tên'));
+          // Pacing: Chờ 1.2s để Flow kịp hiển thị nút ⋮ và trái tim ở góc thẻ
+          await new Promise(res => setTimeout(res, 1200));
           sendResult(action, true, { log: '✓ Hover triggered: ' + (params.name || 'Nhân vật chưa có tên') });
         } else {
           sendResult(action, false, null, 'Cannot hover: ' + (params.name || 'Nhân vật chưa có tên'));
@@ -3268,18 +3321,32 @@
 
         if (cardResult) {
           lastFoundCharacterCard = cardResult;
+          scrollIntoViewIfNeeded(cardResult.card);
+          await new Promise(res => setTimeout(res, 300));
           simulateHover(cardResult.card);
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(res => setTimeout(res, 500));
         }
 
-        const btn = (cardResult ? findMoreButton(cardResult.card) : null) ||
-                    findMoreButton(params.name) ||
-                    findMoreButton('Nhân vật chưa có tên');
+        // Thử tìm nút ⋮ lặp lại đến 5 lần nếu chưa hiển thị ngay (mỗi lần cách 400ms)
+        let btn = null;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          btn = (cardResult ? findMoreButton(cardResult.card) : null) ||
+                findMoreButton(params.name) ||
+                findMoreButton('Nhân vật chưa có tên');
+          if (btn && isVisible(btn)) break;
+          if (cardResult) simulateHover(cardResult.card);
+          await new Promise(res => setTimeout(res, 400));
+        }
 
         if (btn) {
+          scrollIntoViewIfNeeded(btn);
+          simulateHover(btn);
+          await new Promise(res => setTimeout(res, 200));
           simulateClick(btn);
-          log('✓ Clicked ⋮');
-          await new Promise(r => setTimeout(r, 600));
+          try { btn.click(); } catch(e) {}
+          log('✓ Clicked ⋮ button');
+          // Pacing: Chờ 800ms để menu ngữ cảnh xổ xuống
+          await new Promise(res => setTimeout(res, 800));
           sendResult(action, true, { log: '✓ Clicked ⋮ on: ' + (params.name || 'Nhân vật chưa có tên') });
         } else {
           sendResult(action, false, null, '⋮ button not found on card: ' + (params.name || 'Nhân vật chưa có tên'));
@@ -3289,23 +3356,37 @@
 
       // ── Step 4: Wait for dropdown menu ──
       case 'waitMenu': {
-        const btn = await waitForCondition(() => findButtonByText('Thêm vào câu lệnh') || findButtonByText('Add to prompt'), 5000);
+        const btn = await waitForCondition(() =>
+          findButtonByText('Thêm vào câu lệnh') ||
+          findButtonByText('Add to prompt') ||
+          findButtonByText('Add to prompt bar'),
+          6000
+        );
         if (btn) {
+          await new Promise(res => setTimeout(res, 300));
           sendResult(action, true, { log: '✓ Menu detected: "' + btn.textContent.trim().substring(0, 30) + '"' });
         } else {
-          sendResult(action, false, null, 'Menu did not appear');
+          sendResult(action, false, null, 'Menu "Add to prompt" did not appear');
         }
         break;
       }
 
       // ── Step 5: Click "Thêm vào câu lệnh" / "Add to prompt" ──
       case 'clickAddButton': {
-        const btn = findButtonByText('Thêm vào câu lệnh') || findButtonByText('Add to prompt');
+        const btn = findButtonByText('Thêm vào câu lệnh') ||
+                    findButtonByText('Add to prompt') ||
+                    findButtonByText('Add to prompt bar');
         if (btn) {
+          scrollIntoViewIfNeeded(btn);
+          simulateHover(btn);
+          await new Promise(res => setTimeout(res, 200));
           simulateClick(btn);
+          try { btn.click(); } catch(e) {}
           const label = btn.textContent.trim().substring(0, 30);
           log('✓ Clicked "' + label + '"');
-          await new Promise(r => setTimeout(r, 800));
+          // Pacing: Chờ 1.5s để Flow đóng menu và gắn chip nhân vật vào prompt bar
+          log('⏳ Chờ Flow gắn chip nhân vật vào prompt bar (1.5s)...');
+          await new Promise(res => setTimeout(res, 1500));
           sendResult(action, true, { log: '✓ Clicked "' + label + '"' });
         } else {
           sendResult(action, false, null, '"Thêm vào câu lệnh" / "Add to prompt" not found');
@@ -3313,201 +3394,180 @@
         break;
       }
 
-      // ── Step 6: Wait for prompt input "Bạn muốn tạo gì?" ──
+      // ── Step 6: Wait for prompt input "What do you want to create?" ──
       case 'waitTextarea': {
-        const input = await waitForCondition(() => findPromptInput(), 5000);
+        const input = await waitForCondition(() => findPromptInput(), 6000);
         if (input) {
+          scrollIntoViewIfNeeded(input);
+          await new Promise(res => setTimeout(res, 400));
           log('✓ Prompt input ready');
-          sendResult(action, true, { log: '✓ Prompt input "Bạn muốn tạo gì?" ready' });
+          sendResult(action, true, { log: '✓ Prompt input ready' });
         } else {
           log('❌ Prompt input not found');
-          for (const el of document.querySelectorAll('textarea, input, [contenteditable="true"]')) {
-            log('  input: tag=' + el.tagName + ' ph="' + (el.getAttribute('placeholder') || '') + '" vis=' + isVisible(el));
-          }
-          sendResult(action, false, null, 'Prompt input "Bạn muốn tạo gì?" not found');
+          sendResult(action, false, null, 'Prompt input not found');
         }
         break;
       }
 
-      // ── Step 7: Inject prompt text (Using Chrome Debugger API for 100% OS-level reliability) ──
+      // ── Step 7: Inject prompt text (Using Chrome Debugger API + DOM Fallback) ──
       case 'injectPrompt': {
-        const input = findPromptInput();
-        if (input) {
-          log('🐞 Requesting OS-level Debugger Typing...');
-          // Add a space to gracefully separate from the Character Pill/Chip
-          const textToInject = " " + params.prompt;
-          
-          // 1. Focus the input so the debugger types in the correct place
-          input.focus();
-          input.click();
-          
-          // Move cursor to end to avoid overwriting chips
-          if (input.getAttribute('contenteditable') === 'true') {
-             try {
-               let target = input;
-               let inner = input.querySelector('p') || input.querySelector('span') || input.firstElementChild;
-               if (inner) target = inner;
-               const selection = window.getSelection();
-               const range = document.createRange();
-               range.selectNodeContents(target);
-               range.collapse(false);
-               selection.removeAllRanges();
-               selection.addRange(range);
-             } catch(e) {}
-          } else {
-             try { input.selectionStart = input.selectionEnd = input.value.length; } catch(e) {}
-          }
-
-          // 2. Setup listener with TIMEOUT FALLBACK for the background script's response
-          let debuggerHandled = false;
-          const handleDebuggerResponse = (e) => {
-             if (e.source !== window || e.data.type !== 'FLOW_DEBUGGER_RESULT') return;
-             if (debuggerHandled) return;
-             debuggerHandled = true;
-             window.removeEventListener('message', handleDebuggerResponse);
-             
-             if (e.data.success) {
-                log('✓ Debugger typing succeeded! (' + params.prompt.length + ' chars)');
-                setTimeout(() => {
-                   sendResult(action, true, { log: '✓ Typed: "' + params.prompt.substring(0, 50) + '..."' });
-                }, 500);
-             } else {
-                log('❌ Debugger typing failed: ' + e.data.error);
-                log('💉 Falling back to DOM injection...');
-                const ok = injectTextToReactInput(input, textToInject);
-                if (ok) {
-                   sendResult(action, true, { log: '✓ Fallback injected: "' + params.prompt.substring(0, 50) + '..."' });
-                } else {
-                   sendResult(action, false, null, 'Both Debugger and Fallback injection failed');
-                }
-             }
-          };
-          window.addEventListener('message', handleDebuggerResponse);
-
-          // Timeout fallback: if debugger never responds within 15s, use DOM fallback
-          setTimeout(() => {
-            if (!debuggerHandled) {
-              debuggerHandled = true;
-              window.removeEventListener('message', handleDebuggerResponse);
-              log('⏰ Debugger typing timeout (15s). Falling back to DOM injection...');
-              const ok = injectTextToReactInput(input, textToInject);
-              if (ok) {
-                sendResult(action, true, { log: '✓ Timeout fallback injected: "' + params.prompt.substring(0, 50) + '..."' });
-              } else {
-                sendResult(action, false, null, 'Debugger timeout and DOM fallback both failed');
-              }
-            }
-          }, 15000);
-
-          // 3. Send request to content.js to bridge to background.js
-          window.postMessage({
-             type: 'FLOW_DEBUGGER_TYPE',
-             text: textToInject
-          }, '*');
-          
-        } else {
+        let input = findPromptInput();
+        if (!input) {
           sendResult(action, false, null, 'Prompt input not found');
+          break;
         }
+
+        // Pacing: Chờ 500ms để đảm bảo các chip nhân vật đã ổn định trong input
+        await new Promise(r => setTimeout(r, 500));
+
+        // Đảm bảo chế độ tạo đang ở Video
+        await switchCreationMode('video');
+        await new Promise(r => setTimeout(r, 400));
+
+        // Re-acquire input in case mode switch re-rendered the prompt bar
+        input = findPromptInput() || input;
+
+        // Click and focus into the prompt input
+        log('🖱️ Focus & Click vào ô nhập prompt video...');
+        input = await focusAndClickInput(input) || input;
+        await new Promise(r => setTimeout(r, 400));
+
+        const promptText = (params.prompt || '').trim();
+        if (!promptText) {
+          sendResult(action, false, null, 'Prompt video không được để trống');
+          break;
+        }
+
+        // Check if prompt is already present to prevent duplicate typing
+        const readInputText = () => (input.value || input.innerText || input.textContent || '').trim();
+        if (readInputText().includes(promptText.slice(0, 30))) {
+          log('✓ Prompt đã có sẵn trong input; bỏ qua để tránh nhập trùng');
+          sendResult(action, true, { log: '✓ Prompt already present in input' });
+          break;
+        }
+
+        // Add a leading space to separate cleanly from character chip
+        const textToInject = ' ' + promptText;
+
+        log('✍️ Điền prompt video: "' + promptText.substring(0, 50) + '..."');
+        showFlowToast('✍️ Đang nhập prompt video...', 3000);
+
+        // Try typeWithDebuggerOrFallback
+        const typed = await typeWithDebuggerOrFallback(input, textToInject);
+        await new Promise(r => setTimeout(r, 600));
+
+        let currentText = readInputText();
+        if (!typed || !currentText.includes(promptText.slice(0, 15))) {
+          log('💉 Fallback: Dùng injectTextToReactInput...');
+          injectTextToReactInput(input, textToInject);
+          await new Promise(r => setTimeout(r, 600));
+        }
+
+        // Pacing: Chờ 1.5s để React cập nhật state và kích hoạt nút submit
+        log('⏳ Chờ giao diện cập nhật state và kích hoạt nút submit (1.5s)...');
+        await new Promise(r => setTimeout(r, 1500));
+
+        sendResult(action, true, { log: '✓ Typed prompt: "' + promptText.substring(0, 40) + '..."' });
         break;
       }
 
       // ── Step 8: Verify input ──
       case 'verifyInput': {
         const input = findPromptInput();
-        if (input) {
-          const val = input.value || input.textContent || '';
-          if (val.length > 0) {
-            sendResult(action, true, { log: '✓ Input verified (' + val.length + ' chars)' });
-          } else {
-            sendResult(action, false, null, 'Prompt input is empty after injection');
-          }
-        } else {
+        if (!input) {
           sendResult(action, false, null, 'Prompt input not found');
+          break;
+        }
+        const promptText = (params.prompt || '').trim();
+        const currentText = (input.value || input.innerText || input.textContent || '').trim();
+        const submitBtn = findSubmitArrowButton(input);
+        const isReady = isSubmitButtonEnabled(submitBtn);
+
+        // Kiểm tra xem prompt text đã thực sự có trong ô input chưa
+        if (promptText && currentText.includes(promptText.slice(0, 15))) {
+          log('✓ Input verified with prompt text (' + currentText.length + ' chars)');
+          sendResult(action, true, { log: '✓ Input verified with prompt text' });
+        } else if (isReady) {
+          log('✓ Input verified (submit button is enabled)');
+          sendResult(action, true, { log: '✓ Input verified (submit button ready)' });
+        } else if (currentText.length > 0) {
+          // Thử inject bổ sung 1 lần nếu prompt text chưa có
+          log('⚠️ Prompt chưa xuất hiện đầy đủ trong input, thử inject bổ sung...');
+          injectTextToReactInput(input, ' ' + promptText);
+          await new Promise(r => setTimeout(r, 1000));
+          sendResult(action, true, { log: '✓ Re-injected prompt' });
+        } else {
+          sendResult(action, false, null, 'Prompt input is completely empty');
         }
         break;
       }
 
-      // ── Step 9: Press Enter to submit ──
+      // ── Step 9: Press Enter / Click submit button ──
       case 'pressEnter': {
         const input = findPromptInput();
-        if (input) {
-          input.focus();
-          
-          // 🛑 Capture existing videos BEFORE we submit the new prompt!
-          capturePreexistingVideos();
-          
-          log('🐞 Requesting OS-level Debugger Enter Key...');
-          
-          let enterHandled = false;
-          const handleEnterResponse = (e) => {
-             if (e.source !== window || e.data.type !== 'FLOW_DEBUGGER_ENTER_RESULT') return;
-             if (enterHandled) return;
-             enterHandled = true;
-             window.removeEventListener('message', handleEnterResponse);
-             
-             if (e.data.success) {
-                log('✓ Debugger Enter pressed natively!');
-             } else {
-                log('❌ Debugger Enter failed: ' + e.data.error + '. Falling back to DOM events...');
-                const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
-                input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-                input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
-                input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-             }
-             
-             // Also try forcefully clicking the submit button directly as a safety measure
-             setTimeout(() => {
-                const promptContainer = input.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') || input.parentElement?.parentElement || input.parentElement;
-                if (promptContainer) {
-                   const buttons = Array.from(promptContainer.querySelectorAll('button:not([disabled]), [role="button"]:not([aria-disabled="true"])'));
-                   const inputRect = input.getBoundingClientRect();
-                   const submitBtn = buttons.find(b => {
-                      const br = b.getBoundingClientRect();
-                      // Must be near the prompt input vertically and to the right
-                      if (Math.abs(br.top - inputRect.top) > 100) return false;
-                      if (br.left < inputRect.left + 50) return false;
-                      const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-                      if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send')) return true;
-                      if (b.querySelector('svg')) return true; 
-                      return false;
-                   });
-                   
-                   if (submitBtn) {
-                      log('🖱️ Force clicking submit button as well...');
-                      simulateClick(submitBtn);
-                   }
-                }
-                
-                sendResult(action, true, { log: '✓ Enter pressed / Submitted' });
-             }, 800);
-          };
-          
-          window.addEventListener('message', handleEnterResponse);
-
-          // Timeout fallback: if debugger never responds within 15s
-          setTimeout(() => {
-            if (!enterHandled) {
-              enterHandled = true;
-              window.removeEventListener('message', handleEnterResponse);
-              log('⏰ Debugger Enter timeout (15s). Falling back to DOM events...');
-              const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
-              input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-              input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
-              input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-              
-              setTimeout(() => {
-                sendResult(action, true, { log: '✓ Timeout fallback: Enter pressed via DOM' });
-              }, 800);
-            }
-          }, 15000);
-          
-          window.postMessage({
-             type: 'FLOW_DEBUGGER_ENTER'
-          }, '*');
-
-        } else {
-          sendResult(action, false, null, 'Prompt input not found for Enter');
+        if (!input) {
+          sendResult(action, false, null, 'Prompt input not found for Enter / Submit');
+          break;
         }
+
+        // 🛑 Capture existing videos BEFORE we submit the new prompt!
+        capturePreexistingVideos();
+
+        // 1. Focus & click input
+        await focusAndClickInput(input);
+        await new Promise(r => setTimeout(r, 400));
+
+        // 2. Chờ nút submit chuyển sang trạng thái kích hoạt (enabled) - kiểm tra đến 5s
+        log('🔍 Tìm kiếm nút submit (mũi tên gửi) và chờ trạng thái sẵn sàng...');
+        let submitBtn = null;
+        const findStart = Date.now();
+        while (Date.now() - findStart < 5000) {
+          submitBtn = findSubmitArrowButton(input);
+          if (isSubmitButtonEnabled(submitBtn)) {
+            log('✓ Đã tìm thấy nút submit ở trạng thái sẵn sàng (enabled)!');
+            break;
+          }
+          await new Promise(r => setTimeout(r, 300));
+        }
+
+        // 3. Click nút submit mũi tên nếu tìm thấy
+        if (submitBtn) {
+          scrollIntoViewIfNeeded(submitBtn);
+          log('👆 Hover chuột vào nút submit...');
+          simulateHover(submitBtn);
+          await new Promise(r => setTimeout(r, 300));
+
+          log('🖱️ Bấm nút submit gửi prompt video!');
+          showFlowToast('🚀 Đang ấn nút gửi tạo video...', 3000);
+          simulateClick(submitBtn);
+          try { submitBtn.click(); } catch(e) {}
+          await new Promise(r => setTimeout(r, 600));
+        } else {
+          log('⚠️ Không tìm thấy nút submit riêng biệt đang bật, sử dụng phím Enter...');
+        }
+
+        // 4. Dự phòng song song: Dispatch phím Enter (Debugger OS-level + DOM events)
+        log('⏎ Gửi phím Enter (Debugger + DOM fallback)...');
+        window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
+        const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+        input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+        input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+        input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+
+        // 5. Pacing: Chờ 1.5s và kiểm tra xem có cần bấm lại không
+        await new Promise(r => setTimeout(r, 1500));
+        const recheckBtn = submitBtn || findSubmitArrowButton(input);
+        if (recheckBtn && isSubmitButtonEnabled(recheckBtn)) {
+          const currentVal = (input.value || input.textContent || '').trim();
+          if (currentVal.length > 5) {
+            log('🔄 Bấm bổ sung nút submit lần 2 để đảm bảo Flow nhận lệnh...');
+            simulateClick(recheckBtn);
+            try { recheckBtn.click(); } catch(e) {}
+            await new Promise(r => setTimeout(r, 800));
+          }
+        }
+
+        sendResult(action, true, { log: '✓ Video prompt submitted successfully' });
         break;
       }
 
