@@ -441,6 +441,19 @@ window.addEventListener('message', (event) => {
     });
   }
 
+  if (event.data.type === 'FLOW_DEBUGGER_BACKSPACE') {
+    chrome.runtime.sendMessage({
+      type: 'DEBUGGER_BACKSPACE'
+    }, (response) => {
+      const err = chrome.runtime.lastError;
+      window.postMessage({
+        type: 'FLOW_DEBUGGER_BACKSPACE_RESULT',
+        success: !err && !!response?.success,
+        error: err ? err.message : response?.error
+      }, '*');
+    });
+  }
+
   if (event.data.type === 'FLOW_DEBUGGER_CLICK') {
     chrome.runtime.sendMessage({
       type: 'DEBUGGER_CLICK',

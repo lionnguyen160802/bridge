@@ -843,6 +843,34 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       return true;
     }
 
+    case 'DEBUGGER_BACKSPACE': {
+      if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
+      const tabId = sender.tab.id;
+      
+      (async () => {
+        try {
+          await safeDebuggerCommand(tabId, async (target) => {
+            await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
+              type: "rawKeyDown",
+              windowsVirtualKeyCode: 8,
+              key: "Backspace",
+              code: "Backspace"
+            });
+            await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
+              type: "keyUp",
+              windowsVirtualKeyCode: 8,
+              key: "Backspace",
+              code: "Backspace"
+            });
+          });
+          respond({ success: true });
+        } catch (err) {
+          respond({ success: false, error: err.message });
+        }
+      })();
+      return true;
+    }
+
     case 'DEBUGGER_CLICK': {
       if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
       const tabId = sender.tab.id;

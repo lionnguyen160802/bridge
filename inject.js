@@ -1571,12 +1571,16 @@
       if (validButtons.length > 0) {
         // Sort descending by right coordinate
         const sorted = [...validButtons].sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
-        const rightmost = sorted[0];
-        const br = rightmost.getBoundingClientRect();
-        // Check that it is located in the right half of the composer or near the bottom
-        if (br.right > composerRect.left + 50) {
-          log('✓ findCharacterSubmitArrowButton: picked rightmost candidate at x=' + Math.round(br.right) + ', y=' + Math.round(br.top));
-          return rightmost;
+        for (const candidate of sorted) {
+          const br = candidate.getBoundingClientRect();
+          // Must NOT be in the top navbar (y < 80)
+          if (br.top < 80) continue;
+          // When searching document, candidate must be within reasonable vertical range of the composer
+          if (root === document && (br.bottom < composerRect.top - 20 || br.top > composerRect.bottom + 150)) continue;
+          if (br.right > composerRect.left + 50) {
+            log('✓ findCharacterSubmitArrowButton: picked rightmost candidate at x=' + Math.round(br.right) + ', y=' + Math.round(br.top));
+            return candidate;
+          }
         }
       }
     }
@@ -1594,6 +1598,70 @@
     if (style.pointerEvents === 'none') return false;
     if (parseFloat(style.opacity) < 0.4) return false;
     return true;
+  }
+
+  /** Force React/Wiz validation to activate and enable the submit arrow button */
+  async function ensureSubmitButtonActivated(input) {
+    if (!input) input = findPromptInput() || findCharacterPromptInput();
+    if (!input) return false;
+
+    let submitBtn = findSubmitArrowButton(input);
+    if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
+      log('✓ Submit button is already enabled');
+      return true;
+    }
+
+    log('⚡ Đang kích hoạt nút submit (bật trạng thái enabled)...');
+
+    // 1. Ensure input is focused
+    try { input.focus(); } catch(e) {}
+    try { input.click(); } catch(e) {}
+
+    // 2. Trigger React controlled value tracker synchronization
+    const curVal = (input.value || input.innerText || input.textContent || '').trim();
+    if (curVal.length > 0) {
+      try {
+        const proto = input.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+        const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (nativeSetter) nativeSetter.call(input, curVal);
+        if (input._valueTracker) input._valueTracker.setValue('');
+      } catch(e) {}
+
+      const opts = { bubbles: true, composed: true };
+      input.dispatchEvent(new InputEvent('beforeinput', { ...opts, inputType: 'insertText', data: ' ' }));
+      input.dispatchEvent(new InputEvent('input', { ...opts, inputType: 'insertText', data: ' ' }));
+      input.dispatchEvent(new Event('change', opts));
+    }
+
+    // 3. Physical keystroke simulation via Debugger API: type space then backspace
+    try {
+      window.postMessage({ type: 'FLOW_DEBUGGER_TYPE', text: ' ' }, '*');
+      await new Promise(r => setTimeout(r, 200));
+      window.postMessage({ type: 'FLOW_DEBUGGER_BACKSPACE' }, '*');
+      await new Promise(r => setTimeout(r, 200));
+    } catch(e) {}
+
+    // 4. Also dispatch DOM synthetic backspace and input events as fallback
+    try {
+      const bsOpts = { key: 'Backspace', code: 'Backspace', keyCode: 8, which: 8, bubbles: true, composed: true };
+      input.dispatchEvent(new KeyboardEvent('keydown', bsOpts));
+      input.dispatchEvent(new KeyboardEvent('keyup', bsOpts));
+      input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    } catch(e) {}
+
+    // 5. Wait up to 2.5s for submit button to become enabled
+    const startWait = Date.now();
+    while (Date.now() - startWait < 2500) {
+      submitBtn = findSubmitArrowButton(input);
+      if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
+        log('✓ Submit button activated successfully!');
+        return true;
+      }
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    return !!(submitBtn && isSubmitButtonEnabled(submitBtn));
   }
 
   /** Trigger click through DOM layers to ensure React/Wiz event handlers fire */
@@ -1726,43 +1794,8 @@
 
     if (hasText()) return true;
 
-    // Strategy 1: document.execCommand('insertText')
-    log('✍️ Strategy 1: document.execCommand("insertText")...');
-    try {
-      input.focus();
-      document.execCommand('insertText', false, text);
-    } catch(e) {}
-    await new Promise(r => setTimeout(r, 200));
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: text }));
-    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-    if (hasText()) {
-      log('✓ Text entered via execCommand');
-      return true;
-    }
-
-    // Strategy 2: Synthetic paste event with DataTransfer
-    log('📋 Strategy 2: Synthetic paste with DataTransfer...');
-    try {
-      const dt = new DataTransfer();
-      dt.setData('text/plain', text);
-      input.dispatchEvent(new ClipboardEvent('paste', {
-        bubbles: true, cancelable: true, composed: true, clipboardData: dt
-      }));
-      input.dispatchEvent(new InputEvent('beforeinput', {
-        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
-      }));
-      input.dispatchEvent(new InputEvent('input', {
-        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
-      }));
-    } catch(e) {}
-    await new Promise(r => setTimeout(r, 200));
-    if (hasText()) {
-      log('✓ Text entered via synthetic paste');
-      return true;
-    }
-
-    // Strategy 3: OS-level Chrome Debugger typing
-    log('⌨️ Strategy 3: Chrome Debugger typing...');
+    // Strategy 1: OS-level Chrome Debugger typing (highest reliability for React state)
+    log('⌨️ Strategy 1: Chrome Debugger typing...');
     try {
       input = await focusAndClickInput(input) || input;
       await new Promise((resolve) => {
@@ -1786,23 +1819,63 @@
       });
     } catch(e) {}
 
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 250));
     input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
     input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: 'Process', keyCode: 229 }));
 
     if (hasText()) {
       log('✓ Text entered via Chrome Debugger');
+      await ensureSubmitButtonActivated(input);
       return true;
     }
 
-    // Strategy 4: injectTextToReactInput fallback
-    log('💉 Strategy 4: injectTextToReactInput fallback...');
+    // Strategy 2: injectTextToReactInput fallback (React native setter + valueTracker)
+    log('💉 Strategy 2: injectTextToReactInput fallback...');
     injectTextToReactInput(input, text);
-
+    await new Promise(r => setTimeout(r, 200));
     input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, composed: true, key: 'Process', keyCode: 229 }));
+
+    if (hasText()) {
+      log('✓ Text entered via injectTextToReactInput');
+      await ensureSubmitButtonActivated(input);
+      return true;
+    }
+
+    // Strategy 3: document.execCommand('insertText')
+    log('✍️ Strategy 3: document.execCommand("insertText")...');
+    try {
+      input.focus();
+      document.execCommand('insertText', false, text);
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 200));
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: text }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    if (hasText()) {
+      log('✓ Text entered via execCommand');
+      await ensureSubmitButtonActivated(input);
+      return true;
+    }
+
+    // Strategy 4: Synthetic paste event with DataTransfer
+    log('📋 Strategy 4: Synthetic paste with DataTransfer...');
+    try {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      input.dispatchEvent(new ClipboardEvent('paste', {
+        bubbles: true, cancelable: true, composed: true, clipboardData: dt
+      }));
+      input.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
+      }));
+      input.dispatchEvent(new InputEvent('input', {
+        bubbles: true, cancelable: true, composed: true, inputType: 'insertFromPaste', data: text
+      }));
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 200));
+    await ensureSubmitButtonActivated(input);
+    return hasText();
 
     await new Promise(r => setTimeout(r, 300));
     const curVal = (input.value || input.innerText || input.textContent || '').trim();
@@ -1927,7 +2000,9 @@
       const hasControls = Array.from(curr.querySelectorAll('button, [role="button"]')).some(b => {
         const t = (b.textContent || '').toLowerCase();
         const aria = (b.getAttribute('aria-label') || '').toLowerCase();
-        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || t.includes('nano') || aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send') || aria.includes('generate');
+        return t.includes('định dạng') || t.includes('format') || t.includes('banana') || t.includes('nano') ||
+               t.includes('agent') || t.includes('tác nhân') || t.includes('video') || t.includes('720p') || t.includes('1080p') ||
+               aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') || aria.includes('create') || aria.includes('send') || aria.includes('generate');
       });
       if (hasControls || hasAttachment || curr.matches('form, [class*="composer"], [class*="prompt"]')) {
         return curr;
@@ -3543,20 +3618,21 @@
 
         // Try typeWithDebuggerOrFallback
         const typed = await typeWithDebuggerOrFallback(input, textToInject);
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 400));
 
         let currentText = readInputText();
         if (!typed || !currentText.includes(promptText.slice(0, 15))) {
           log('💉 Fallback: Dùng injectTextToReactInput...');
           injectTextToReactInput(input, textToInject);
-          await new Promise(r => setTimeout(r, 600));
+          await new Promise(r => setTimeout(r, 400));
         }
 
-        // Pacing: Chờ 1.5s để React cập nhật state và kích hoạt nút submit
-        log('⏳ Chờ giao diện cập nhật state và kích hoạt nút submit (1.5s)...');
-        await new Promise(r => setTimeout(r, 1500));
+        // Pacing & activation: Đảm bảo nút submit được kích hoạt (enabled)
+        log('⚡ Đang xác nhận kích hoạt nút submit...');
+        await ensureSubmitButtonActivated(input);
+        await new Promise(r => setTimeout(r, 500));
 
-        sendResult(action, true, { log: '✓ Typed prompt: "' + promptText.substring(0, 40) + '..."' });
+        sendResult(action, true, { log: '✓ Typed prompt and activated submit: "' + promptText.substring(0, 40) + '..."' });
         break;
       }
 
@@ -3568,23 +3644,31 @@
           break;
         }
         const promptText = (params.prompt || '').trim();
-        const currentText = (input.value || input.innerText || input.textContent || '').trim();
-        const submitBtn = findSubmitArrowButton(input);
-        const isReady = isSubmitButtonEnabled(submitBtn);
+        let currentText = (input.value || input.innerText || input.textContent || '').trim();
+        let submitBtn = findSubmitArrowButton(input);
+        let isReady = isSubmitButtonEnabled(submitBtn);
+
+        // If submit button is not ready yet, try to activate it!
+        if (!isReady && currentText.length > 5) {
+          log('⚡ verifyInput: Đang kích hoạt nút submit...');
+          await ensureSubmitButtonActivated(input);
+          submitBtn = findSubmitArrowButton(input);
+          isReady = isSubmitButtonEnabled(submitBtn);
+        }
 
         // Kiểm tra xem prompt text đã thực sự có trong ô input chưa
         if (promptText && currentText.includes(promptText.slice(0, 15))) {
-          log('✓ Input verified with prompt text (' + currentText.length + ' chars)');
-          sendResult(action, true, { log: '✓ Input verified with prompt text' });
+          log('✓ Input verified with prompt text (' + currentText.length + ' chars), submit enabled=' + isReady);
+          sendResult(action, true, { log: '✓ Input verified with prompt text', submitReady: isReady });
         } else if (isReady) {
           log('✓ Input verified (submit button is enabled)');
-          sendResult(action, true, { log: '✓ Input verified (submit button ready)' });
+          sendResult(action, true, { log: '✓ Input verified (submit button ready)', submitReady: true });
         } else if (currentText.length > 0) {
           // Thử inject bổ sung 1 lần nếu prompt text chưa có
           log('⚠️ Prompt chưa xuất hiện đầy đủ trong input, thử inject bổ sung...');
           injectTextToReactInput(input, ' ' + promptText);
-          await new Promise(r => setTimeout(r, 1000));
-          sendResult(action, true, { log: '✓ Re-injected prompt' });
+          await ensureSubmitButtonActivated(input);
+          sendResult(action, true, { log: '✓ Re-injected prompt and activated submit' });
         } else {
           sendResult(action, false, null, 'Prompt input is completely empty');
         }
@@ -3602,38 +3686,35 @@
         // 🛑 Capture existing videos BEFORE we submit the new prompt!
         capturePreexistingVideos();
 
-        // 1. Focus & click input
-        await focusAndClickInput(input);
-        await new Promise(r => setTimeout(r, 400));
-
-        // 2. Chờ nút submit chuyển sang trạng thái kích hoạt (enabled) - kiểm tra đến 5s
+        // 1. Chờ nút submit chuyển sang trạng thái kích hoạt (enabled) - kiểm tra đến 5s
         log('🔍 Tìm kiếm nút submit (mũi tên gửi) và chờ trạng thái sẵn sàng...');
         let submitBtn = null;
         const findStart = Date.now();
         while (Date.now() - findStart < 5000) {
           submitBtn = findSubmitArrowButton(input);
-          if (isSubmitButtonEnabled(submitBtn)) {
+          if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
             log('✓ Đã tìm thấy nút submit ở trạng thái sẵn sàng (enabled)!');
             break;
           }
+          await ensureSubmitButtonActivated(input);
           await new Promise(r => setTimeout(r, 300));
         }
 
-        // 3. Click nút submit mũi tên nếu tìm thấy
-        if (submitBtn) {
+        // 2. Click nút submit mũi tên nếu tìm thấy
+        if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
           log('🖱️ Bấm nút submit gửi prompt video!');
           showFlowToast('🚀 Đang ấn nút gửi tạo video...', 3000);
           await clickSubmitArrowButton(submitBtn, input);
-          await new Promise(r => setTimeout(r, 1200));
+          await new Promise(r => setTimeout(r, 1500));
 
-          // Pacing: Chờ 1.5s và kiểm tra xem có cần bấm lại không
+          // Pacing: Chờ 2s và kiểm tra xem có cần bấm lại không
           const recheckBtn = findSubmitArrowButton(input);
           if (recheckBtn && isSubmitButtonEnabled(recheckBtn)) {
             const currentVal = (input.value || input.textContent || '').trim();
             if (currentVal.length > 5) {
               log('🔄 Bấm bổ sung nút submit lần 2 để đảm bảo Flow nhận lệnh...');
               await clickSubmitArrowButton(recheckBtn, input);
-              await new Promise(r => setTimeout(r, 800));
+              await new Promise(r => setTimeout(r, 1000));
             }
           }
         } else {
