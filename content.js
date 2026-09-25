@@ -430,7 +430,8 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === 'FLOW_DEBUGGER_ENTER') {
     chrome.runtime.sendMessage({
-      type: 'DEBUGGER_ENTER'
+      type: 'DEBUGGER_ENTER',
+      ctrlKey: !!event.data.ctrlKey
     }, (response) => {
       const err = chrome.runtime.lastError;
       window.postMessage({

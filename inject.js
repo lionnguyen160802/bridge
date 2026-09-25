@@ -1531,8 +1531,9 @@
         // Exclude back button, dropdowns, clear button, attachments, formats, models, etc.
         if (aria.includes('back') || aria.includes('quay lại') || aria.includes('trở về') ||
             title.includes('back') || title.includes('quay lại')) return false;
-        if (aria.includes('down') || aria.includes('xuống') || aria.includes('up') || aria.includes('lên') ||
-            title.includes('down') || title.includes('up')) return false;
+        if (aria === 'down' || aria === 'up' || aria.includes('thumbs down') || aria.includes('thumbs up') ||
+            aria.includes('chevron down') || aria.includes('chevron up') ||
+            title === 'down' || title === 'up') return false;
         if (aria.includes('clear') || aria.includes('close') || aria.includes('remove') || aria.includes('delete') ||
             aria.includes('xóa') || aria.includes('hủy') || aria.includes('đóng') ||
             title.includes('clear') || title.includes('close') || title.includes('remove') ||
@@ -1614,7 +1615,15 @@
         }
       }
 
-      // Priority 4: The rightmost small button in the composer toolbar
+      // Priority 4: Inside composer, pick the rightmost button in the toolbar
+      if (root === composer && validButtons.length > 0) {
+        const sorted = [...validButtons].sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+        const rightmost = sorted[0];
+        log('✓ findCharacterSubmitArrowButton: picked rightmost button inside composer at x=' + Math.round(rightmost.getBoundingClientRect().right));
+        return rightmost;
+      }
+
+      // Priority 5: The rightmost small button in the document near the composer
       if (validButtons.length > 0) {
         const sorted = [...validButtons].sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
         for (const candidate of sorted) {
@@ -1720,10 +1729,14 @@
       button: 0, buttons: 1, detail: 1, pointerId: 1, pointerType: 'mouse'
     };
 
-    // 1. Dispatch pointerdown / mousedown
+    // 1. Dispatch pointerdown / mousedown on both target and el
     target.dispatchEvent(new PointerEvent('pointerdown', opts));
     target.dispatchEvent(new MouseEvent('mousedown', opts));
-    try { target.focus(); } catch (e) {}
+    if (target !== el) {
+      try { el.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch(e) {}
+      try { el.dispatchEvent(new MouseEvent('mousedown', opts)); } catch(e) {}
+    }
+    try { el.focus(); } catch (e) {}
 
     // 2. Dispatch pointerup / mouseup / click
     const upOpts = { ...opts, buttons: 0 };
@@ -1733,27 +1746,35 @@
 
     // 3. Also dispatch click on the button element if target was a child
     if (target !== el) {
+      try { el.dispatchEvent(new PointerEvent('pointerup', upOpts)); } catch(e) {}
+      try { el.dispatchEvent(new MouseEvent('mouseup', upOpts)); } catch(e) {}
       try { el.dispatchEvent(new MouseEvent('click', upOpts)); } catch(e) {}
     }
 
-    // 4. Native DOM click
+    // 4. Native DOM click & prototype call
     try { el.click(); } catch(e) {}
+    try { HTMLButtonElement.prototype.click.call(el); } catch(e) {}
 
     return true;
   }
 
-  /** Bulletproof submit button clicker: DOM layers + OS-level hardware click via CDP */
+  /** Bulletproof submit button clicker: DOM layers + OS-level hardware click via CDP + Dual Keyboard Enter */
   async function clickSubmitArrowButton(btn, inputEl) {
     if (!btn) return false;
     scrollIntoViewIfNeeded(btn);
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 100));
+
+    // Focus input if available to ensure state synchronization
+    if (inputEl && inputEl.isConnected) {
+      try { inputEl.focus(); } catch(e) {}
+    }
 
     const { x, y } = getCenter(btn);
     log('🖱️ Clicking submit button at coordinates (' + Math.round(x) + ', ' + Math.round(y) + ')...');
 
     // 1. Hover
     simulateHover(btn);
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise(r => setTimeout(r, 100));
 
     // 2. Multi-layer DOM click
     triggerRealClick(btn);
@@ -1767,6 +1788,34 @@
 
     // 4. Native click fallback
     try { btn.click(); } catch(e) {}
+    try { HTMLButtonElement.prototype.click.call(btn); } catch(e) {}
+
+    // 5. If button is within a form, submit the form directly
+    try {
+      if (btn.form) btn.form.requestSubmit(btn);
+    } catch(e) {}
+
+    // 6. Dual Keyboard Submission (Ctrl+Enter and Enter)
+    if (inputEl && inputEl.isConnected) {
+      try {
+        inputEl.focus();
+        // CDP level: Send Ctrl+Enter, then Enter
+        window.postMessage({ type: 'FLOW_DEBUGGER_ENTER', ctrlKey: true }, '*');
+        await new Promise(r => setTimeout(r, 150));
+        window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
+
+        // DOM level: Synthetic KeyboardEvents
+        const enterCtrl = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, ctrlKey: true, bubbles: true, cancelable: true, composed: true };
+        inputEl.dispatchEvent(new KeyboardEvent('keydown', enterCtrl));
+        inputEl.dispatchEvent(new KeyboardEvent('keypress', enterCtrl));
+        inputEl.dispatchEvent(new KeyboardEvent('keyup', enterCtrl));
+
+        const enterPlain = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+        inputEl.dispatchEvent(new KeyboardEvent('keydown', enterPlain));
+        inputEl.dispatchEvent(new KeyboardEvent('keypress', enterPlain));
+        inputEl.dispatchEvent(new KeyboardEvent('keyup', enterPlain));
+      } catch(e) {}
+    }
 
     return true;
   }
@@ -3746,30 +3795,36 @@
           await new Promise(r => setTimeout(r, 300));
         }
 
-        // 2. Click nút submit mũi tên nếu tìm thấy
-        if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
-          log('🖱️ Bấm nút submit gửi prompt video!');
-          showFlowToast('🚀 Đang ấn nút gửi tạo video...', 3000);
-          await clickSubmitArrowButton(submitBtn, input);
-          await new Promise(r => setTimeout(r, 1500));
+        // 2. Click nút submit mũi tên và trigger submit
+        log('🚀 Bắt đầu thực thi gửi prompt video (Click nút mũi tên + phím Enter/Ctrl+Enter)...');
+        showFlowToast('🚀 Đang gửi tạo video...', 3000);
 
-          // Pacing: Chờ 2s và kiểm tra xem có cần bấm lại không
-          const recheckBtn = findSubmitArrowButton(input);
-          if (recheckBtn && isSubmitButtonEnabled(recheckBtn)) {
-            const currentVal = (input.value || input.textContent || '').trim();
-            if (currentVal.length > 5) {
-              log('🔄 Bấm bổ sung nút submit lần 2 để đảm bảo Flow nhận lệnh...');
-              await clickSubmitArrowButton(recheckBtn, input);
-              await new Promise(r => setTimeout(r, 1000));
-            }
-          }
+        if (submitBtn && isSubmitButtonEnabled(submitBtn)) {
+          await clickSubmitArrowButton(submitBtn, input);
         } else {
-          log('⚠️ Không tìm thấy nút submit riêng biệt đang bật, sử dụng phím Enter...');
+          // Fallback: direct keyboard submit via Debugger and DOM
+          window.postMessage({ type: 'FLOW_DEBUGGER_ENTER', ctrlKey: true }, '*');
+          await new Promise(r => setTimeout(r, 200));
           window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
-          const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
-          input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-          input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
-          input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+        }
+
+        // Pacing & Verification: Kiểm tra xem lệnh đã được Flow nhận chưa
+        // Nếu sau 1.5s nút submit vẫn còn hiển thị enabled và composer vẫn còn text, thử bấm và gửi bổ sung
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          await new Promise(r => setTimeout(r, 1500));
+          const recheckBtn = findSubmitArrowButton(input);
+          const currentVal = (input.value || input.textContent || '').trim();
+
+          // Flow đã nhận lệnh nếu: nút submit biến mất / chuyển sang loading / disabled, hoặc composer đã đóng
+          if (!recheckBtn || !isSubmitButtonEnabled(recheckBtn) || !input.isConnected) {
+            log('✓ Flow đã nhận lệnh submit video thành công (nút đã chuyển trạng thái hoặc đã đóng composer)!');
+            break;
+          }
+
+          if (currentVal.length > 5) {
+            log(`🔄 Lần ${attempt}: Flow chưa xử lý lệnh, tiếp tục bấm nút submit và gửi phím Ctrl+Enter...`);
+            await clickSubmitArrowButton(recheckBtn, input);
+          }
         }
 
         sendResult(action, true, { log: '✓ Video prompt submitted successfully' });

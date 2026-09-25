@@ -820,6 +820,8 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
     case 'DEBUGGER_ENTER': {
       if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
       const tabId = sender.tab.id;
+      const ctrlKey = !!msg.ctrlKey;
+      const modifiers = ctrlKey ? 2 : 0;
       
       (async () => {
         try {
@@ -828,11 +830,13 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
               type: "rawKeyDown",
               windowsVirtualKeyCode: 13,
               unmodifiedText: "\r",
-              text: "\r"
+              text: "\r",
+              modifiers: modifiers
             });
             await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
               type: "keyUp",
-              windowsVirtualKeyCode: 13
+              windowsVirtualKeyCode: 13,
+              modifiers: modifiers
             });
           });
           respond({ success: true });
@@ -892,6 +896,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
               x: x,
               y: y,
               button: "left",
+              buttons: 1,
               clickCount: 1
             });
             await new Promise(r => setTimeout(r, 80));
@@ -900,6 +905,7 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
               x: x,
               y: y,
               button: "left",
+              buttons: 0,
               clickCount: 1
             });
           });
