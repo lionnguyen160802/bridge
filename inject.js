@@ -1460,81 +1460,92 @@
   function findCharacterSubmitArrowButton(inputEl) {
     if (!inputEl) inputEl = findPromptInput() || findCharacterPromptInput();
     if (!inputEl) return null;
-    const container = inputEl.closest('form, [class*="prompt"], [class*="composer"], [class*="input"]') ||
-                      inputEl.parentElement?.parentElement?.parentElement ||
-                      inputEl.parentElement?.parentElement ||
-                      inputEl.parentElement;
 
-    const roots = [container, document].filter(Boolean);
+    // 1. Identify composer container
+    const composer = (typeof getCharacterComposer === 'function' ? getCharacterComposer(inputEl) : null) ||
+                     inputEl.closest('form, [class*="composer"], [class*="prompt"]') ||
+                     inputEl.parentElement?.parentElement?.parentElement?.parentElement ||
+                     inputEl.parentElement?.parentElement?.parentElement ||
+                     inputEl.parentElement?.parentElement ||
+                     inputEl.parentElement;
+
+    const composerRect = composer ? composer.getBoundingClientRect() : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
+
+    const roots = [composer, document].filter(Boolean);
 
     for (const root of roots) {
       const allButtons = Array.from(root.querySelectorAll('button, [role="button"], div[tabindex="0"], a[role="button"]'));
 
-      // 1. By aria-label or title matching submit/create/arrow/send/generate
-      for (const btn of allButtons) {
-        if (!isVisible(btn)) continue;
+      // Filter to potential submit candidates by strictly excluding controls that are NOT submit
+      const validButtons = allButtons.filter(btn => {
+        if (!isVisible(btn)) return false;
+        if (btn.closest('#flowauto-floating-widget') || btn.closest('#flowauto-toast')) return false;
+
+        const text = (btn.textContent || '').trim().toLowerCase();
         const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
         const title = (btn.getAttribute('title') || '').toLowerCase();
-        if (aria.includes('tạo') || aria.includes('gửi') || aria.includes('submit') ||
-            aria.includes('create') || aria.includes('send') || aria.includes('generate') ||
-            aria.includes('mũi tên') || aria.includes('arrow') || aria.includes('forward') ||
-            title.includes('tạo') || title.includes('gửi') || title.includes('submit') ||
-            title.includes('create') || title.includes('send') || title.includes('arrow') || title.includes('generate')) {
+
+        // STRICT EXCLUSIONS:
+        // Exclude back button, dropdowns, clear button, attachments, formats, models, etc.
+        if (aria.includes('back') || aria.includes('quay lại') || aria.includes('trở về') ||
+            title.includes('back') || title.includes('quay lại')) return false;
+        if (aria.includes('down') || aria.includes('xuống') || aria.includes('up') || aria.includes('lên') ||
+            title.includes('down') || title.includes('up')) return false;
+        if (aria.includes('clear') || aria.includes('close') || aria.includes('remove') || aria.includes('delete') ||
+            aria.includes('xóa') || aria.includes('hủy') || aria.includes('đóng') ||
+            title.includes('clear') || title.includes('close') || title.includes('remove') ||
+            text === '✕' || text === '×' || text === 'x' || text === 'X') return false;
+        if (text === '+' || aria.includes('attach') || aria.includes('thêm tệp') ||
+            text.includes('format') || text.includes('định dạng') ||
+            text.includes('banana') || text.includes('nano') ||
+            text.includes('agent') || text.includes('tác nhân') ||
+            text.includes('video') || text.includes('image') || text.includes('hình ảnh') ||
+            text.includes('720p') || text.includes('1080p') ||
+            text.includes('upload') || text.includes('tải lên') ||
+            text.includes('project') || text.includes('dự án') ||
+            text.includes('favorite') || text.includes('thích')) return false;
+
+        return true;
+      });
+
+      // Priority 1: By explicit submit/create/send/generate label (that is not back or down)
+      for (const btn of validButtons) {
+        const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const title = (btn.getAttribute('title') || '').toLowerCase();
+        if (aria === 'tạo' || aria === 'gửi' || aria === 'submit' || aria === 'create' || aria === 'send' || aria === 'generate' ||
+            aria.includes('submit') || aria.includes('send') || aria.includes('generate') || aria.includes('forward') ||
+            title.includes('tạo') || title.includes('gửi') || title.includes('submit') || title.includes('send') || title.includes('generate')) {
           log('✓ findCharacterSubmitArrowButton: matched aria/title: "' + (aria || title) + '"');
           return btn;
         }
       }
 
-      // 2. By SVG arrow icon inside the button
-      for (const btn of allButtons) {
-        if (!isVisible(btn)) continue;
-        const text = (btn.textContent || '').trim().toLowerCase();
-        if (text === '+' || text.includes('agent') || text.includes('tác nhân') ||
-            text.includes('video') || text.includes('image') || text.includes('hình ảnh') ||
-            text.includes('720p') || text.includes('1080p') || text.includes('định dạng') ||
-            text.includes('format') || text.includes('banana') || text.includes('upload') ||
-            text.includes('tải lên') || text.includes('project') || text.includes('dự án')) continue;
-
+      // Priority 2: By SVG arrow forward icon inside the button
+      for (const btn of validButtons) {
         const svg = btn.querySelector('svg');
         if (svg) {
           const pathDs = Array.from(svg.querySelectorAll('path, polygon, polyline')).map(p => (p.getAttribute('d') || '') + ' ' + (p.getAttribute('points') || '')).join(' ');
           if (pathDs.includes('M5 12') || pathDs.includes('M12 4') || pathDs.includes('l8-8') ||
               pathDs.includes('16.17') || pathDs.includes('M10 6') || pathDs.includes('2.01') ||
               pathDs.includes('M4 12') || pathDs.includes('M5 13') || pathDs.includes('21.14') ||
-              pathDs.includes('arrow') || pathDs.includes('forward') ||
-              pathDs.includes('send') || pathDs.includes('M12 2L2 22') || pathDs.includes('M2.01 21L23 12')) {
+              pathDs.includes('forward') || pathDs.includes('send') || pathDs.includes('M12 2L2 22') || pathDs.includes('M2.01 21L23 12')) {
             log('✓ findCharacterSubmitArrowButton: matched arrow path in SVG');
             return btn;
           }
         }
       }
 
-      // 3. Position-based: the rightmost icon button in the prompt bar
-      const inputRect = inputEl.getBoundingClientRect();
-      const candidates = allButtons.filter(btn => {
-        if (!isVisible(btn)) return false;
-        const text = (btn.textContent || '').trim().toLowerCase();
-        // Exclude "+" button, format button, model dropdown, agent, video, image, upload, etc.
-        if (text === '+' || text.includes('agent') || text.includes('tác nhân') ||
-            text.includes('video') || text.includes('image') || text.includes('hình ảnh') ||
-            text.includes('720p') || text.includes('1080p') || text.includes('định dạng') ||
-            text.includes('format') || text.includes('banana') || text.includes('tải lên') ||
-            text.includes('upload') || text.includes('dự án') || text.includes('project')) return false;
-
-        const br = btn.getBoundingClientRect();
-        // Must be in vertical range of prompt box
-        if (br.top < inputRect.top - 80 || br.bottom > inputRect.bottom + 180) return false;
-        // Must be in right half of prompt box
-        if (br.left < inputRect.left + 50) return false;
-        // Must have an SVG or look like an icon button
-        return !!btn.querySelector('svg') || (br.width <= 70 && br.height <= 70);
-      });
-
-      if (candidates.length > 0) {
+      // Priority 3: The rightmost button in the composer toolbar
+      if (validButtons.length > 0) {
         // Sort descending by right coordinate
-        candidates.sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
-        log('✓ findCharacterSubmitArrowButton: picked rightmost candidate button at x=' + Math.round(candidates[0].getBoundingClientRect().right));
-        return candidates[0];
+        const sorted = [...validButtons].sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+        const rightmost = sorted[0];
+        const br = rightmost.getBoundingClientRect();
+        // Check that it is located in the right half of the composer or near the bottom
+        if (br.right > composerRect.left + 50) {
+          log('✓ findCharacterSubmitArrowButton: picked rightmost candidate at x=' + Math.round(br.right) + ', y=' + Math.round(br.top));
+          return rightmost;
+        }
       }
     }
 
@@ -1550,6 +1561,89 @@
     const style = window.getComputedStyle(btn);
     if (style.pointerEvents === 'none') return false;
     if (parseFloat(style.opacity) < 0.4) return false;
+    return true;
+  }
+
+  /** Trigger click through all DOM layers to ensure React/Wiz event handlers fire */
+  function triggerRealClick(el) {
+    if (!el) return false;
+    scrollIntoViewIfNeeded(el);
+    const { x, y } = getCenter(el);
+    const target = (x > 0 && y > 0) ? (document.elementFromPoint(x, y) || el) : el;
+    const opts = {
+      bubbles: true, cancelable: true, composed: true, view: window,
+      clientX: x, clientY: y,
+      screenX: (window.screenX || 0) + x, screenY: (window.screenY || 0) + y,
+      button: 0, buttons: 1, detail: 1, pointerId: 1, pointerType: 'mouse'
+    };
+
+    // 1. Dispatch on innermost element under coordinates
+    target.dispatchEvent(new PointerEvent('pointerdown', opts));
+    target.dispatchEvent(new MouseEvent('mousedown', opts));
+    try { target.focus(); } catch (e) {}
+    const upOpts = { ...opts, buttons: 0 };
+    target.dispatchEvent(new PointerEvent('pointerup', upOpts));
+    target.dispatchEvent(new MouseEvent('mouseup', upOpts));
+    target.dispatchEvent(new MouseEvent('click', upOpts));
+
+    // 2. Also dispatch directly on the button element if target is inner
+    if (target !== el) {
+      el.dispatchEvent(new PointerEvent('pointerdown', opts));
+      el.dispatchEvent(new MouseEvent('mousedown', opts));
+      try { el.focus(); } catch (e) {}
+      el.dispatchEvent(new PointerEvent('pointerup', upOpts));
+      el.dispatchEvent(new MouseEvent('mouseup', upOpts));
+      el.dispatchEvent(new MouseEvent('click', upOpts));
+    }
+
+    // 3. Native DOM click
+    try { target.click(); } catch(e) {}
+    try { el.click(); } catch(e) {}
+
+    // 4. If button contains svg or path, click them too
+    const svg = el.querySelector('svg');
+    if (svg && svg !== target) {
+      try { svg.dispatchEvent(new MouseEvent('click', upOpts)); } catch(e) {}
+    }
+
+    return true;
+  }
+
+  /** Bulletproof submit button clicker: DOM layers + OS-level hardware click via CDP + Enter fallback */
+  async function clickSubmitArrowButton(btn, inputEl) {
+    if (!btn) return false;
+    scrollIntoViewIfNeeded(btn);
+    await new Promise(r => setTimeout(r, 200));
+
+    const { x, y } = getCenter(btn);
+    log('🖱️ Clicking submit button at coordinates (' + Math.round(x) + ', ' + Math.round(y) + ')...');
+
+    // 1. Hover
+    simulateHover(btn);
+    await new Promise(r => setTimeout(r, 250));
+
+    // 2. Multi-layer DOM click
+    triggerRealClick(btn);
+
+    // 3. OS-level hardware mouse click via Chrome Debugger CDP
+    if (x > 0 && y > 0) {
+      log('🐞 Triggering OS-level Debugger Mouse Click at (' + Math.round(x) + ', ' + Math.round(y) + ')...');
+      window.postMessage({
+        type: 'FLOW_DEBUGGER_CLICK',
+        x: x,
+        y: y
+      }, '*');
+    }
+
+    // 4. Parallel Enter key dispatch
+    if (inputEl) {
+      window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
+      const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+      inputEl.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+      inputEl.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+      inputEl.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
+    }
+
     return true;
   }
 
@@ -2760,11 +2854,11 @@
           }
           capturePreexistingImages();
           const button = findCharacterSubmitArrowButton(evidence.input);
-          if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') {
+          if (!button || !isSubmitButtonEnabled(button)) {
             sendResult(action, false, null, 'Không tìm thấy nút submit character đang khả dụng');
             return;
           }
-          simulateClick(button);
+          await clickSubmitArrowButton(button, evidence.input);
           let fresh = [];
           const started = Date.now();
           while (Date.now() - started < 45000) {
@@ -3002,54 +3096,38 @@
           log('🔍 Đang tìm nút mũi tên gửi (submit)...');
           let arrowBtn = null;
           const findArrowStart = Date.now();
-          while (Date.now() - findArrowStart < 4000) {
+          while (Date.now() - findArrowStart < 5000) {
             arrowBtn = findCharacterSubmitArrowButton(input);
-            if (arrowBtn) {
-              const isDisabled = arrowBtn.hasAttribute('disabled') || 
-                                 arrowBtn.getAttribute('aria-disabled') === 'true' || 
-                                 arrowBtn.disabled;
-              if (!isDisabled) {
-                log('✓ Đã tìm thấy nút mũi tên ở trạng thái sẵn sàng!');
-                break;
-              }
+            if (arrowBtn && isSubmitButtonEnabled(arrowBtn)) {
+              log('✓ Đã tìm thấy nút mũi tên ở trạng thái sẵn sàng (enabled)!');
+              break;
             }
             await new Promise(r => setTimeout(r, 300));
           }
 
           if (arrowBtn) {
-            scrollIntoViewIfNeeded(arrowBtn);
-            log('👆 Hover chuột vào nút mũi tên gửi...');
-            simulateHover(arrowBtn);
-            await new Promise(r => setTimeout(r, 400));
-
-            log('🖱️ Click nút mũi tên gửi nội dung!');
+            log('🚀 Đang ấn nút mũi tên gửi tạo ảnh...');
             showFlowToast('🚀 Đang ấn mũi tên gửi tạo ảnh...', 3000);
-            simulateClick(arrowBtn);
-            try { arrowBtn.click(); } catch(e) {}
-            await new Promise(r => setTimeout(r, 600));
+            await clickSubmitArrowButton(arrowBtn, input);
+            await new Promise(r => setTimeout(r, 1200));
+
+            // Pacing: Chờ 1.5 giây rồi kiểm tra lại xem có cần bấm lại lần 2 không
+            const recheckBtn = findCharacterSubmitArrowButton(input);
+            if (recheckBtn && isSubmitButtonEnabled(recheckBtn)) {
+              const curVal = (input.value || input.textContent || '').trim();
+              if (curVal.length > 5) {
+                log('🔄 Bấm bổ sung nút mũi tên lần 2 để đảm bảo gửi thành công...');
+                await clickSubmitArrowButton(recheckBtn, input);
+                await new Promise(r => setTimeout(r, 800));
+              }
+            }
           } else {
             log('⚠️ Không tìm thấy nút mũi tên riêng biệt, dùng phím Enter...');
-          }
-
-          // Dự phòng song song: Dispatch phím Enter
-          log('⏎ Gửi sự kiện Enter dự phòng...');
-          window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
-          const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
-          input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-          input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
-          input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-
-          // Pacing: Chờ 1.2 giây rồi kiểm tra lại xem có cần bấm lại lần 2 không
-          await new Promise(r => setTimeout(r, 1200));
-          const recheckBtn = arrowBtn || findCharacterSubmitArrowButton(input);
-          if (recheckBtn && !recheckBtn.disabled && recheckBtn.getAttribute('aria-disabled') !== 'true') {
-            const curVal = (input.value || input.textContent || '').trim();
-            if (curVal.length > 5) {
-              log('🔄 Bấm bổ sung nút mũi tên lần 2 để đảm bảo gửi thành công...');
-              simulateClick(recheckBtn);
-              try { recheckBtn.click(); } catch(e) {}
-              await new Promise(r => setTimeout(r, 800));
-            }
+            window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
+            const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+            input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+            input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+            input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
           }
 
           // 7. Wait for new image card to appear (up to 45s)
@@ -3532,39 +3610,28 @@
 
         // 3. Click nút submit mũi tên nếu tìm thấy
         if (submitBtn) {
-          scrollIntoViewIfNeeded(submitBtn);
-          log('👆 Hover chuột vào nút submit...');
-          simulateHover(submitBtn);
-          await new Promise(r => setTimeout(r, 300));
-
           log('🖱️ Bấm nút submit gửi prompt video!');
           showFlowToast('🚀 Đang ấn nút gửi tạo video...', 3000);
-          simulateClick(submitBtn);
-          try { submitBtn.click(); } catch(e) {}
-          await new Promise(r => setTimeout(r, 600));
+          await clickSubmitArrowButton(submitBtn, input);
+          await new Promise(r => setTimeout(r, 1200));
+
+          // Pacing: Chờ 1.5s và kiểm tra xem có cần bấm lại không
+          const recheckBtn = findSubmitArrowButton(input);
+          if (recheckBtn && isSubmitButtonEnabled(recheckBtn)) {
+            const currentVal = (input.value || input.textContent || '').trim();
+            if (currentVal.length > 5) {
+              log('🔄 Bấm bổ sung nút submit lần 2 để đảm bảo Flow nhận lệnh...');
+              await clickSubmitArrowButton(recheckBtn, input);
+              await new Promise(r => setTimeout(r, 800));
+            }
+          }
         } else {
           log('⚠️ Không tìm thấy nút submit riêng biệt đang bật, sử dụng phím Enter...');
-        }
-
-        // 4. Dự phòng song song: Dispatch phím Enter (Debugger OS-level + DOM events)
-        log('⏎ Gửi phím Enter (Debugger + DOM fallback)...');
-        window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
-        const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
-        input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
-        input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
-        input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
-
-        // 5. Pacing: Chờ 1.5s và kiểm tra xem có cần bấm lại không
-        await new Promise(r => setTimeout(r, 1500));
-        const recheckBtn = submitBtn || findSubmitArrowButton(input);
-        if (recheckBtn && isSubmitButtonEnabled(recheckBtn)) {
-          const currentVal = (input.value || input.textContent || '').trim();
-          if (currentVal.length > 5) {
-            log('🔄 Bấm bổ sung nút submit lần 2 để đảm bảo Flow nhận lệnh...');
-            simulateClick(recheckBtn);
-            try { recheckBtn.click(); } catch(e) {}
-            await new Promise(r => setTimeout(r, 800));
-          }
+          window.postMessage({ type: 'FLOW_DEBUGGER_ENTER' }, '*');
+          const enterOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true, composed: true };
+          input.dispatchEvent(new KeyboardEvent('keydown', enterOpts));
+          input.dispatchEvent(new KeyboardEvent('keypress', enterOpts));
+          input.dispatchEvent(new KeyboardEvent('keyup', enterOpts));
         }
 
         sendResult(action, true, { log: '✓ Video prompt submitted successfully' });

@@ -440,6 +440,21 @@ window.addEventListener('message', (event) => {
       }, '*');
     });
   }
+
+  if (event.data.type === 'FLOW_DEBUGGER_CLICK') {
+    chrome.runtime.sendMessage({
+      type: 'DEBUGGER_CLICK',
+      x: event.data.x,
+      y: event.data.y
+    }, (response) => {
+      const err = chrome.runtime.lastError;
+      window.postMessage({
+        type: 'FLOW_DEBUGGER_CLICK_RESULT',
+        success: !err && !!response?.success,
+        error: err ? err.message : response?.error
+      }, '*');
+    });
+  }
 });
 
 // ==========================================

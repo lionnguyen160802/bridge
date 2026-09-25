@@ -835,6 +835,39 @@ chrome.runtime.onMessage.addListener((msg, sender, respond) => {
       return true;
     }
 
+    case 'DEBUGGER_CLICK': {
+      if (!sender || !sender.tab) { respond({ success: false, error: 'No sender tab' }); return; }
+      const tabId = sender.tab.id;
+      const x = Math.round(msg.x || 0);
+      const y = Math.round(msg.y || 0);
+
+      (async () => {
+        try {
+          await safeDebuggerCommand(tabId, async (target) => {
+            await chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", {
+              type: "mousePressed",
+              x: x,
+              y: y,
+              button: "left",
+              clickCount: 1
+            });
+            await new Promise(r => setTimeout(r, 60));
+            await chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", {
+              type: "mouseReleased",
+              x: x,
+              y: y,
+              button: "left",
+              clickCount: 1
+            });
+          });
+          respond({ success: true });
+        } catch (err) {
+          respond({ success: false, error: err.message });
+        }
+      })();
+      return true;
+    }
+
     // --- From Popup ---
     case MSG.GET_DASHBOARD:
       respond({
